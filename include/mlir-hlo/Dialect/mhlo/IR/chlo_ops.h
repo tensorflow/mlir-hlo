@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef TENSORFLOW_COMPILER_MLIR_XLA_IR_CHLO_OPS_H_
-#define TENSORFLOW_COMPILER_MLIR_XLA_IR_CHLO_OPS_H_
+#ifndef TENSORFLOW_COMPILER_MLIR_HLO_INCLUDE_MLIR_HLO_DIALECT_MHLO_IR_CHLO_OPS_H_
+#define TENSORFLOW_COMPILER_MLIR_HLO_INCLUDE_MLIR_HLO_DIALECT_MHLO_IR_CHLO_OPS_H_
 
 #include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/StringRef.h"
 #include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Dialect.h"
@@ -42,4 +42,4 @@ class XlaHloClientDialect : public Dialect {
 }  // namespace xla_chlo
 }  // namespace mlir
 
-#endif  // TENSORFLOW_COMPILER_MLIR_XLA_IR_CHLO_OPS_H_
+#endif  // TENSORFLOW_COMPILER_MLIR_HLO_INCLUDE_MLIR_HLO_DIALECT_MHLO_IR_CHLO_OPS_H_
