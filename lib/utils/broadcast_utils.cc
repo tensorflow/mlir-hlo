@@ -24,7 +24,7 @@ limitations under the License.
 #include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
 
 namespace mlir {
-namespace xla {
+namespace hlo {
 
 bool IsLegalNumpyRankedBroadcast(Value lhs, Value rhs,
                                  DenseIntElementsAttr broadcast_dims) {
@@ -70,5 +70,5 @@ Value ComputeBinaryElementwiseBroadcastingResultExtents(Location loc, Value lhs,
       result_shape_v);
 }
 
-}  // namespace xla
+}  // namespace hlo
 }  // namespace mlir

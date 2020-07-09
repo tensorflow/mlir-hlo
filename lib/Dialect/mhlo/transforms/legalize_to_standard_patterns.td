@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-// This is the legalization pattern definition file for XLA to StandardOps.
+// This is the legalization pattern definition file for MHLO to StandardOps.
 
 include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
 include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.td"

@@ -35,7 +35,7 @@ limitations under the License.
 #include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
 #include "third_party/llvm/llvm-project/mlir/include/mlir/Transforms/DialectConversion.h"
 #include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/map_xla_to_scalar_op.h"
+#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/map_lmhlo_to_scalar_op.h"
 
 namespace mlir {
 namespace lmhlo {
