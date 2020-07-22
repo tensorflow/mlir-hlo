@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/SCF/SCF.h"
 #include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/Shape/IR/Shape.h"
 #include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.h"
 #include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
@@ -37,6 +38,7 @@ struct TestChloLegalizeToHloPass
     // The conversion uses helpers from the Standard dialect.
     conversionTarget.addLegalDialect<mlir::StandardOpsDialect>();
     conversionTarget.addLegalDialect<mlir::shape::ShapeDialect>();
+    conversionTarget.addLegalDialect<mlir::scf::SCFDialect>();
 
     PopulateLegalizeChloToHloPatterns(&getContext(), &conversionPatterns);
 
