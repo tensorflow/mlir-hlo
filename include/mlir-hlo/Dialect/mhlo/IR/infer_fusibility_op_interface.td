@@ -19,7 +19,7 @@ limitations under the License.
 #ifndef MLIR_INFER_FUSIBILITY_OP_INTERFACE
 #define MLIR_INFER_FUSIBILITY_OP_INTERFACE
 
-include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
+include "mlir/IR/OpBase.td"
 
 // OpInterface to query if an op is fusible and to query the shape equality
 // constraint among the inputs and outputs of an op.

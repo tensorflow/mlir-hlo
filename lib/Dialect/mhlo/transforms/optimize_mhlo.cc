@@ -21,18 +21,18 @@ limitations under the License.
 #include <iterator>
 #include <numeric>
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/STLExtras.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Attributes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/MLIRContext.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Operation.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/PatternMatch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/TypeUtilities.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Types.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/PassRegistry.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/passes.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/utils/hlo_utils.h"
+#include "llvm/ADT/STLExtras.h"
+#include "mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/passes.h"
+#include "mlir-hlo/utils/hlo_utils.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/Types.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassRegistry.h"
 
 using mlir::OwningRewritePatternList;
 

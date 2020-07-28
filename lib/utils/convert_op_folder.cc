@@ -15,11 +15,11 @@ limitations under the License.
 
 // This file defines helpers useful when creating or manipulating lhlo/hlo.
 
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/utils/convert_op_folder.h"
+#include "mlir-hlo/utils/convert_op_folder.h"
 
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Attributes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/TypeUtilities.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/TypeUtilities.h"
 
 namespace mlir {
 namespace hlo {

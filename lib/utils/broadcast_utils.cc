@@ -13,15 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/utils/broadcast_utils.h"
+#include "mlir-hlo/utils/broadcast_utils.h"
 
 #include <algorithm>
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/Sequence.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/SmallVector.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/Shape/IR/Shape.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Diagnostics.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVector.h"
+#include "mlir/Dialect/Shape/IR/Shape.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/StandardTypes.h"
 
 namespace mlir {
 namespace hlo {

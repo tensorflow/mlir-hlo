@@ -19,12 +19,12 @@ limitations under the License.
 // Utilities relating to implementing HLO broadcasting.
 // Note: This file should not depend on any non-MLIR TensorFlow libraries.
 
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Attributes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Builders.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Location.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/InferTypeOpInterface.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Support/LLVM.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Support/LLVM.h"
 
 namespace mlir {
 namespace hlo {

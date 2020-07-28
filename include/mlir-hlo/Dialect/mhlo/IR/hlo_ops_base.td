@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef HLO_OPS_BASE
 #define HLO_OPS_BASE
 
-include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
+include "mlir/IR/OpBase.td"
 
 def HLO_Pred : TypeAlias<I1, "pred (AKA boolean or 1-bit integer)">;
 

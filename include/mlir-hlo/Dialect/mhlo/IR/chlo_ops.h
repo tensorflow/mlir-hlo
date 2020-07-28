@@ -16,16 +16,16 @@ limitations under the License.
 #ifndef TENSORFLOW_COMPILER_MLIR_HLO_INCLUDE_MLIR_HLO_DIALECT_MHLO_IR_CHLO_OPS_H_
 #define TENSORFLOW_COMPILER_MLIR_HLO_INCLUDE_MLIR_HLO_DIALECT_MHLO_IR_CHLO_OPS_H_
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/StringRef.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Dialect.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/DialectImplementation.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/MLIRContext.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpDefinition.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Operation.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Types.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/InferTypeOpInterface.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/SideEffectInterfaces.h"
+#include "llvm/ADT/StringRef.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/Types.h"
+#include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 namespace mlir {
 namespace chlo {
@@ -37,7 +37,7 @@ class HloClientDialect : public Dialect {
 };
 
 #define GET_OP_CLASSES
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/chlo_ops.h.inc"
+#include "mlir-hlo/Dialect/mhlo/IR/chlo_ops.h.inc"
 
 }  // namespace chlo
 }  // namespace mlir

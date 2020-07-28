@@ -18,12 +18,12 @@ limitations under the License.
 #ifndef HLO_OPS
 #define HLO_OPS
 
-include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
-include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/InferTypeOpInterface.td"
-include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/SideEffectInterfaces.td"
-include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td"
-include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_utils.td"
-include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/infer_fusibility_op_interface.td"
+include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td"
+include "mlir-hlo/Dialect/mhlo/IR/hlo_utils.td"
+include "mlir-hlo/Dialect/mhlo/IR/infer_fusibility_op_interface.td"
 
 def HLO_Dialect : Dialect {
   let name = "mhlo";

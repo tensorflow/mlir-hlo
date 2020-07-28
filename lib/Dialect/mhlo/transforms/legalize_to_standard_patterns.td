@@ -15,9 +15,9 @@ limitations under the License.
 
 // This is the legalization pattern definition file for MHLO to StandardOps.
 
-include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
-include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.td"
-include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td"
+include "mlir/IR/OpBase.td"
+include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir-hlo/Dialect/mhlo/IR/hlo_ops.td"
 
 //===----------------------------------------------------------------------===//
 // Nullary op patterns.

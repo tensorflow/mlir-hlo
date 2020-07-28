@@ -13,16 +13,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Conversion/AffineToStandard/AffineToStandard.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Conversion/SCFToStandard/SCFToStandard.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
+#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
+#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace lmhlo {
@@ -57,8 +57,9 @@ class TestLhloToLLVMPass
 
 }  // namespace
 
-static PassRegistration<TestLhloToLLVMPass> legalize_lhlo_pass(
-    "test-lhlo-legalize-to-llvm", "Legalize from LHLO dialect to LLVM.");
+std::unique_ptr<Pass> createTestLhloToLLVMPass() {
+  return std::make_unique<TestLhloToLLVMPass>();
+}
 
 }  // namespace lmhlo
 }  // namespace mlir

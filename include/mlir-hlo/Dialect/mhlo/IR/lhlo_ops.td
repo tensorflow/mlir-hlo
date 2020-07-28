@@ -33,9 +33,9 @@ limitations under the License.
 #ifndef LHLO_OPS
 #define LHLO_OPS
 
-include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
-include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/SideEffectInterfaces.td"
-include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/ViewLikeInterface.td"
+include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/Interfaces/ViewLikeInterface.td"
 include "mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td"
 
 def LHLO_Dialect : Dialect {

@@ -29,9 +29,9 @@ limitations under the License.
 #ifndef CHLO_OPS
 #define CHLO_OPS
 
-include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
-include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/InferTypeOpInterface.td"
-include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td"
 
 def HLOClient_Dialect : Dialect {

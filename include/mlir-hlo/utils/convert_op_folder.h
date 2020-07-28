@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef TENSORFLOW_COMPILER_MLIR_HLO_INCLUDE_MLIR_HLO_UTILS_CONVERT_OP_FOLDER_H_
 #define TENSORFLOW_COMPILER_MLIR_HLO_INCLUDE_MLIR_HLO_UTILS_CONVERT_OP_FOLDER_H_
 
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Attributes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/StandardTypes.h"
 
 namespace mlir {
 namespace hlo {

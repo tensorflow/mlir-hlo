@@ -18,7 +18,7 @@ limitations under the License.
 #ifndef HLO_UTILS
 #define HLO_UTILS
 
-include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
+include "mlir/IR/OpBase.td"
 
 def NullArrayAttr : NativeCodeCall<"ArrayAttr()">;
 

@@ -15,30 +15,30 @@ limitations under the License.
 
 // This file implements logic for lowering MHLO dialect to Standard dialect.
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/STLExtras.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/StringSwitch.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/Support/Casting.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Block.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/BlockAndValueMapping.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Builders.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Function.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/PatternMatch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/TypeUtilities.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/PassRegistry.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Support/LogicalResult.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/passes.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/Casting.h"
+#include "mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/passes.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Block.h"
+#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/Function.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/TypeUtilities.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassRegistry.h"
+#include "mlir/Support/LogicalResult.h"
 
 using mlir::PassRegistration;
 
 namespace mlir {
 namespace mhlo {
 namespace {
-struct LegalizeControlFlow
-    : public mlir::PassWrapper<LegalizeControlFlow, FunctionPass> {
+struct LegalizeControlFlowPass
+    : public mlir::PassWrapper<LegalizeControlFlowPass, FunctionPass> {
   // Perform the lowering to MLIR control flow.
   void runOnFunction() override;
 };
@@ -206,7 +206,7 @@ LogicalResult LowerWhileOp(mlir::mhlo::WhileOp while_op) {
   return success();
 }
 
-void LegalizeControlFlow::runOnFunction() {
+void LegalizeControlFlowPass::runOnFunction() {
   auto func = getFunction();
   llvm::SmallVector<IfOp, 4> if_ops;
   func.walk([&](IfOp op) { if_ops.push_back(op); });
@@ -228,9 +228,5 @@ void LegalizeControlFlow::runOnFunction() {
 
 std::unique_ptr<mlir::OperationPass<mlir::FuncOp>>
 mlir::mhlo::createLegalizeControlFlowPass() {
-  return std::make_unique<LegalizeControlFlow>();
+  return std::make_unique<LegalizeControlFlowPass>();
 }
-
-static PassRegistration<mlir::mhlo::LegalizeControlFlow> legalize_cf_pass(
-    "mhlo-legalize-control-flow",
-    "Legalize from MHLO control flow to CFG control flow");

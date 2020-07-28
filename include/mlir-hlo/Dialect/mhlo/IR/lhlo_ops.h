@@ -18,22 +18,22 @@ limitations under the License.
 #ifndef TENSORFLOW_COMPILER_MLIR_HLO_INCLUDE_MLIR_HLO_DIALECT_MHLO_IR_LHLO_OPS_H_
 #define TENSORFLOW_COMPILER_MLIR_HLO_INCLUDE_MLIR_HLO_DIALECT_MHLO_IR_LHLO_OPS_H_
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/StringRef.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Attributes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Dialect.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Location.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/MLIRContext.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpDefinition.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Operation.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Types.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/SideEffectInterfaces.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/StringRef.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/Types.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 
 namespace mlir {
 class OpBuilder;
 
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_structs.h.inc"
+#include "mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.h.inc"
 
 namespace lmhlo {
 
@@ -44,7 +44,7 @@ class LmhloDialect : public Dialect {
 };
 
 #define GET_OP_CLASSES
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h.inc"
+#include "mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h.inc"
 
 }  // namespace lmhlo
 }  // end namespace mlir

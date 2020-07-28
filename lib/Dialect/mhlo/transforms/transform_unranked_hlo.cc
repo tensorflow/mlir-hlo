@@ -14,18 +14,17 @@ limitations under the License.
 
 ==============================================================================*/
 
-#include "third_party/absl/memory/memory.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/Shape/IR/Shape.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Function.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/MLIRContext.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Operation.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/PatternMatch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Transforms/DialectConversion.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "mlir/Dialect/Shape/IR/Shape.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Function.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 namespace mhlo {
@@ -204,9 +203,9 @@ void PopulateTransformUnrankedHloPatterns(MLIRContext *context,
   // clang-format on
 }
 
-static PassRegistration<TransformUnrankedHloPass> transform_unranked_hlo_pass(
-    "transform-unranked-hlo",
-    "Realize element-wise operations on ranked tensors where possible");
+std::unique_ptr<::mlir::Pass> createTransformUnrankedHloPass() {
+  return std::make_unique<TransformUnrankedHloPass>();
+}
 
 }  // namespace mhlo
 }  // namespace mlir

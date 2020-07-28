@@ -15,7 +15,7 @@ limitations under the License.
 
 // This is the canonicalize pattern definition file.
 
-include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
+include "mlir/IR/OpBase.td"
 include "mlir-hlo/Dialect/mhlo/IR/hlo_ops.td"
 include "mlir-hlo/Dialect/mhlo/IR/hlo_utils.td"
 

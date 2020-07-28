@@ -13,13 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "third_party/absl/memory/memory.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Function.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/PatternMatch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/passes.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/passes.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "mlir/IR/Function.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 
@@ -128,8 +127,8 @@ struct GatherIsTorchIndexSelect : public OpRewritePattern<GatherOp> {
   }
 };
 
-struct LegalizeGatherToTorchIndexSelect
-    : public PassWrapper<LegalizeGatherToTorchIndexSelect, FunctionPass> {
+struct LegalizeGatherToTorchIndexSelectPass
+    : public PassWrapper<LegalizeGatherToTorchIndexSelectPass, FunctionPass> {
   /// Perform the lowering of standard dialect operations to approximations.
   void runOnFunction() override {
     OwningRewritePatternList patterns;
@@ -144,9 +143,9 @@ void PopulateGatherToTorchIndexSelectPatterns(
   patterns->insert<GatherIsTorchIndexSelect>(context);
 }
 
-static PassRegistration<LegalizeGatherToTorchIndexSelect> legalize_hlo_pass(
-    "mhlo-legalize-gather-to-torch-index-select",
-    "Legalizes gathers to a torch index select.");
+std::unique_ptr<FunctionPass> createLegalizeGatherToTorchIndexSelectPass() {
+  return std::make_unique<LegalizeGatherToTorchIndexSelectPass>();
+}
 
 }  // namespace mhlo
 }  // namespace mlir

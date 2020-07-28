@@ -15,18 +15,18 @@ limitations under the License.
 
 // This file implements logic for lowering MHLO dialect to Standard dialect.
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/StringSwitch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Function.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/PatternMatch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/passes.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/passes.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Function.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace {
-#include "third_party/tensorflow/compiler/mlir/hlo/lib/Dialect/mhlo/transforms/generated_legalize_to_standard.inc"
+#include "generated_legalize_to_standard.inc"
 }  // end anonymous namespace
 namespace mhlo {
 namespace {
@@ -176,15 +176,15 @@ class ConvertIotaOp : public OpRewritePattern<mhlo::IotaOp> {
 }  // end anonymous namespace
 
 namespace {
-struct LegalizeToStandard
-    : public PassWrapper<LegalizeToStandard, FunctionPass> {
+struct LegalizeToStandardPass
+    : public PassWrapper<LegalizeToStandardPass, FunctionPass> {
   /// Perform the lowering to Standard dialect.
   void runOnFunction() override;
 };
 }  // end anonymous namespace
 
 std::unique_ptr<mlir::OperationPass<mlir::FuncOp>> createLegalizeToStdPass() {
-  return std::make_unique<LegalizeToStandard>();
+  return std::make_unique<LegalizeToStandardPass>();
 }
 
 void PopulateMhloToStdPatterns(OwningRewritePatternList *patterns,
@@ -194,14 +194,11 @@ void PopulateMhloToStdPatterns(OwningRewritePatternList *patterns,
 }
 
 /// Perform the lowering to standard dialect.
-void LegalizeToStandard::runOnFunction() {
+void LegalizeToStandardPass::runOnFunction() {
   OwningRewritePatternList patterns;
   mlir::mhlo::PopulateMhloToStdPatterns(&patterns, &getContext());
   applyPatternsAndFoldGreedily(getFunction(), patterns);
 }
-
-static PassRegistration<LegalizeToStandard> legalize_pass(
-    "mhlo-legalize-to-std", "Legalize from MHLO dialect to standard dialect");
 
 }  // end namespace mhlo
 }  // end namespace mlir

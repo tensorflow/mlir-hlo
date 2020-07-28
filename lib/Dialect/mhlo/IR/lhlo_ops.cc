@@ -15,44 +15,44 @@ limitations under the License.
 
 // This file defines the operations used in the LMHLO dialect.
 
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h"
+#include "mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h"
 
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/APFloat.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/APInt.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/ArrayRef.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/STLExtras.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/SmallVector.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/StringRef.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/Support/FormatVariadic.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Attributes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Builders.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Dialect.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Location.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/MLIRContext.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpDefinition.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpImplementation.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Operation.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OperationSupport.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/PatternMatch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/TypeUtilities.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Types.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Value.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h.inc"
+#include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h.inc"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/TypeUtilities.h"
+#include "mlir/IR/Types.h"
+#include "mlir/IR/Value.h"
 
 namespace mlir {
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_structs.cc.inc"
+#include "mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.cc.inc"
 namespace lmhlo {
 
 LmhloDialect::LmhloDialect(MLIRContext *context)
     : Dialect(getDialectNamespace(), context) {
   addOperations<
 #define GET_OP_LIST
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.cc.inc"
+#include "mlir-hlo/Dialect/mhlo/IR/lhlo_ops.cc.inc"
       >();
 }
 
@@ -127,7 +127,7 @@ static LogicalResult Verify(ReshapeMemRefCastOp op) {
 }
 
 #define GET_OP_CLASSES
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.cc.inc"
+#include "mlir-hlo/Dialect/mhlo/IR/lhlo_ops.cc.inc"
 
 // TODO(cheshire): Support folding, reuse code from hlo_ops.cc.
 

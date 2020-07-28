@@ -13,11 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/utils/cycle_detector.h"
+#include "mlir-hlo/utils/cycle_detector.h"
 
 #include <algorithm>
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/DenseSet.h"
+#include "llvm/ADT/DenseSet.h"
 
 namespace mlir {
 

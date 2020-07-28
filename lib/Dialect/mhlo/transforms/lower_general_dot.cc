@@ -15,20 +15,20 @@ limitations under the License.
 
 // This file implements logic for lowering MHLO general dot to a regular dot.
 
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/STLExtras.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/StringSwitch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Attributes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Function.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Location.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Operation.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/PatternMatch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/TypeUtilities.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/passes.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringSwitch.h"
+#include "mlir-hlo/Dialect/mhlo/IR/hlo_ops.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/passes.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/rewriters.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Function.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/IR/TypeUtilities.h"
+#include "mlir/Pass/Pass.h"
 
 using mlir::DenseIntElementsAttr;
 using mlir::ElementsAttr;
@@ -170,8 +170,8 @@ struct GeneralDotConvert : public OpRewritePattern<mlir::mhlo::DotGeneralOp> {
   }
 };
 
-struct LegalizeGeneralDot
-    : public PassWrapper<LegalizeGeneralDot, FunctionPass> {
+struct LegalizeGeneralDotPass
+    : public PassWrapper<LegalizeGeneralDotPass, FunctionPass> {
   /// Lower all general dots that can be represented as a non-batched matmul.
   void runOnFunction() override {
     OwningRewritePatternList patterns;
@@ -187,6 +187,6 @@ void mlir::mhlo::PopulateGeneralDotOpLoweringPatterns(
   patterns->insert<GeneralDotConvert>(ctx);
 }
 
-static PassRegistration<LegalizeGeneralDot> legalize_pass(
-    "mhlo-test-lower-general-dot",
-    "Tests lowering general dot to a non-batched dot when possible");
+std::unique_ptr<::mlir::Pass> mlir::mhlo::createLegalizeGeneralDotPass() {
+  return std::make_unique<LegalizeGeneralDotPass>();
+}

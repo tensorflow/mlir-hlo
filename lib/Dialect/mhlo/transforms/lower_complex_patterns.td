@@ -16,9 +16,9 @@ limitations under the License.
 // This is the legalization pattern that converts complex operations into
 // equivalent real value operations.
 
-include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OpBase.td"
-include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.td"
-include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td"
+include "mlir/IR/OpBase.td"
+include "mlir/Dialect/StandardOps/IR/Ops.td"
+include "mlir-hlo/Dialect/mhlo/IR/hlo_ops.td"
 
 //===----------------------------------------------------------------------===//
 // Binary op patterns.

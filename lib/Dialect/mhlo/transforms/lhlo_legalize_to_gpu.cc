@@ -17,25 +17,24 @@ limitations under the License.
 
 #include <cstdint>
 
-#include "third_party/absl/memory/memory.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/ArrayRef.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/GPU/GPUDialect.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/Linalg/IR/LinalgOps.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/SCF/SCF.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/StandardOps/IR/Ops.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Attributes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/BlockAndValueMapping.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Builders.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Function.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Location.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/MLIRContext.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Operation.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/PatternMatch.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/StandardTypes.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Pass/Pass.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/Transforms/DialectConversion.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h"
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/Dialect/mhlo/transforms/map_lmhlo_to_scalar_op.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h"
+#include "mlir-hlo/Dialect/mhlo/transforms/map_lmhlo_to_scalar_op.h"
+#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/Linalg/IR/LinalgOps.h"
+#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/Function.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Operation.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/StandardTypes.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 namespace lmhlo {
@@ -168,7 +167,8 @@ class LhloReduceToGPULaunchConverter : public OpConversionPattern<ReduceOp> {
   };
 };
 
-struct LhloLegalizeToGpu : public PassWrapper<LhloLegalizeToGpu, FunctionPass> {
+struct LhloLegalizeToGpuPass
+    : public PassWrapper<LhloLegalizeToGpuPass, FunctionPass> {
   void runOnFunction() override {
     OwningRewritePatternList patterns;
     ConversionTarget target(getContext());
@@ -185,12 +185,9 @@ struct LhloLegalizeToGpu : public PassWrapper<LhloLegalizeToGpu, FunctionPass> {
 
 }  // namespace
 
-std::unique_ptr<OperationPass<FuncOp>> createLegalizeToGpuPass() {
-  return absl::make_unique<LhloLegalizeToGpu>();
+std::unique_ptr<FunctionPass> createLegalizeToGpuPass() {
+  return std::make_unique<LhloLegalizeToGpuPass>();
 }
-
-static PassRegistration<LhloLegalizeToGpu> legalize_pass(
-    "lhlo-legalize-to-gpu", "Legalize from LHLO dialect to GPU dialect");
 
 }  // namespace lmhlo
 }  // namespace mlir

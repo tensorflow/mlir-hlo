@@ -13,11 +13,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "third_party/tensorflow/compiler/mlir/hlo/include/mlir-hlo/utils/hlo_utils.h"
+#include "mlir-hlo/utils/hlo_utils.h"
 
 #include <numeric>
 
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/Attributes.h"
+#include "mlir/IR/Attributes.h"
 
 namespace mlir {
 namespace hlo {
