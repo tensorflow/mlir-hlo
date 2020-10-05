@@ -13,6 +13,12 @@ func @print_f32(%arg : f32) {
 }
 
 // Compute and print trigonometric function.
+func @atan_f32(%arg : f32) {
+  %res = atan %arg : f32
+  call @print_f32(%res) : (f32) -> ()
+  return
+}
+
 func @atan2_f32(%arg0 : f32, %arg1 : f32) {
   %res = atan2 %arg0, %arg1 : f32
   call @print_f32(%res) : (f32) -> ()
@@ -116,6 +122,38 @@ func @main() {
   // CHECK: 2.356{{.*}}
   call @atan2_f32(%cf_1_0, %cf_1_0) : (f32, f32) -> ()
   // CHECK: 0.785{{.*}}
+
+  // Atan.
+  call @atan_f32(%cf_n50_0) : (f32) -> ()
+  // CHECK: -1.550{{.*}}
+  call @atan_f32(%cf_n5_0) : (f32) -> ()
+  // CHECK: -1.373{{.*}}
+  call @atan_f32(%cf_n3_0) : (f32) -> ()
+  // CHECK: -1.249{{.*}}
+  call @atan_f32(%cf_n2_0) : (f32) -> ()
+  // CHECK: -1.107{{.*}}
+  call @atan_f32(%cf_n1_0) : (f32) -> ()
+  // CHECK: -0.785{{.*}}
+  call @atan_f32(%cf_n0_5) : (f32) -> ()
+  // CHECK: -0.463{{.*}}
+  call @atan_f32(%cf_n0_1) : (f32) -> ()
+  // CHECK: -0.099{{.*}}
+  call @atan_f32(%cf_0_0) : (f32) -> ()
+  // CHECK: 0
+  call @atan_f32(%cf_0_1) : (f32) -> ()
+  // CHECK: 0.099{{.*}}
+  call @atan_f32(%cf_0_5) : (f32) -> ()
+  // CHECK: 0.463{{.*}}
+  call @atan_f32(%cf_1_0) : (f32) -> ()
+  // CHECK: 0.785{{.*}}
+  call @atan_f32(%cf_2_0) : (f32) -> ()
+  // CHECK: 1.107{{.*}}
+  call @atan_f32(%cf_3_0) : (f32) -> ()
+  // CHECK: 1.249{{.*}}
+  call @atan_f32(%cf_5_0) : (f32) -> ()
+  // CHECK: 1.373{{.*}}
+  call @atan_f32(%cf_50_0) : (f32) -> ()
+  // CHECK: 1.550{{.*}}
 
   return
 }
