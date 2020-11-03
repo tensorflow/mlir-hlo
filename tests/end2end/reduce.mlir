@@ -1,5 +1,5 @@
 // RUN: mlir-hlo-opt %s -chlo-legalize-to-hlo \
-// RUN: -hlo-legalize-to-lhlo=results-escape-function=true -buffer-hoisting \
+// RUN: -hlo-legalize-to-lhlo -buffer-hoisting \
 // RUN: -buffer-deallocation -copy-removal -canonicalize -cse \
 // RUN: -lhlo-legalize-to-linalg -lhlo-fuse-linalg -convert-linalg-to-loops \
 // RUN: -lower-affine -convert-scf-to-std -canonicalize -cse \
