@@ -1,6 +1,6 @@
 // RUN: mlir-hlo-opt %s --mhlo-legalize-trigonometric-to-approximation --convert-std-to-llvm | mlir-cpu-runner -e main -entry-point-result=void --shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | FileCheck %s
 
-func @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 // Helper function to print scalar values.
 func @print_f32(%arg : f32) {
