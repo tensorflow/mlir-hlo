@@ -45,8 +45,7 @@ func @reduce_add() {
   }) {dimensions = dense<1> : tensor<1xi64>}
       : (tensor<2x3xf32>, tensor<f32>) -> tensor<2xf32>
 
-  %output = alloc() : memref<2xf32>
-  tensor_store %reduce, %output : memref<2xf32>
+  %output = tensor_to_memref %reduce : memref<2xf32>
   %unranked_output = memref_cast %output : memref<2xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 1 offset = 0 sizes = [2] strides = [1]
@@ -83,8 +82,7 @@ func @reduce_max() {
   }) {dimensions = dense<1> : tensor<1xi64>}
       : (tensor<2x3xf32>, tensor<f32>) -> tensor<2xf32>
 
-  %output = alloc() : memref<2xf32>
-  tensor_store %reduce, %output : memref<2xf32>
+  %output = tensor_to_memref %reduce : memref<2xf32>
   %unranked_output = memref_cast %output : memref<2xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 1 offset = 0 sizes = [2] strides = [1]

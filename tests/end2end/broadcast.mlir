@@ -45,8 +45,7 @@ func @trivial_broadcast_wrapper() {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>) -> tensor<3x4xf32>
 
-  %output_buf = alloc() : memref<3x4xf32>
-  tensor_store %output, %output_buf : memref<3x4xf32>
+  %output_buf = tensor_to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
@@ -63,8 +62,7 @@ func @trivial_broadcast_wrapper() {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = alloc() : memref<3x4xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<3x4xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -97,8 +95,7 @@ func @broadcast_in_X_dim_wrapper() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x4xf32>) -> tensor<3x4xf32>
 
-  %output_buf = alloc() : memref<3x4xf32>
-  tensor_store %output, %output_buf : memref<3x4xf32>
+  %output_buf = tensor_to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
@@ -114,8 +111,7 @@ func @broadcast_in_X_dim_wrapper() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x4xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = alloc() : memref<3x4xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<3x4xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -145,8 +141,7 @@ func @broadcast_in_Y_dim_wrapper() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<3x1xf32>) -> tensor<3x4xf32>
 
-  %output_buf = alloc() : memref<3x4xf32>
-  tensor_store %output, %output_buf : memref<3x4xf32>
+  %output_buf = tensor_to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
@@ -163,8 +158,7 @@ func @broadcast_in_Y_dim_wrapper() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<3x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = alloc() : memref<3x4xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<3x4xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -197,8 +191,7 @@ func @broadcast_in_X_dim_transpose_wrapper() {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<4x1xf32>) -> tensor<3x4xf32>
 
-  %output_buf = alloc() : memref<3x4xf32>
-  tensor_store %output, %output_buf : memref<3x4xf32>
+  %output_buf = tensor_to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
@@ -214,8 +207,7 @@ func @broadcast_in_X_dim_transpose_wrapper() {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<4x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = alloc() : memref<3x4xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<3x4xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -245,8 +237,7 @@ func @broadcast_in_Y_dim_transpose_wrapper() {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<1x3xf32>) -> tensor<3x4xf32>
 
-  %output_buf = alloc() : memref<3x4xf32>
-  tensor_store %output, %output_buf : memref<3x4xf32>
+  %output_buf = tensor_to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
@@ -263,8 +254,7 @@ func @broadcast_in_Y_dim_transpose_wrapper() {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<1x3xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = alloc() : memref<3x4xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<3x4xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -288,8 +278,7 @@ func @broadcast_scalar_1d_wrapper() {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<1xf32>) -> tensor<3x4xf32>
 
-  %output_buf = alloc() : memref<3x4xf32>
-  tensor_store %output, %output_buf : memref<3x4xf32>
+  %output_buf = tensor_to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
@@ -306,8 +295,7 @@ func @broadcast_scalar_1d_wrapper() {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = alloc() : memref<3x4xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<3x4xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -331,8 +319,7 @@ func @broadcast_scalar_2d_wrapper() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x1xf32>) -> tensor<3x4xf32>
 
-  %output_buf = alloc() : memref<3x4xf32>
-  tensor_store %output, %output_buf : memref<3x4xf32>
+  %output_buf = tensor_to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
@@ -349,8 +336,7 @@ func @broadcast_scalar_2d_wrapper() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = alloc() : memref<3x4xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<3x4xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -386,8 +372,7 @@ func @broadcast_to_the_same_shape() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<2x3xf32>) -> tensor<2x3xf32>
 
-  %output_buf = alloc() : memref<2x3xf32>
-  tensor_store %output, %output_buf : memref<2x3xf32>
+  %output_buf = tensor_to_memref %output : memref<2x3xf32>
 
   %unraked_output = memref_cast %output_buf : memref<2x3xf32> to memref<*xf32>
   call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
@@ -401,8 +386,7 @@ func @broadcast_to_the_same_shape() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<2x3xf32>, tensor<2xindex>) -> tensor<2x3xf32>
 
-  %dyn_output_buf = alloc() : memref<2x3xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<2x3xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<2x3xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<2x3xf32> to memref<*xf32>
@@ -433,8 +417,7 @@ func @broadcast_1d_to_2d() {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>) -> tensor<3x3xf32>
 
-  %output_buf = alloc() : memref<3x3xf32>
-  tensor_store %output, %output_buf : memref<3x3xf32>
+  %output_buf = tensor_to_memref %output : memref<3x3xf32>
 
   %unraked_output = memref_cast %output_buf : memref<3x3xf32> to memref<*xf32>
   call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
@@ -451,8 +434,7 @@ func @broadcast_1d_to_2d() {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x3xf32>
 
-  %dyn_output_buf = alloc() : memref<3x3xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<3x3xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x3xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<3x3xf32> to memref<*xf32>
@@ -484,8 +466,7 @@ func @broadcast_1d_to_2d_with_transpose() {
     broadcast_dimensions = dense<1> : tensor<1xi64>
   } : (tensor<3xf32>) -> tensor<3x3xf32>
 
-  %output_buf = alloc() : memref<3x3xf32>
-  tensor_store %output, %output_buf : memref<3x3xf32>
+  %output_buf = tensor_to_memref %output : memref<3x3xf32>
 
   %unraked_output = memref_cast %output_buf : memref<3x3xf32> to memref<*xf32>
   call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
@@ -501,8 +482,7 @@ func @broadcast_1d_to_2d_with_transpose() {
     broadcast_dimensions = dense<1> : tensor<1xi64>
   } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x3xf32>
 
-  %dyn_output_buf = alloc() : memref<3x3xf32>
-  tensor_store %dyn_output, %dyn_output_buf : memref<3x3xf32>
+  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x3xf32>
 
   %unranked_dyn_output = memref_cast %dyn_output_buf
     : memref<3x3xf32> to memref<*xf32>
