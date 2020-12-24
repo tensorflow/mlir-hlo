@@ -21,6 +21,7 @@ limitations under the License.
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
+#include "third_party/llvm/llvm-project/mlir/include/mlir/Dialect/Tensor/IR/Tensor.h"
 
 namespace mlir {
 namespace mhlo {
@@ -43,6 +44,7 @@ struct ChloLegalizeToHloPass
 
     // The conversion uses helpers from the standard dialect.
     conversionTarget.addLegalDialect<mlir::StandardOpsDialect>();
+    conversionTarget.addLegalDialect<mlir::tensor::TensorDialect>();
     conversionTarget.addLegalDialect<mlir::shape::ShapeDialect>();
     conversionTarget.addLegalDialect<mlir::scf::SCFDialect>();
 
