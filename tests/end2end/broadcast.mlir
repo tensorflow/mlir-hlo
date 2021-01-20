@@ -57,7 +57,7 @@ func @trivial_broadcast_wrapper() {
   // Test DynamicBroadcastInDimOp.
   %c3 = constant 3 : index
   %c4 = constant 4 : index
-  %shape = tensor_from_elements %c3, %c4 : tensor<2xindex>
+  %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x4xf32>
@@ -106,7 +106,7 @@ func @broadcast_in_X_dim_wrapper() {
 
   // Test DynamicBroadcastInDimOp.
   %c4 = constant 4 : index
-  %shape = tensor_from_elements %c3, %c4 : tensor<2xindex>
+  %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x4xf32>, tensor<2xindex>) -> tensor<3x4xf32>
@@ -153,7 +153,7 @@ func @broadcast_in_Y_dim_wrapper() {
   // Test DynamicBroadcastInDimOp.
   %c3 = constant 3 : index
   %c4 = constant 4 : index
-  %shape = tensor_from_elements %c3, %c4 : tensor<2xindex>
+  %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<3x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
@@ -202,7 +202,7 @@ func @broadcast_in_X_dim_transpose_wrapper() {
 
   // Test DynamicBroadcastInDimOp.
   %c4 = constant 4 : index
-  %shape = tensor_from_elements %c3, %c4 : tensor<2xindex>
+  %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<4x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
@@ -249,7 +249,7 @@ func @broadcast_in_Y_dim_transpose_wrapper() {
   // Test DynamicBroadcastInDimOp.
   %c3 = constant 3 : index
   %c4 = constant 4 : index
-  %shape = tensor_from_elements %c3, %c4 : tensor<2xindex>
+  %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<1x3xf32>, tensor<2xindex>) -> tensor<3x4xf32>
@@ -290,7 +290,7 @@ func @broadcast_scalar_1d_wrapper() {
   // Test DynamicBroadcastInDimOp.
   %c3 = constant 3 : index
   %c4 = constant 4 : index
-  %shape = tensor_from_elements %c3, %c4 : tensor<2xindex>
+  %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
@@ -331,7 +331,7 @@ func @broadcast_scalar_2d_wrapper() {
   // Test DynamicBroadcastInDimOp.
   %c3 = constant 3 : index
   %c4 = constant 4 : index
-  %shape = tensor_from_elements %c3, %c4 : tensor<2xindex>
+  %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
@@ -381,7 +381,7 @@ func @broadcast_to_the_same_shape() {
   // CHECK-NEXT: [1,   2,   3]
 
   // Test DynamicBroadcastInDimOp.
-  %shape = tensor_from_elements %c2, %c3 : tensor<2xindex>
+  %shape = tensor.from_elements %c2, %c3 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<2x3xf32>, tensor<2xindex>) -> tensor<2x3xf32>
@@ -429,7 +429,7 @@ func @broadcast_1d_to_2d() {
   // Test DynamicBroadcastInDimOp.
   %c3 = constant 3 : index
   %c4 = constant 3 : index
-  %shape = tensor_from_elements %c3, %c4 : tensor<2xindex>
+  %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x3xf32>
@@ -477,7 +477,7 @@ func @broadcast_1d_to_2d_with_transpose() {
 
   // Test DynamicBroadcastInDimOp.
   %c3 = constant 3 : index
-  %shape = tensor_from_elements %c3, %c3 : tensor<2xindex>
+  %shape = tensor.from_elements %c3, %c3 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<1> : tensor<1xi64>
   } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x3xf32>
