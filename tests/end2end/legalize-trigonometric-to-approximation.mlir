@@ -13,7 +13,7 @@ func @print_f32(%arg : f32) {
 }
 
 func @tanh_f32(%arg : f32) {
-  %res = tanh %arg : f32
+  %res = math.tanh %arg : f32
   call @print_f32(%res) : (f32) -> ()
   return
 }
