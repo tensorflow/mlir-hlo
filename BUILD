@@ -202,13 +202,33 @@ gentbl(
 )
 
 gentbl(
+    name = "lhlo_ops_structs_inc_gen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        ("-gen-struct-attr-decls", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.h.inc"),
+        ("-gen-struct-attr-defs", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.cc.inc"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.td",
+    td_includes = [
+        "external/mlir-hlo/include",
+        "include",
+    ],
+    td_relative_includes = [
+        "include",
+    ],
+    td_srcs = [
+        ":hlo_ops_td_files",
+        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_dialect.td",
+    ],
+)
+
+gentbl(
     name = "lhlo_ops_inc_gen",
     strip_include_prefix = "include",
     tbl_outs = [
         ("-gen-op-decls", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h.inc"),
         ("-gen-op-defs", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.cc.inc"),
-        ("-gen-struct-attr-decls", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.h.inc"),
-        ("-gen-struct-attr-defs", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.cc.inc"),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.td",
@@ -219,7 +239,11 @@ gentbl(
     td_relative_includes = [
         "include",
     ],
-    td_srcs = [":hlo_ops_td_files"],
+    td_srcs = [
+        ":hlo_ops_td_files",
+        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.td",
+        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_dialect.td",
+    ],
 )
 
 gentbl(
@@ -476,7 +500,11 @@ cc_library(
     srcs = [
         "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.cc.inc",
         "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h.inc",
+        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.cc.inc",
+        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.h",
+        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.h.inc",
         "lib/Dialect/mhlo/IR/lhlo_ops.cc",
+        "lib/Dialect/mhlo/IR/lhlo_ops_structs.cc",
     ],
     hdrs = [
         "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h",
