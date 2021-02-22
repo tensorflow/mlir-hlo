@@ -98,6 +98,66 @@ struct DotOpConverter : public OpRewritePattern<DotOp> {
   }
 };
 
+struct ConcatOpConverter : public OpRewritePattern<ConcatenateOp> {
+  using OpRewritePattern<ConcatenateOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConcatenateOp op,
+                                PatternRewriter& rewriter) const override {
+    Location loc = op.getLoc();
+    Value output = op.output();
+    MemRefType outputType = output.getType().cast<MemRefType>();
+    unsigned outputRank = outputType.getRank();
+    ArrayRef<int64_t> outputShape = outputType.getShape();
+
+    ValueRange operands = op.val();
+    uint64_t concatDim = op.dimension();
+    int64_t prevBound = 0;
+
+    for (Value operand : operands) {
+      MemRefType operandType = operand.getType().cast<MemRefType>();
+      ArrayRef<int64_t> operandShape = operandType.getShape();
+      if (!operandType.hasStaticShape()) return failure();
+      SmallVector<Value, 3> indices;
+
+      // Only for the concatenation dimension, the value is dimension -
+      // prevBound.
+      SmallVector<AffineExpr, 4> expr;
+      for (unsigned i = 0; i < outputRank; i++) {
+        AffineExpr d0 = (i == concatDim)
+                            ? rewriter.getAffineDimExpr(concatDim) - prevBound
+                            : rewriter.getAffineDimExpr(i);
+
+        expr.push_back(d0);
+      }
+      AffineMap map =
+          AffineMap::get(outputRank, 0, expr, rewriter.getContext());
+
+      AffineForOp forOp;
+      
+      // Create multiple for loop nests iterating along the concatenation
+      // dimension.
+      OpBuilder::InsertionGuard guard(rewriter);
+      for (unsigned i = 0; i < outputRank; i++) {
+        if (i == concatDim) {
+          forOp = rewriter.create<AffineForOp>(loc, prevBound,
+                                               prevBound + operandShape[i]);
+          prevBound += operandShape[i];
+          indices.push_back(forOp.getInductionVar());
+        } else {
+          forOp = rewriter.create<AffineForOp>(loc, 0, outputShape[i]);
+          indices.push_back(forOp.getInductionVar());
+        }
+        rewriter.setInsertionPointToStart(forOp.getBody());
+      }
+      Value storeVal =
+          rewriter.create<AffineLoadOp>(loc, operand, map, indices);
+      rewriter.create<AffineStoreOp>(loc, storeVal, output, indices);
+    }
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 template <typename LhloOpTy>
 struct BinaryOpConverter : public OpRewritePattern<LhloOpTy> {
   using OpRewritePattern<LhloOpTy>::OpRewritePattern;
@@ -145,6 +205,7 @@ void populateLHLOToAffineConversionPattern(MLIRContext* context,
       BinaryOpConverter<lmhlo::MinOp>,
       BinaryOpConverter<lmhlo::MulOp>,
       BinaryOpConverter<lmhlo::SubOp>,
+      ConcatOpConverter,
       DotOpConverter>(context);
   // clang-format on
 }
