@@ -1,39 +1,30 @@
-load("@llvm-project//mlir:tblgen.bzl", "gentbl")
+load("@llvm-project//mlir:tblgen.bzl", "gentbl", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],  # Apache 2.0
 )
 
-exports_files(["include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td"])
+exports_files([
+    "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td",
+    "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.td",
+])
 
-exports_files(["include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.td"])
-
-filegroup(
+td_library(
     name = "hlo_ops_td_files",
-    srcs = [
-        "include/mlir-hlo/Dialect/mhlo/IR/chlo_ops.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_enums.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_structs.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/hlo_utils.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/infer_fusibility_op_interface.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_base.td",
-        "@llvm-project//mlir:OpBaseTdFiles",
-        "@llvm-project//mlir:SideEffectTdFiles",
+    srcs = glob(["include/mlir-hlo/Dialect/mhlo/IR/*.td"]) + [
+        # TODO(gcmn): These should be encapsulate in a td_library.
         "@llvm-project//mlir:include/mlir/Interfaces/CopyOpInterface.td",
         "@llvm-project//mlir:include/mlir/Interfaces/InferTypeOpInterface.td",
         "@llvm-project//mlir:include/mlir/Interfaces/LoopLikeInterface.td",
         "@llvm-project//mlir:include/mlir/Interfaces/ViewLikeInterface.td",
+        "@llvm-project//mlir:include/mlir/Dialect/Shape/IR/ShapeBase.td",
+        "@llvm-project//mlir:include/mlir/Dialect/Shape/IR/ShapeOps.td",
     ],
-)
-
-filegroup(
-    name = "hlo_ops_base_td",
-    srcs = [
-        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td",
+    includes = ["include"],
+    deps = [
+        "@llvm-project//mlir:OpBaseTdFiles",
+        "@llvm-project//mlir:SideEffectTdFiles",
     ],
 )
 
@@ -52,7 +43,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_srcs = [
+    deps = [
         "@llvm-project//mlir:PassBaseTdFiles",
     ],
 )
@@ -72,7 +63,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_srcs = [
+    deps = [
         "@llvm-project//mlir:PassBaseTdFiles",
     ],
 )
@@ -90,10 +81,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [":hlo_ops_td_files"],
+    deps = [":hlo_ops_td_files"],
 )
 
 gentbl(
@@ -108,16 +96,8 @@ gentbl(
     td_includes = [
         "external/mlir-hlo/include",
         "include",
-        "include/mlir-hlo/Dialect/mhlo/IR/hlo_utils.td",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
-        ":hlo_ops_base_td",
-        ":hlo_ops_td_files",
-        "@llvm-project//mlir:include/mlir/Interfaces/InferTypeOpInterface.td",
-    ],
+    deps = [":hlo_ops_td_files"],
 )
 
 gentbl(
@@ -133,10 +113,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [":hlo_ops_td_files"],
+    deps = [":hlo_ops_td_files"],
 )
 
 gentbl(
@@ -151,10 +128,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [":hlo_ops_td_files"],
+    deps = [":hlo_ops_td_files"],
 )
 
 gentbl(
@@ -169,10 +143,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [":hlo_ops_td_files"],
+    deps = [":hlo_ops_td_files"],
 )
 
 gentbl(
@@ -190,14 +161,9 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
+    deps = [
         ":hlo_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
-        "@llvm-project//mlir:include/mlir/Dialect/Shape/IR/ShapeBase.td",
-        "@llvm-project//mlir:include/mlir/Dialect/Shape/IR/ShapeOps.td",
     ],
 )
 
@@ -214,13 +180,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
-        ":hlo_ops_td_files",
-        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_dialect.td",
-    ],
+    deps = [":hlo_ops_td_files"],
 )
 
 gentbl(
@@ -236,14 +196,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
-        ":hlo_ops_td_files",
-        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_dialect.td",
-    ],
+    deps = [":hlo_ops_td_files"],
 )
 
 gentbl(
@@ -259,13 +212,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
-        ":hlo_ops_td_files",
-        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_base.td",
-    ],
+    deps = [":hlo_ops_td_files"],
 )
 
 gentbl(
@@ -281,10 +228,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [":hlo_ops_td_files"],
+    deps = [":hlo_ops_td_files"],
 )
 
 cc_library(
@@ -335,15 +279,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
-        ":hlo_ops_td_files",
-        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_base.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_structs.td",
-        "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_enums.td",
-    ],
+    deps = [":hlo_ops_td_files"],
 )
 
 #TODO(aminim): revisit the naming and grouping of these rules post-move.
@@ -359,10 +295,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [":hlo_ops_td_files"],
+    deps = [":hlo_ops_td_files"],
 )
 
 gentbl(
@@ -383,12 +316,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
-        ":hlo_ops_td_files",
-    ],
+    deps = [":hlo_ops_td_files"],
 )
 
 cc_library(
@@ -835,10 +763,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
+    deps = [
         ":hlo_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
@@ -929,12 +854,8 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
+    deps = [
         ":hlo_ops_td_files",
-        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:StdOpsTdFiles",
     ],
 )
@@ -1032,12 +953,7 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
-    td_relative_includes = [
-        "include",
-    ],
-    td_srcs = [
-        ":hlo_ops_td_files",
-    ],
+    deps = [":hlo_ops_td_files"],
 )
 
 cc_library(
