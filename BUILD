@@ -164,6 +164,7 @@ gentbl(
     deps = [
         ":hlo_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
+        "@llvm-project//mlir:TensorOpsTdFiles",
     ],
 )
 
