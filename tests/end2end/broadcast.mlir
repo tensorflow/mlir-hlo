@@ -27,7 +27,7 @@ func private @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
 func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 func @trivial_broadcast_wrapper() {
-  %input_buf = alloc() : memref<3xf32>
+  %input_buf = memref.alloc() : memref<3xf32>
 
   %c1f32 = constant 1.0 : f32
   %c2f32 = constant 2.0 : f32
@@ -36,19 +36,19 @@ func @trivial_broadcast_wrapper() {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  store %c1f32, %input_buf[%c0] : memref<3xf32>
-  store %c2f32, %input_buf[%c1] : memref<3xf32>
-  store %c3f32, %input_buf[%c2] : memref<3xf32>
-  %input = tensor_load %input_buf : memref<3xf32>
+  memref.store %c1f32, %input_buf[%c0] : memref<3xf32>
+  memref.store %c2f32, %input_buf[%c1] : memref<3xf32>
+  memref.store %c3f32, %input_buf[%c2] : memref<3xf32>
+  %input = memref.tensor_load %input_buf : memref<3xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>) -> tensor<3x4xf32>
 
-  %output_buf = tensor_to_memref %output : memref<3x4xf32>
+  %output_buf = memref.buffer_cast %output : memref<3x4xf32>
 
-  %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
+  %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   1,   1,   1]
@@ -63,9 +63,9 @@ func @trivial_broadcast_wrapper() {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
@@ -76,29 +76,29 @@ func @trivial_broadcast_wrapper() {
 }
 
 func @broadcast_in_X_dim_wrapper() {
-  %input_buf = alloc() : memref<1x4xf32>
+  %input_buf = memref.alloc() : memref<1x4xf32>
   %c1f32 = constant 1.0 : f32
   %c0 = constant 0 : index
-  store %c1f32, %input_buf[%c0, %c0] : memref<1x4xf32>
+  memref.store %c1f32, %input_buf[%c0, %c0] : memref<1x4xf32>
   %c2f32 = constant 2.0 : f32
   %c1 = constant 1 : index
-  store %c2f32, %input_buf[%c0, %c1] : memref<1x4xf32>
+  memref.store %c2f32, %input_buf[%c0, %c1] : memref<1x4xf32>
   %c3f32 = constant 3.0 : f32
   %c2 = constant 2 : index
-  store %c3f32, %input_buf[%c0, %c2] : memref<1x4xf32>
+  memref.store %c3f32, %input_buf[%c0, %c2] : memref<1x4xf32>
   %c4f32 = constant 4.0 : f32
   %c3 = constant 3 : index
-  store %c4f32, %input_buf[%c0, %c3] : memref<1x4xf32>
-  %input = tensor_load %input_buf : memref<1x4xf32>
+  memref.store %c4f32, %input_buf[%c0, %c3] : memref<1x4xf32>
+  %input = memref.tensor_load %input_buf : memref<1x4xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x4xf32>) -> tensor<3x4xf32>
 
-  %output_buf = tensor_to_memref %output : memref<3x4xf32>
+  %output_buf = memref.buffer_cast %output : memref<3x4xf32>
 
-  %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
+  %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   2,   3,   4]
@@ -112,9 +112,9 @@ func @broadcast_in_X_dim_wrapper() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x4xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
@@ -125,26 +125,26 @@ func @broadcast_in_X_dim_wrapper() {
 }
 
 func @broadcast_in_Y_dim_wrapper() {
-  %input_buf = alloc() : memref<3x1xf32>
+  %input_buf = memref.alloc() : memref<3x1xf32>
   %c1f32 = constant 1.0 : f32
   %c0 = constant 0 : index
-  store %c1f32, %input_buf[%c0, %c0] : memref<3x1xf32>
+  memref.store %c1f32, %input_buf[%c0, %c0] : memref<3x1xf32>
   %c2f32 = constant 2.0 : f32
   %c1 = constant 1 : index
-  store %c2f32, %input_buf[%c1, %c0] : memref<3x1xf32>
+  memref.store %c2f32, %input_buf[%c1, %c0] : memref<3x1xf32>
   %c3f32 = constant 3.0 : f32
   %c2 = constant 2 : index
-  store %c3f32, %input_buf[%c2, %c0] : memref<3x1xf32>
-  %input = tensor_load %input_buf : memref<3x1xf32>
+  memref.store %c3f32, %input_buf[%c2, %c0] : memref<3x1xf32>
+  %input = memref.tensor_load %input_buf : memref<3x1xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<3x1xf32>) -> tensor<3x4xf32>
 
-  %output_buf = tensor_to_memref %output : memref<3x4xf32>
+  %output_buf = memref.buffer_cast %output : memref<3x4xf32>
 
-  %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
+  %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   1,   1,   1]
@@ -159,9 +159,9 @@ func @broadcast_in_Y_dim_wrapper() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<3x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
@@ -172,29 +172,29 @@ func @broadcast_in_Y_dim_wrapper() {
 }
 
 func @broadcast_in_X_dim_transpose_wrapper() {
-  %input_buf = alloc() : memref<4x1xf32>
+  %input_buf = memref.alloc() : memref<4x1xf32>
   %c1f32 = constant 1.0 : f32
   %c0 = constant 0 : index
-  store %c1f32, %input_buf[%c0, %c0] : memref<4x1xf32>
+  memref.store %c1f32, %input_buf[%c0, %c0] : memref<4x1xf32>
   %c2f32 = constant 2.0 : f32
   %c1 = constant 1 : index
-  store %c2f32, %input_buf[%c1, %c0] : memref<4x1xf32>
+  memref.store %c2f32, %input_buf[%c1, %c0] : memref<4x1xf32>
   %c3f32 = constant 3.0 : f32
   %c2 = constant 2 : index
-  store %c3f32, %input_buf[%c2, %c0] : memref<4x1xf32>
+  memref.store %c3f32, %input_buf[%c2, %c0] : memref<4x1xf32>
   %c4f32 = constant 4.0 : f32
   %c3 = constant 3 : index
-  store %c4f32, %input_buf[%c3, %c0] : memref<4x1xf32>
-  %input = tensor_load %input_buf : memref<4x1xf32>
+  memref.store %c4f32, %input_buf[%c3, %c0] : memref<4x1xf32>
+  %input = memref.tensor_load %input_buf : memref<4x1xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<4x1xf32>) -> tensor<3x4xf32>
 
-  %output_buf = tensor_to_memref %output : memref<3x4xf32>
+  %output_buf = memref.buffer_cast %output : memref<3x4xf32>
 
-  %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
+  %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   2,   3,   4]
@@ -208,9 +208,9 @@ func @broadcast_in_X_dim_transpose_wrapper() {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<4x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
@@ -221,26 +221,26 @@ func @broadcast_in_X_dim_transpose_wrapper() {
 }
 
 func @broadcast_in_Y_dim_transpose_wrapper() {
-  %input_buf = alloc() : memref<1x3xf32>
+  %input_buf = memref.alloc() : memref<1x3xf32>
   %c1f32 = constant 1.0 : f32
   %c0 = constant 0 : index
-  store %c1f32, %input_buf[%c0, %c0] : memref<1x3xf32>
+  memref.store %c1f32, %input_buf[%c0, %c0] : memref<1x3xf32>
   %c2f32 = constant 2.0 : f32
   %c1 = constant 1 : index
-  store %c2f32, %input_buf[%c0, %c1] : memref<1x3xf32>
+  memref.store %c2f32, %input_buf[%c0, %c1] : memref<1x3xf32>
   %c3f32 = constant 3.0 : f32
   %c2 = constant 2 : index
-  store %c3f32, %input_buf[%c0, %c2] : memref<1x3xf32>
-  %input = tensor_load %input_buf : memref<1x3xf32>
+  memref.store %c3f32, %input_buf[%c0, %c2] : memref<1x3xf32>
+  %input = memref.tensor_load %input_buf : memref<1x3xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<1x3xf32>) -> tensor<3x4xf32>
 
-  %output_buf = tensor_to_memref %output : memref<3x4xf32>
+  %output_buf = memref.buffer_cast %output : memref<3x4xf32>
 
-  %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
+  %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT-NEXT: [1,   1,   1,   1]
@@ -255,9 +255,9 @@ func @broadcast_in_Y_dim_transpose_wrapper() {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
   } : (tensor<1x3xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
@@ -268,20 +268,20 @@ func @broadcast_in_Y_dim_transpose_wrapper() {
 }
 
 func @broadcast_scalar_1d_wrapper() {
-  %input_buf = alloc() : memref<1xf32>
+  %input_buf = memref.alloc() : memref<1xf32>
   %c1f32 = constant 1.0 : f32
   %c0 = constant 0 : index
-  store %c1f32, %input_buf[%c0] : memref<1xf32>
-  %input = tensor_load %input_buf : memref<1xf32>
+  memref.store %c1f32, %input_buf[%c0] : memref<1xf32>
+  %input = memref.tensor_load %input_buf : memref<1xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<1xf32>) -> tensor<3x4xf32>
 
-  %output_buf = tensor_to_memref %output : memref<3x4xf32>
+  %output_buf = memref.buffer_cast %output : memref<3x4xf32>
 
-  %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
+  %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
@@ -296,9 +296,9 @@ func @broadcast_scalar_1d_wrapper() {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
@@ -309,20 +309,20 @@ func @broadcast_scalar_1d_wrapper() {
 }
 
 func @broadcast_scalar_2d_wrapper() {
-  %input_buf = alloc() : memref<1x1xf32>
+  %input_buf = memref.alloc() : memref<1x1xf32>
   %c1f32 = constant 1.0 : f32
   %c0 = constant 0 : index
-  store %c1f32, %input_buf[%c0, %c0] : memref<1x1xf32>
-  %input = tensor_load %input_buf : memref<1x1xf32>
+  memref.store %c1f32, %input_buf[%c0, %c0] : memref<1x1xf32>
+  %input = memref.tensor_load %input_buf : memref<1x1xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x1xf32>) -> tensor<3x4xf32>
 
-  %output_buf = tensor_to_memref %output : memref<3x4xf32>
+  %output_buf = memref.buffer_cast %output : memref<3x4xf32>
 
-  %unranked_output = memref_cast %output_buf : memref<3x4xf32> to memref<*xf32>
+  %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
@@ -337,9 +337,9 @@ func @broadcast_scalar_2d_wrapper() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<1x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
@@ -350,7 +350,7 @@ func @broadcast_scalar_2d_wrapper() {
 }
 
 func @broadcast_to_the_same_shape() {
-  %input_buf = alloc() : memref<2x3xf32>
+  %input_buf = memref.alloc() : memref<2x3xf32>
 
   %c1f32 = constant 1.0 : f32
   %c2f32 = constant 2.0 : f32
@@ -360,22 +360,22 @@ func @broadcast_to_the_same_shape() {
   %c1 = constant 1 : index
   %c2 = constant 2 : index
   %c3 = constant 3 : index
-  store %c1f32, %input_buf[%c0, %c0] : memref<2x3xf32>
-  store %c1f32, %input_buf[%c1, %c0] : memref<2x3xf32>
-  store %c2f32, %input_buf[%c0, %c1] : memref<2x3xf32>
-  store %c2f32, %input_buf[%c1, %c1] : memref<2x3xf32>
-  store %c3f32, %input_buf[%c0, %c2] : memref<2x3xf32>
-  store %c3f32, %input_buf[%c1, %c2] : memref<2x3xf32>
-  %input = tensor_load %input_buf : memref<2x3xf32>
+  memref.store %c1f32, %input_buf[%c0, %c0] : memref<2x3xf32>
+  memref.store %c1f32, %input_buf[%c1, %c0] : memref<2x3xf32>
+  memref.store %c2f32, %input_buf[%c0, %c1] : memref<2x3xf32>
+  memref.store %c2f32, %input_buf[%c1, %c1] : memref<2x3xf32>
+  memref.store %c3f32, %input_buf[%c0, %c2] : memref<2x3xf32>
+  memref.store %c3f32, %input_buf[%c1, %c2] : memref<2x3xf32>
+  %input = memref.tensor_load %input_buf : memref<2x3xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<2x3xf32>) -> tensor<2x3xf32>
 
-  %output_buf = tensor_to_memref %output : memref<2x3xf32>
+  %output_buf = memref.buffer_cast %output : memref<2x3xf32>
 
-  %unraked_output = memref_cast %output_buf : memref<2x3xf32> to memref<*xf32>
+  %unraked_output = memref.cast %output_buf : memref<2x3xf32> to memref<*xf32>
   call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   2,   3]
@@ -387,9 +387,9 @@ func @broadcast_to_the_same_shape() {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<2x3xf32>, tensor<2xindex>) -> tensor<2x3xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<2x3xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<2x3xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<2x3xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
@@ -399,7 +399,7 @@ func @broadcast_to_the_same_shape() {
 }
 
 func @broadcast_1d_to_2d() {
-  %input_buf = alloc() : memref<3xf32>
+  %input_buf = memref.alloc() : memref<3xf32>
 
   %c1f32 = constant 1.0 : f32
   %c2f32 = constant 2.0 : f32
@@ -408,19 +408,19 @@ func @broadcast_1d_to_2d() {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  store %c1f32, %input_buf[%c0] : memref<3xf32>
-  store %c2f32, %input_buf[%c1] : memref<3xf32>
-  store %c3f32, %input_buf[%c2] : memref<3xf32>
-  %input = tensor_load %input_buf : memref<3xf32>
+  memref.store %c1f32, %input_buf[%c0] : memref<3xf32>
+  memref.store %c2f32, %input_buf[%c1] : memref<3xf32>
+  memref.store %c3f32, %input_buf[%c2] : memref<3xf32>
+  %input = memref.tensor_load %input_buf : memref<3xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>) -> tensor<3x3xf32>
 
-  %output_buf = tensor_to_memref %output : memref<3x3xf32>
+  %output_buf = memref.buffer_cast %output : memref<3x3xf32>
 
-  %unraked_output = memref_cast %output_buf : memref<3x3xf32> to memref<*xf32>
+  %unraked_output = memref.cast %output_buf : memref<3x3xf32> to memref<*xf32>
   call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   1,   1]
@@ -435,9 +435,9 @@ func @broadcast_1d_to_2d() {
     broadcast_dimensions = dense<0> : tensor<1xi64>
   } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x3xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x3xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x3xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x3xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]
@@ -448,7 +448,7 @@ func @broadcast_1d_to_2d() {
 }
 
 func @broadcast_1d_to_2d_with_transpose() {
-  %input_buf = alloc() : memref<3xf32>
+  %input_buf = memref.alloc() : memref<3xf32>
 
   %c1f32 = constant 1.0 : f32
   %c2f32 = constant 2.0 : f32
@@ -457,19 +457,19 @@ func @broadcast_1d_to_2d_with_transpose() {
   %c0 = constant 0 : index
   %c1 = constant 1 : index
   %c2 = constant 2 : index
-  store %c1f32, %input_buf[%c0] : memref<3xf32>
-  store %c2f32, %input_buf[%c1] : memref<3xf32>
-  store %c3f32, %input_buf[%c2] : memref<3xf32>
-  %input = tensor_load %input_buf : memref<3xf32>
+  memref.store %c1f32, %input_buf[%c0] : memref<3xf32>
+  memref.store %c2f32, %input_buf[%c1] : memref<3xf32>
+  memref.store %c3f32, %input_buf[%c2] : memref<3xf32>
+  %input = memref.tensor_load %input_buf : memref<3xf32>
 
   // Test BroadcastInDimOp.
   %output = "mhlo.broadcast_in_dim"(%input) {
     broadcast_dimensions = dense<1> : tensor<1xi64>
   } : (tensor<3xf32>) -> tensor<3x3xf32>
 
-  %output_buf = tensor_to_memref %output : memref<3x3xf32>
+  %output_buf = memref.buffer_cast %output : memref<3x3xf32>
 
-  %unraked_output = memref_cast %output_buf : memref<3x3xf32> to memref<*xf32>
+  %unraked_output = memref.cast %output_buf : memref<3x3xf32> to memref<*xf32>
   call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   2,   3]
@@ -483,9 +483,9 @@ func @broadcast_1d_to_2d_with_transpose() {
     broadcast_dimensions = dense<1> : tensor<1xi64>
   } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x3xf32>
 
-  %dyn_output_buf = tensor_to_memref %dyn_output : memref<3x3xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x3xf32>
 
-  %unranked_dyn_output = memref_cast %dyn_output_buf
+  %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x3xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]

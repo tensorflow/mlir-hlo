@@ -4,10 +4,10 @@ func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface
 
 // Helper function to print scalar values.
 func @print_f32(%arg : f32) {
-  %mem = alloca() : memref<1xf32>
+  %mem = memref.alloca() : memref<1xf32>
   %c0 = constant 0 : index
-  store %arg, %mem[%c0] : memref<1xf32>
-  %mem_unranked = memref_cast %mem : memref<1xf32> to memref<*xf32>
+  memref.store %arg, %mem[%c0] : memref<1xf32>
+  %mem_unranked = memref.cast %mem : memref<1xf32> to memref<*xf32>
   call @print_memref_f32(%mem_unranked) : (memref<*xf32>) -> ()
   return
 }
