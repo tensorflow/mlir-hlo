@@ -1,4 +1,4 @@
-load("@llvm-project//mlir:tblgen.bzl", "gentbl", "gentbl_filegroup", "td_library")
+load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -32,12 +32,15 @@ td_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "MhloPassIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
         (
-            "-gen-pass-decls -name MHLO",
+            [
+                "-gen-pass-decls",
+                "-name=MHLO",
+            ],
             "include/mlir-hlo/Dialect/mhlo/transforms/mhlo_passes.h.inc",
         ),
     ],
@@ -52,12 +55,15 @@ gentbl(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "LmhloPassIncGen",
     strip_include_prefix = "include",
     tbl_outs = [
         (
-            "-gen-pass-decls -name LMHLO",
+            [
+                "-gen-pass-decls",
+                "-name=LMHLO",
+            ],
             "include/mlir-hlo/Dialect/mhlo/transforms/lmhlo_passes.h.inc",
         ),
     ],
@@ -72,12 +78,18 @@ gentbl(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "chlo_ops_inc_gen",
     strip_include_prefix = "include",
     tbl_outs = [
-        ("-gen-op-decls", "include/mlir-hlo/Dialect/mhlo/IR/chlo_ops.h.inc"),
-        ("-gen-op-defs", "include/mlir-hlo/Dialect/mhlo/IR/chlo_ops.cc.inc"),
+        (
+            ["-gen-op-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/chlo_ops.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/chlo_ops.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/chlo_ops.td",
@@ -88,12 +100,18 @@ gentbl(
     deps = [":hlo_ops_td_files"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "hlo_ops_inc_gen",
     strip_include_prefix = "include",
     tbl_outs = [
-        ("-gen-op-decls", "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h.inc"),
-        ("-gen-op-defs", "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.cc.inc"),
+        (
+            ["-gen-op-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td",
@@ -104,12 +122,18 @@ gentbl(
     deps = [":hlo_ops_td_files"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "hlo_ops_base_inc_gen",
     strip_include_prefix = "include",
     tbl_outs = [
-        ("-gen-op-decls", "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.h.inc"),
-        ("-gen-op-defs", "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.cc.inc"),
+        (
+            ["-gen-op-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td",
@@ -120,11 +144,17 @@ gentbl(
     deps = [":hlo_ops_td_files"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "hlo_ops_base_structs_inc_gen",
     tbl_outs = [
-        ("-gen-struct-attr-decls", "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_structs.h.inc"),
-        ("-gen-struct-attr-defs", "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_structs.cc.inc"),
+        (
+            ["-gen-struct-attr-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_structs.h.inc",
+        ),
+        (
+            ["-gen-struct-attr-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_structs.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td",
@@ -135,11 +165,17 @@ gentbl(
     deps = [":hlo_ops_td_files"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "hlo_ops_base_enums_inc_gen",
     tbl_outs = [
-        ("-gen-enum-decls", "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_enums.h.inc"),
-        ("-gen-enum-defs", "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_enums.cc.inc"),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_enums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_enums.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td",
@@ -150,12 +186,12 @@ gentbl(
     deps = [":hlo_ops_td_files"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "hlo_ops_pattern_gen",
     strip_include_prefix = "lib/Dialect/mhlo/IR/",
     tbl_outs = [
         (
-            "-gen-rewriters",
+            ["-gen-rewriters"],
             "lib/Dialect/mhlo/IR/hlo_patterns.cc.inc",
         ),
     ],
@@ -172,12 +208,18 @@ gentbl(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "lhlo_ops_structs_inc_gen",
     strip_include_prefix = "include",
     tbl_outs = [
-        ("-gen-struct-attr-decls", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.h.inc"),
-        ("-gen-struct-attr-defs", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.cc.inc"),
+        (
+            ["-gen-struct-attr-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.h.inc",
+        ),
+        (
+            ["-gen-struct-attr-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.td",
@@ -188,12 +230,18 @@ gentbl(
     deps = [":hlo_ops_td_files"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "lhlo_ops_inc_gen",
     strip_include_prefix = "include",
     tbl_outs = [
-        ("-gen-op-decls", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h.inc"),
-        ("-gen-op-defs", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.cc.inc"),
+        (
+            ["-gen-op-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.td",
@@ -204,12 +252,18 @@ gentbl(
     deps = [":hlo_ops_td_files"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "lhlo_gpu_ops_structs_inc_gen",
     strip_include_prefix = "include",
     tbl_outs = [
-        ("-gen-struct-attr-decls", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_structs.h.inc"),
-        ("-gen-struct-attr-defs", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_structs.cc.inc"),
+        (
+            ["-gen-struct-attr-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_structs.h.inc",
+        ),
+        (
+            ["-gen-struct-attr-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_structs.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_structs.td",
@@ -220,12 +274,18 @@ gentbl(
     deps = [":hlo_ops_td_files"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "lhlo_gpu_ops_enums_inc_gen",
     strip_include_prefix = "include",
     tbl_outs = [
-        ("-gen-enum-decls", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_enums.h.inc"),
-        ("-gen-enum-defs", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_enums.cc.inc"),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_enums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_enums.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_enums.td",
@@ -239,7 +299,10 @@ gentbl(
 gentbl_filegroup(
     name = "hlo_ops_doc_gen",
     tbl_outs = [
-        ("-gen-dialect-doc", "g3doc/hlo_ops.md"),
+        (
+            ["-gen-dialect-doc"],
+            "g3doc/hlo_ops.md",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td",
@@ -249,7 +312,10 @@ gentbl_filegroup(
 gentbl_filegroup(
     name = "lhlo_ops_doc_gen",
     tbl_outs = [
-        ("-gen-dialect-doc", "g3doc/lhlo_ops.md"),
+        (
+            ["-gen-dialect-doc"],
+            "g3doc/lhlo_ops.md",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.td",
@@ -302,12 +368,18 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "lhlo_gpu_ops_inc_gen",
     strip_include_prefix = "include",
     tbl_outs = [
-        ("-gen-op-decls", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops.h.inc"),
-        ("-gen-op-defs", "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops.cc.inc"),
+        (
+            ["-gen-op-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops.td",
@@ -319,11 +391,14 @@ gentbl(
 )
 
 #TODO(aminim): revisit the naming and grouping of these rules post-move.
-gentbl(
+gentbl_cc_library(
     name = "canonicalize_inc_gen",
     strip_include_prefix = "lib/Dialect/mhlo/IR/",
     tbl_outs = [
-        ("-gen-rewriters", "lib/Dialect/mhlo/IR/mhlo_canonicalize.inc"),
+        (
+            ["-gen-rewriters"],
+            "lib/Dialect/mhlo/IR/mhlo_canonicalize.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "lib/Dialect/mhlo/IR/mhlo_canonicalize.td",
@@ -334,15 +409,15 @@ gentbl(
     deps = [":hlo_ops_td_files"],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "infer_fusibility_op_interface_gen",
     tbl_outs = [
         (
-            "-gen-op-interface-decls",
+            ["-gen-op-interface-decls"],
             "include/mlir-hlo/Dialect/mhlo/IR/infer_fusibility_op_interface.h.inc",
         ),
         (
-            "-gen-op-interface-defs",
+            ["-gen-op-interface-defs"],
             "include/mlir-hlo/Dialect/mhlo/IR/infer_fusibility_op_interface.cpp.inc",
         ),
     ],
@@ -845,11 +920,14 @@ cc_library(
     alwayslink = 1,
 )
 
-gentbl(
+gentbl_cc_library(
     name = "legalize_to_standard_inc_gen",
     strip_include_prefix = "lib/Dialect/mhlo/transforms/",
     tbl_outs = [
-        ("-gen-rewriters", "lib/Dialect/mhlo/transforms/generated_legalize_to_standard.inc"),
+        (
+            ["-gen-rewriters"],
+            "lib/Dialect/mhlo/transforms/generated_legalize_to_standard.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "lib/Dialect/mhlo/transforms/legalize_to_standard_patterns.td",
@@ -936,11 +1014,14 @@ cc_library(
     alwayslink = 1,
 )
 
-gentbl(
+gentbl_cc_library(
     name = "lower_complex_inc_gen",
     strip_include_prefix = "lib/Dialect/mhlo/transforms/",
     tbl_outs = [
-        ("-gen-rewriters", "lib/Dialect/mhlo/transforms/generated_lower_complex.inc"),
+        (
+            ["-gen-rewriters"],
+            "lib/Dialect/mhlo/transforms/generated_lower_complex.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "lib/Dialect/mhlo/transforms/lower_complex_patterns.td",
@@ -1033,12 +1114,12 @@ cc_library(
     ],
 )
 
-gentbl(
+gentbl_cc_library(
     name = "chlo_legalize_to_hlo_inc_gen",
     strip_include_prefix = "lib/Dialect/mhlo/transforms/",
     tbl_outs = [
         (
-            "-gen-rewriters",
+            ["-gen-rewriters"],
             "lib/Dialect/mhlo/transforms/generated_chlo_legalize_to_hlo.inc",
         ),
     ],
