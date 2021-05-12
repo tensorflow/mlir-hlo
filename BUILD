@@ -1,4 +1,4 @@
-load("@llvm-project//mlir:tblgen.bzl", "gentbl", "td_library")
+load("@llvm-project//mlir:tblgen.bzl", "gentbl", "gentbl_filegroup", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -233,6 +233,26 @@ gentbl(
         "external/mlir-hlo/include",
         "include",
     ],
+    deps = [":hlo_ops_td_files"],
+)
+
+gentbl_filegroup(
+    name = "hlo_ops_doc_gen",
+    tbl_outs = [
+        ("-gen-dialect-doc", "g3doc/hlo_ops.md"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td",
+    deps = [":hlo_ops_td_files"],
+)
+
+gentbl_filegroup(
+    name = "lhlo_ops_doc_gen",
+    tbl_outs = [
+        ("-gen-dialect-doc", "g3doc/lhlo_ops.md"),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.td",
     deps = [":hlo_ops_td_files"],
 )
 
