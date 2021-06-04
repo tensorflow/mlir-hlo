@@ -15,9 +15,9 @@
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-LLVM_COMMIT = "23a116c8c446f82ec5e2d2337c3253d0dc9c75b5"
+LLVM_COMMIT = "b109172d993edacd9853a8bbb8128a94da014399"
 
-LLVM_SHA256 = "a967ffa8052ade2ee5c3c6532843d5796e0e3831369b70ffd266f5fc33e24956"
+LLVM_SHA256 = "36ee6bf7d89b43034c1c58c57aa63d0703d1688807480969dfd1f4d7ccaa3787"
 
 LLVM_BAZEL_TAG = "llvm-project-{commit}".format(commit = LLVM_COMMIT)
 
