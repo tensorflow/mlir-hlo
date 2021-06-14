@@ -611,11 +611,107 @@ cc_library(
     alwayslink = 1,
 )
 
+gentbl_cc_library(
+    name = "DiscRalPassIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=RAL",
+            ],
+            "include/mlir-hlo/Dialect/mhlo/transforms/disc_ral_passes.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/mlir-hlo/Dialect/mhlo/transforms/disc_ral_passes.td",
+    td_includes = [
+        "external/mlir-hlo/include",
+        "include",
+    ],
+    deps = [
+        "@llvm-project//mlir:PassBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "disc_ral_ops_inc_gen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/disc_ral_ops.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/disc_ral_ops.cc.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/mlir-hlo/Dialect/mhlo/IR/disc_ral_ops.td",
+    td_includes = [
+        "external/mlir-hlo/include",
+        "include",
+    ],
+    deps = [":hlo_ops_td_files"],
+)
+
+cc_library(
+    name = "disc_ral",
+    srcs = [
+        "include/mlir-hlo/Dialect/mhlo/IR/disc_ral_ops.cc.inc",
+        "include/mlir-hlo/Dialect/mhlo/IR/disc_ral_ops.h.inc",
+        "lib/Dialect/mhlo/IR/disc_ral_ops.cc",
+    ],
+    hdrs = [
+        "include/mlir-hlo/Dialect/mhlo/IR/disc_ral_ops.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":disc_ral_ops_inc_gen",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Analysis",
+        "@llvm-project//mlir:ControlFlowInterfaces",
+        "@llvm-project//mlir:CopyOpInterface",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:InferTypeOpInterface",
+        "@llvm-project//mlir:LoopLikeInterface",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:SideEffects",
+        "@llvm-project//mlir:StandardOps",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TransformUtils",
+        "@llvm-project//mlir:Transforms",
+        "@llvm-project//mlir:ViewLikeInterface",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
+    name = "ral_inject_execution_context",
+    srcs = ["lib/Dialect/mhlo/transforms/ral_inject_execution_context.cc"],
+    hdrs = ["include/mlir-hlo/Dialect/mhlo/transforms/passes.h"],
+    deps = [
+        ":disc_ral",
+        ":pass_details",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:SCFDialect",
+        "@llvm-project//mlir:Shape",
+        "@llvm-project//mlir:StandardOps",
+        "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:Transforms",
+    ],
+    alwayslink = 1,
+)
+
 cc_library(
     name = "hlo_dialect_registration",
     srcs = ["lib/Dialect/mhlo/IR/init.cc"],
     hdrs = ["include/mlir-hlo/Dialect/mhlo/IR/register.h"],
     deps = [
+        ":disc_ral",
         ":hlo",
         ":lhlo",
         ":lhlo_gpu",
@@ -1159,6 +1255,7 @@ cc_library(
         "//visibility:private",  # This target is a private detail of pass implementations
     ],
     deps = [
+        ":DiscRalPassIncGen",
         ":MhloPassIncGen",
         "@llvm-project//mlir:Pass",
     ],
@@ -1202,6 +1299,7 @@ cc_library(
         "include/mlir-hlo/Dialect/mhlo/transforms/register_passes.h",
     ],
     deps = [
+        ":DiscRalPassIncGen",
         ":LmhloPassIncGen",
         ":MhloPassIncGen",
         ":broadcast_propagation",
@@ -1221,6 +1319,7 @@ cc_library(
         ":mhlo_control_flow_to_scf",
         ":mhlo_fusion",
         ":mhlo_to_mhlo_lowering_patterns",
+        ":ral_inject_execution_context",
         ":rank_specialization",
         ":sink_constants_to_control_flow",
         ":test_passes",
@@ -1236,6 +1335,7 @@ cc_binary(
     ],
     deps = [
         ":all_passes",
+        ":disc_ral",
         ":hlo",
         ":lhlo",
         ":lhlo_gpu",
