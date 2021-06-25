@@ -1288,6 +1288,17 @@ cc_library(
 )
 
 cc_library(
+    name = "lhlo_fusion_inliner",
+    srcs = ["lib/Dialect/mhlo/transforms/lhlo_fusion_inliner.cc"],
+    deps = [
+        ":lhlo",
+        ":pass_details",
+        "@llvm-project//mlir:Pass",
+    ],
+    alwayslink = 1,
+)
+
+cc_library(
     name = "chlo_legalize_to_hlo",
     srcs = ["lib/Dialect/mhlo/transforms/chlo_legalize_to_hlo.cc"],
     hdrs = ["include/mlir-hlo/Dialect/mhlo/transforms/rewriters.h"],
@@ -1393,6 +1404,7 @@ cc_library(
         ":lhlo",
         ":lhlo_fuse_linalg",
         ":lhlo_fusion",
+        ":lhlo_fusion_inliner",
         ":lhlo_legalize_to_affine",
         ":lhlo_legalize_to_gpu",
         ":lhlo_legalize_to_parallel_loops",
