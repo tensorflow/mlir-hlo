@@ -1,12 +1,12 @@
-// RUN: mlir-hlo-opt %s -chlo-legalize-to-hlo -hlo-legalize-to-lhlo \
-// RUN: -std-bufferize -tensor-bufferize -finalizing-bufferize \
-// RUN: -canonicalize -buffer-hoisting -buffer-deallocation \
-// RUN: -canonicalize -cse -lhlo-legalize-to-linalg \
+// RUN: mlir-hlo-opt %s -chlo-legalize-to-hlo -hlo-legalize-to-memref \
+// RUN: -tensor-bufferize -std-bufferize -hlo-legalize-to-lhlo \
+// RUN: -finalizing-bufferize -canonicalize -buffer-hoisting \
+// RUN: -buffer-deallocation -canonicalize -cse -lhlo-legalize-to-linalg \
 // RUN: -lhlo-fuse-linalg -convert-linalg-to-loops -canonicalize -cse \
 // RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-std \
 // RUN: -convert-std-to-llvm \
 // RUN: | mlir-cpu-runner -e main -entry-point-result=void \
-// RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext \
+// RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
 // RUN: | FileCheck %s --dump-input=always
 
 func @main() -> () {
@@ -61,9 +61,9 @@ func @trivial_broadcast_wrapper() {
   %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<0> : tensor<1xi64>
-  } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x4xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
+  } : (tensor<3xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<3x4xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -110,9 +110,9 @@ func @broadcast_in_X_dim_wrapper() {
   %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
-  } : (tensor<1x4xf32>, tensor<2xindex>) -> tensor<3x4xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
+  } : (tensor<1x4xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<3x4xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -157,9 +157,9 @@ func @broadcast_in_Y_dim_wrapper() {
   %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
-  } : (tensor<3x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
+  } : (tensor<3x1xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<3x4xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -206,9 +206,9 @@ func @broadcast_in_X_dim_transpose_wrapper() {
   %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
-  } : (tensor<4x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
+  } : (tensor<4x1xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<3x4xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -253,9 +253,9 @@ func @broadcast_in_Y_dim_transpose_wrapper() {
   %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[1, 0]> : tensor<2xi64>
-  } : (tensor<1x3xf32>, tensor<2xindex>) -> tensor<3x4xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
+  } : (tensor<1x3xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<3x4xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -294,9 +294,9 @@ func @broadcast_scalar_1d_wrapper() {
   %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<0> : tensor<1xi64>
-  } : (tensor<1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
+  } : (tensor<1xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<3x4xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -335,9 +335,9 @@ func @broadcast_scalar_2d_wrapper() {
   %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
-  } : (tensor<1x1xf32>, tensor<2xindex>) -> tensor<3x4xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x4xf32>
+  } : (tensor<1x1xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<3x4xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<3x4xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
@@ -385,9 +385,9 @@ func @broadcast_to_the_same_shape() {
   %shape = tensor.from_elements %c2, %c3 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<[0, 1]> : tensor<2xi64>
-  } : (tensor<2x3xf32>, tensor<2xindex>) -> tensor<2x3xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<2x3xf32>
+  } : (tensor<2x3xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<2x3xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<2x3xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<2x3xf32> to memref<*xf32>
@@ -433,9 +433,9 @@ func @broadcast_1d_to_2d() {
   %shape = tensor.from_elements %c3, %c4 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<0> : tensor<1xi64>
-  } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x3xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x3xf32>
+  } : (tensor<3xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<3x3xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<3x3xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x3xf32> to memref<*xf32>
@@ -481,9 +481,9 @@ func @broadcast_1d_to_2d_with_transpose() {
   %shape = tensor.from_elements %c3, %c3 : tensor<2xindex>
   %dyn_output = "mhlo.dynamic_broadcast_in_dim"(%input, %shape) {
     broadcast_dimensions = dense<1> : tensor<1xi64>
-  } : (tensor<3xf32>, tensor<2xindex>) -> tensor<3x3xf32>
-
-  %dyn_output_buf = memref.buffer_cast %dyn_output : memref<3x3xf32>
+  } : (tensor<3xf32>, tensor<2xindex>) -> tensor<?x?xf32>
+  %dyn_casted = tensor.cast %dyn_output : tensor<?x?xf32> to tensor<3x3xf32>
+  %dyn_output_buf = memref.buffer_cast %dyn_casted : memref<3x3xf32>
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x3xf32> to memref<*xf32>
