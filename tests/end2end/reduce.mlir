@@ -3,7 +3,7 @@
 // RUN: -buffer-deallocation -canonicalize -cse \
 // RUN: -lhlo-legalize-to-linalg -lhlo-fuse-linalg -convert-linalg-to-loops \
 // RUN: -lower-affine -convert-scf-to-std -canonicalize -cse \
-// RUN: -convert-std-to-llvm | mlir-cpu-runner -e main \
+// RUN: -convert-memref-to-llvm -convert-std-to-llvm | mlir-cpu-runner -e main \
 // RUN: -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | \
 // RUN: FileCheck %s
