@@ -6,9 +6,13 @@ package(
 )
 
 exports_files([
+    "include/mlir-hlo/Dialect/mhlo/IR/clo_ops.td",
     "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td",
     "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.td",
 ])
+
+# Python extension sources.
+exports_files(["python/MlirHloModule.cpp"])
 
 td_library(
     name = "hlo_ops_td_files",
@@ -1744,6 +1748,20 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "CAPI",
+    srcs = [
+        "lib/CAPI/Dialects.cpp",
+    ],
+    hdrs = [
+        "include/mlir-hlo-c/Dialects.h",
+    ],
+    deps = [
+        ":hlo",
+        "@llvm-project//mlir:CAPIIR",
+    ],
+)
+
 cc_binary(
     name = "mlir-hlo-opt",
     srcs = [
@@ -1786,11 +1804,29 @@ gentbl_filegroup(
                 "-gen-python-op-bindings",
                 "-bind-dialect=mhlo",
             ],
-            "python/_mhlo_ops_gen.py",
+            "python/mlir/dialects/_mhlo_ops_gen.py",
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "python/MhloOps.td",
+    td_file = "python/mlir/dialects/MhloOps.td",
+    deps = [
+        ":MhloOpsPyTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "ChloOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=chlo",
+            ],
+            "python/mlir/dialects/_chlo_ops_gen.py",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "python/mlir/dialects/ChloOps.td",
     deps = [
         ":MhloOpsPyTdFiles",
     ],
@@ -1799,7 +1835,9 @@ gentbl_filegroup(
 filegroup(
     name = "MhloOpsPyFiles",
     srcs = [
-        "python/mhlo.py",
+        "python/mlir/dialects/chlo.py",
+        "python/mlir/dialects/mhlo.py",
+        ":ChloOpsPyGen",
         ":MhloOpsPyGen",
     ],
 )
