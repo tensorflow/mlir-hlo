@@ -14,6 +14,11 @@ exports_files([
 # Python extension sources.
 exports_files(["python/MlirHloModule.cpp"])
 
+filegroup(
+    name = "hlo_ops_td_filegroup",
+    srcs = glob(["include/mlir-hlo/Dialect/mhlo/IR/*.td"]),
+)
+
 td_library(
     name = "hlo_ops_td_files",
     srcs = glob(["include/mlir-hlo/Dialect/mhlo/IR/*.td"]),
