@@ -521,6 +521,7 @@ cc_library(
     deps = [
         ":hlo_ops_base_enums_inc_gen",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
     ],
 )
 
