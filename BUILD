@@ -50,10 +50,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/transforms/mhlo_passes.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [
         "@llvm-project//mlir:PassBaseTdFiles",
     ],
@@ -73,10 +69,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/transforms/lmhlo_passes.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [
         "@llvm-project//mlir:PassBaseTdFiles",
     ],
@@ -97,10 +89,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/chlo_ops.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -119,10 +107,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -141,10 +125,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -162,10 +142,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -183,10 +159,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -201,10 +173,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "lib/Dialect/mhlo/IR/hlo_patterns.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [
         ":hlo_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
@@ -227,10 +195,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops_structs.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -249,10 +213,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_ops.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -271,10 +231,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_structs.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -293,10 +249,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops_enums.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -388,10 +340,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_gpu_ops.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -407,10 +355,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "lib/Dialect/mhlo/IR/mhlo_canonicalize.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -428,10 +372,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/infer_fusibility_op_interface.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -467,10 +407,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/lhlo_structured_interface.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -673,10 +609,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/transforms/disc_ral_passes.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [
         "@llvm-project//mlir:PassBaseTdFiles",
     ],
@@ -697,10 +629,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/mhlo/IR/disc_ral_ops.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -1301,10 +1229,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "lib/Dialect/mhlo/transforms/legalize_to_standard_patterns.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [
         ":hlo_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
@@ -1419,10 +1343,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "lib/Dialect/mhlo/transforms/lower_complex_patterns.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [
         ":hlo_ops_td_files",
         "@llvm-project//mlir:StdOpsTdFiles",
@@ -1589,10 +1509,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "lib/Dialect/mhlo/transforms/chlo_legalize_to_hlo_patterns.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [":hlo_ops_td_files"],
 )
 
@@ -1732,10 +1648,6 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Transforms/passes.td",
-    td_includes = [
-        "external/mlir-hlo/include",
-        "include",
-    ],
     deps = [
         "@llvm-project//mlir:PassBaseTdFiles",
     ],
