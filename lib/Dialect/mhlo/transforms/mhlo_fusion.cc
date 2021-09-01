@@ -551,12 +551,12 @@ struct MhloFusionPass : public MhloFusionPassBase<MhloFusionPass> {
       // mlir ops Adjacency List likely above
       // the B is consumer of fused A, so B need move behind D
       // because fusion op create at D's location
-      DenseSet<Operation*> fused_set(pattern.begin(), pattern.end());
-      DenseSet<Operation*> consumers_set;
-      SmallVector<Operation*, 4> consumers_vec;
+      DenseSet<Operation *> fused_set(pattern.begin(), pattern.end());
+      DenseSet<Operation *> consumers_set;
+      SmallVector<Operation *, 4> consumers_vec;
       auto first_iter = pattern.front()->getIterator();
       auto last_iter = pattern.back()->getIterator();
-      for (Operation& cur_op : llvm::make_range(first_iter, last_iter)) {
+      for (Operation &cur_op : llvm::make_range(first_iter, last_iter)) {
         // isn't fused op && consumer's op
         // move this after fusion op
         if (!fused_set.contains(&cur_op)) {
@@ -564,20 +564,16 @@ struct MhloFusionPass : public MhloFusionPassBase<MhloFusionPass> {
           bool is_consumer = llvm::any_of(
               cur_op.getOperands(), [&fused_set, &consumers_set](Value v) {
                 auto op = v.getDefiningOp();
-                return fused_set.find(op) != fused_set.end() ||
-                       consumers_set.find(op) != consumers_set.end();
+                return fused_set.contains(op) || consumers_set.contains(op);
               });
           if (is_consumer) {
             consumers_set.insert(&cur_op);
             consumers_vec.push_back(&cur_op);
           }
         }
-        ++first_iter;
       }
-      Operation* lastest_op = pattern.back();
-      for (auto op : consumers_vec) {
-        op->moveAfter(lastest_op);
-        lastest_op = op;
+      for (auto op : llvm::reverse(consumers_vec)) {
+        op->moveAfter(pattern.back());
       }
 
       FusionOp fusion =
