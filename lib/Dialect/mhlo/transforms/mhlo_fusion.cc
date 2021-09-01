@@ -556,27 +556,29 @@ struct MhloFusionPass : public MhloFusionPassBase<MhloFusionPass> {
       SmallVector<Operation*, 4> consumers_vec;
       auto first_iter = pattern.front()->getIterator();
       auto last_iter = pattern.back()->getIterator();
-      while (first_iter != last_iter) {
+      for (Operation& cur_op : llvm::make_range(first_iter, last_iter)) {
         // isn't fused op && consumer's op
         // move this after fusion op
-        Operation* cur_op = &*first_iter;
-        if (fused_set.end() == fused_set.find(cur_op)) {
+        if (!fused_set.contains(&cur_op)) {
           // fused op's consumer or consumer's consumer
-          bool is_consumer = std::any_of(
-              cur_op->operand_begin(), cur_op->operand_end(),
-              [&fused_set, &consumers_set](Value v) {
+          bool is_consumer = llvm::any_of(
+              cur_op.getOperands(), [&fused_set, &consumers_set](Value v) {
                 auto op = v.getDefiningOp();
                 return fused_set.find(op) != fused_set.end() ||
                        consumers_set.find(op) != consumers_set.end();
               });
           if (is_consumer) {
-            consumers_set.insert(cur_op);
-            consumers_vec.push_back(cur_op);
+            consumers_set.insert(&cur_op);
+            consumers_vec.push_back(&cur_op);
           }
         }
         ++first_iter;
       }
-      for (auto op : consumers_vec) op->moveAfter(pattern.back());
+      Operation* lastest_op = pattern.back();
+      for (auto op : consumers_vec) {
+        op->moveAfter(lastest_op);
+        lastest_op = op;
+      }
 
       FusionOp fusion =
           b.create<mhlo::FusionOp>(fused_loc, output_types, inputs);
