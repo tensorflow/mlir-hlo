@@ -129,6 +129,23 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "hlo_ops_base_attrs_inc_gen",
+    tbl_outs = [
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_attrs.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_attrs.cc.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.td",
+    deps = [":hlo_ops_td_files"],
+)
+
+gentbl_cc_library(
     name = "hlo_ops_base_structs_inc_gen",
     tbl_outs = [
         (
@@ -476,6 +493,8 @@ cc_library(
     srcs = [
         "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.cc.inc",
         "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h.inc",
+        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_attrs.cc.inc",
+        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_attrs.h.inc",
         "lib/Dialect/mhlo/IR/chlo_ops.cc",
         "lib/Dialect/mhlo/IR/hlo_ops.cc",
         "lib/utils/broadcast_utils.cc",
@@ -485,6 +504,7 @@ cc_library(
         "include/mlir-hlo/Dialect/mhlo/IR/chlo_ops.h",
         "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.h",
         "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base.h",
+        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_base_attrs.h",
         "include/mlir-hlo/utils/broadcast_utils.h",
         "include/mlir-hlo/utils/hlo_utils.h",
     ],
@@ -493,6 +513,7 @@ cc_library(
         ":canonicalize_inc_gen",
         ":chlo_ops_inc_gen",
         ":convert_op_folder",
+        ":hlo_ops_base_attrs_inc_gen",
         ":hlo_ops_base_enums",
         ":hlo_ops_base_inc_gen",
         ":hlo_ops_base_structs",
@@ -531,6 +552,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
+        ":hlo",
         ":hlo_ops_base_enums",
         ":hlo_ops_base_inc_gen",
         ":hlo_ops_base_structs",
