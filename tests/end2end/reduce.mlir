@@ -1,13 +1,14 @@
-// RUN: mlir-hlo-opt %s -chlo-legalize-to-hlo \
-// RUN: -hlo-legalize-to-lhlo -buffer-hoisting \
+// RUN: mlir-hlo-opt %s -chlo-legalize-to-hlo -hlo-legalize-to-memref \
+// RUN: -hlo-legalize-to-linalg -tensor-constant-bufferize -tensor-bufferize \
+// RUN: -std-bufferize -linalg-bufferize  -finalizing-bufferize \
+// RUN: -canonicalize -buffer-hoisting \
 // RUN: -buffer-deallocation -canonicalize -cse \
-// RUN: -lhlo-legalize-to-linalg -lhlo-fuse-linalg -convert-linalg-to-loops \
-// RUN: -lower-affine -convert-scf-to-std -canonicalize -cse \
-// RUN: -convert-memref-to-llvm -std-expand -convert-std-to-llvm \
-// RUN: -reconcile-unrealized-casts \
-// RUN: | mlir-cpu-runner -e main \
-// RUN: -entry-point-result=void \
-// RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | \
+// RUN: -convert-linalg-to-loops -canonicalize -cse \
+// RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-std -std-expand \
+// RUN: -convert-memref-to-llvm -convert-std-to-llvm \
+// RUN: -reconcile-unrealized-casts |\
+// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 func @main() -> () {

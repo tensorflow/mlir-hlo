@@ -1,14 +1,14 @@
 // RUN: mlir-hlo-opt %s -chlo-legalize-to-hlo -hlo-legalize-to-memref \
-// RUN: -tensor-bufferize -std-bufferize -hlo-legalize-to-lhlo \
-// RUN: -finalizing-bufferize -canonicalize -buffer-hoisting \
-// RUN: -buffer-deallocation -canonicalize -cse -lhlo-legalize-to-linalg \
-// RUN: -lhlo-fuse-linalg -convert-linalg-to-loops -canonicalize -cse \
+// RUN: -hlo-legalize-to-linalg -tensor-bufferize -std-bufferize \
+// RUN: -linalg-bufferize -finalizing-bufferize -canonicalize -buffer-hoisting \
+// RUN: -buffer-deallocation -canonicalize -cse \
+// RUN: -convert-linalg-to-loops -canonicalize -cse \
 // RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-std \
 // RUN: -convert-memref-to-llvm -convert-std-to-llvm \
-// RUN: -reconcile-unrealized-casts \
-// RUN: | mlir-cpu-runner -e main -entry-point-result=void \
-// RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
-// RUN: | FileCheck %s --dump-input=always
+// RUN: -reconcile-unrealized-casts |\
+// RUN: mlir-cpu-runner -e main -entry-point-result=void \
+// RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext |\
+// RUN: FileCheck %s
 
 func @main() -> () {
   call @trivial_broadcast_wrapper() : () -> ()
