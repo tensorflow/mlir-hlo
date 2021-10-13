@@ -1612,6 +1612,7 @@ cc_library(
         "include/mlir-hlo/Dialect/mhlo/transforms/register_passes.h",
         "include/mlir-hlo/Transforms/register_passes.h",
     ],
+    visibility = ["//third_party/tensorflow/compiler/mlir/python:__pkg__"],
     deps = [
         ":DiscRalPassIncGen",
         ":LmhloPassIncGen",
