@@ -20,16 +20,16 @@ func @main() -> () {
 func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 func @reduce_add() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
 
   // Initialize input.
   %input = memref.alloc() : memref<2x3xf32>
   %dim_x = memref.dim %input, %c0 : memref<2x3xf32>
   %dim_y = memref.dim %input, %c1 : memref<2x3xf32>
   scf.parallel (%i, %j) = (%c0, %c0) to (%dim_x, %dim_y) step (%c1, %c1) {
-    %i_i64 = index_cast %i : index to i64
-    %i_f32 = sitofp %i_i64 : i64 to f32
+    %i_i64 = arith.index_cast %i : index to i64
+    %i_f32 = arith.sitofp %i_i64 : i64 to f32
     memref.store %i_f32, %input[%i, %j] : memref<2x3xf32>
   }
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
@@ -57,16 +57,16 @@ func @reduce_add() {
 }
 
 func @reduce_max() {
-  %c0 = constant 0 : index
-  %c1 = constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
 
   // Initialize input.
   %input = memref.alloc() : memref<2x3xf32>
   %dim_x = memref.dim %input, %c0 : memref<2x3xf32>
   %dim_y = memref.dim %input, %c1 : memref<2x3xf32>
   scf.parallel (%i, %j) = (%c0, %c0) to (%dim_x, %dim_y) step (%c1, %c1) {
-    %i_i64 = index_cast %i : index to i64
-    %i_f32 = sitofp %i_i64 : i64 to f32
+    %i_i64 = arith.index_cast %i : index to i64
+    %i_f32 = arith.sitofp %i_i64 : i64 to f32
     memref.store %i_f32, %input[%i, %j] : memref<2x3xf32>
   }
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
