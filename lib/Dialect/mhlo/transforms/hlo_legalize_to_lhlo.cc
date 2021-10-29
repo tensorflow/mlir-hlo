@@ -139,8 +139,7 @@ LogicalResult ConvertResults(Operation* op, SmallVectorImpl<Value>& results,
 
   if (op->getNumResults() == 1 && op->getResult(0).getType().isa<TupleType>()) {
     SmallVector<Type, 4> fattenedTypes;
-    op->getResult(0).getType().dyn_cast<TupleType>().getFlattenedTypes(fattenedTypes);
-
+    op->getResult(0).getType().cast<TupleType>().getFlattenedTypes(fattenedTypes);
     for (auto result : llvm::enumerate(fattenedTypes)) {
       if (failed(convert_result(result.value(), result.index()))) return failure();
     }
@@ -149,7 +148,6 @@ LogicalResult ConvertResults(Operation* op, SmallVectorImpl<Value>& results,
       if (failed(convert_result(result.value().getType(), result.index()))) return failure();
     }
   }
-
   return success();
 }
 
