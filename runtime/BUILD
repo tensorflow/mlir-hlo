@@ -1,7 +1,7 @@
 # TODO(b/160617323): Decouple MLIR HLO from TensorFlow/XLA
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = [":friends"],
     licenses = ["notice"],
 )
 
