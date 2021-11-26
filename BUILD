@@ -292,7 +292,7 @@ gentbl_filegroup(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/lhlo/IR/lhlo_ops.td",
-    deps = [":hlo_ops_td_files"],
+    deps = [":lhlo_ops_td_files"],
 )
 
 cc_library(
@@ -592,6 +592,7 @@ cc_library(
         ":lhlo_structured_interface",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Analysis",
+        "@llvm-project//mlir:BufferizationDialect",
         "@llvm-project//mlir:ControlFlowInterfaces",
         "@llvm-project//mlir:CopyOpInterface",
         "@llvm-project//mlir:IR",
@@ -1179,6 +1180,7 @@ cc_library(
         ":pass_details",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Affine",
+        "@llvm-project//mlir:BufferizationDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:LinalgTransforms",
         "@llvm-project//mlir:MemRefDialect",
@@ -1218,6 +1220,7 @@ cc_library(
         ":pass_details",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithmeticDialect",
+        "@llvm-project//mlir:BufferizationDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:Pass",
@@ -1244,6 +1247,7 @@ cc_library(
         ":type_conversion",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithmeticDialect",
+        "@llvm-project//mlir:BufferizationDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:Pass",
@@ -1476,13 +1480,14 @@ cc_library(
 )
 
 cc_library(
-    name = "legalize_tensor_load_op",
-    srcs = ["lib/Dialect/mhlo/transforms/legalize_tensor_load_op.cc"],
+    name = "legalize_to_tensor_op",
+    srcs = ["lib/Dialect/mhlo/transforms/legalize_to_tensor_op.cc"],
     hdrs = ["include/mlir-hlo/Dialect/mhlo/transforms/passes.h"],
     deps = [
         ":lhlo",
         ":pass_details",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:BufferizationDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:Pass",
@@ -1669,9 +1674,9 @@ cc_library(
         ":legalize_control_flow",
         ":legalize_einsum_to_dot_general",
         ":legalize_gather_to_torch_index_select",
-        ":legalize_tensor_load_op",
         ":legalize_to_linalg",
         ":legalize_to_standard",
+        ":legalize_to_tensor_op",
         ":legalize_trigonometric_to_approximation",
         ":lhlo",
         ":lhlo_fuse_linalg",

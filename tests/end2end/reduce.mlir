@@ -39,7 +39,7 @@ func @reduce_add() {
   // CHECK: [0,   0,   0]
   // CHECK: [1,   1,   1]
 
-  %in = memref.tensor_load %input : memref<2x3xf32>
+  %in = bufferization.to_tensor %input : memref<2x3xf32>
   %init = mhlo.constant dense<0.000000e+00> : tensor<f32>
 
   %reduce = "mhlo.reduce"(%in, %init) ( {
@@ -49,7 +49,7 @@ func @reduce_add() {
   }) {dimensions = dense<1> : tensor<1xi64>}
       : (tensor<2x3xf32>, tensor<f32>) -> tensor<2xf32>
 
-  %output = memref.buffer_cast %reduce : memref<2xf32>
+  %output = bufferization.to_memref %reduce : memref<2xf32>
   %unranked_output = memref.cast %output : memref<2xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 1 offset = 0 sizes = [2] strides = [1]
@@ -76,7 +76,7 @@ func @reduce_max() {
   // CHECK: [0,   0,   0]
   // CHECK: [1,   1,   1]
 
-  %in = memref.tensor_load %input : memref<2x3xf32>
+  %in = bufferization.to_tensor %input : memref<2x3xf32>
   %init = mhlo.constant dense<0xff800000> : tensor<f32>
 
   %reduce = "mhlo.reduce"(%in, %init) ( {
@@ -86,7 +86,7 @@ func @reduce_max() {
   }) {dimensions = dense<1> : tensor<1xi64>}
       : (tensor<2x3xf32>, tensor<f32>) -> tensor<2xf32>
 
-  %output = memref.buffer_cast %reduce : memref<2xf32>
+  %output = bufferization.to_memref %reduce : memref<2xf32>
   %unranked_output = memref.cast %output : memref<2xf32> to memref<*xf32>
   call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 1 offset = 0 sizes = [2] strides = [1]
