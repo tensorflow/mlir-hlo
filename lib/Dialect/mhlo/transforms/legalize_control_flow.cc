@@ -212,20 +212,114 @@ LogicalResult LowerWhileOp(mlir::mhlo::WhileOp while_op) {
   return success();
 }
 
+// Lowers to a cascaded conditional with structure:
+//   ^entry_block:
+//     %target_index = ...
+//   ^cond_0:
+//     ...
+//     cond_br %is_target, ^case0, ^cond_1
+//   ^cond_n_minus_1:
+//     ...
+//     cond_br %is_target, ^case_n_minus_1, ^case_n
+//   ^case_0:
+//     ...
+//     br ^tail_block(...)
+//   ^case_n:
+//     ...
+//     br ^tail_block(...)
+//   ^tail_block(%result : ...):
+//
+// In the HLO version, each case body block receives an argument, but these are
+// trivially resolved via the original dominating values in the CFG form, so
+// they are just mapped appropriately prior to inlining.
+LogicalResult LowerCaseOp(mlir::mhlo::CaseOp case_op) {
+  Operation *op_inst = case_op.getOperation();
+  mlir::OpBuilder builder(case_op);
+  Block *orig_block = op_inst->getBlock();
+  Block *tail_block = orig_block->splitBlock(op_inst);
+  Location loc = case_op.getLoc();
+  BlockAndValueMapping mapper;
+
+  // The tail block has phi arguments for each result.
+  TypeRange result_types = case_op.getResultTypes();
+  tail_block->addArguments(result_types);
+  for (auto it : llvm::zip(op_inst->getResults(), tail_block->getArguments())) {
+    Value orig_result = std::get<0>(it);
+    Value new_value = std::get<1>(it);
+    orig_result.replaceAllUsesWith(new_value);
+  }
+
+  // Create a block for each branch condition check (using the entry block for
+  // the first). Pre-create so that we can populate them as we inline the
+  // branches. There is one fewer cond blocks than branches because the final
+  // one can branch directly to its target in the preceding.
+  int branch_count = case_op.branches().size();
+  int cond_count = branch_count - 1;
+  SmallVector<Block *> cond_blocks(cond_count);
+  cond_blocks[0] = orig_block;
+  for (int i = 1; i < cond_count - 1; ++i) {
+    Block *cond_block = new Block();
+    cond_block->insertBefore(tail_block);
+    cond_blocks[i] = cond_block;
+  }
+
+  // Extract the branch number.
+  builder.setInsertionPointToEnd(orig_block);
+  auto selected_branch_index = builder.create<mlir::tensor::ExtractOp>(loc, case_op.index());
+
+  // Clone each branch into the parent, remapping the branch operand as we
+  // go.
+  for (auto it : llvm::zip(case_op.branches(), case_op.branch_operands())) {
+    Region &branch_region = std::get<0>(it);
+    Value incoming_branch_operand = std::get<1>(it);
+    Block *branch_block = &branch_region.front();
+
+    // Clone the branch body.
+    mapper.map(branch_block->getArgument(0), incoming_branch_operand);
+    branch_region.cloneInto(orig_block->getParent(), Region::iterator(tail_block), mapper);
+    if (failed(ReplaceTerminators(&branch_region, tail_block, loc, mapper, &builder))) {
+      return failure();
+    }
+  }
+
+  // Populate condition blocks.
+  for (int i = 0; i < cond_count; ++i) {
+    Block *cond_block = cond_blocks[i];
+
+    // Emit the condition check.
+    builder.setInsertionPointToEnd(cond_block);
+    Value current_branch_index = builder.create<mlir::arith::ConstantOp>(loc, builder.getI32IntegerAttr(i));
+    Value pred = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, selected_branch_index, current_branch_index);
+
+    bool is_last = i == (cond_count - 1);
+    Block *true_block = mapper.lookup(&case_op.branches()[i].front());
+    Block *false_block = !is_last ?
+      cond_blocks[i + 1] :
+      mapper.lookup(&case_op.branches()[i + 1].front());
+    builder.create<CondBranchOp>(loc, pred, true_block, ValueRange{}, false_block, ValueRange{});
+  }
+
+  return success();
+}
+
 void LegalizeControlFlowPass::runOnFunction() {
   auto func = getFunction();
   llvm::SmallVector<IfOp, 4> if_ops;
   func.walk([&](IfOp op) { if_ops.push_back(op); });
-
   for (auto& op : if_ops) {
     if (failed(LowerIfOp(op))) return signalPassFailure();
   }
 
   llvm::SmallVector<WhileOp, 4> while_ops;
   func.walk([&](WhileOp op) { while_ops.push_back(op); });
-
   for (auto& op : while_ops) {
     if (failed(LowerWhileOp(op))) return signalPassFailure();
+  }
+
+  llvm::SmallVector<CaseOp> case_ops;
+  func.walk([&](CaseOp op) { case_ops.push_back(op); });
+  for (auto &op : case_ops) {
+    if (failed(LowerCaseOp(op))) return signalPassFailure();
   }
 }
 }  // namespace
