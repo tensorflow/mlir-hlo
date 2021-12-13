@@ -219,6 +219,28 @@ func @concatenate_dynamic(%arg0: memref<1x?xf32>, %arg1: memref<1x?xf32>, %arg2:
     "lmhlo.terminator"() : () -> ()
 }
 
+// CHECK-LABEL: func @constant_non_splat
+func @constant_non_splat(%memref : memref<1x5x1x1xf32>, %z_memref: memref<f32>) {
+  "lmhlo.constant"(%memref) {value = dense<[[[[3.323920e-05]], [[9.915520e-05]], [[2.191530e-02]], [[5.093550e-02]], [[1.109190e-03]]]]> : tensor<1x5x1x1xf32>} : (memref<1x5x1x1xf32>) -> ()
+
+  // CHECK-DAG:     %[[C0:.*]] = arith.constant 3.323920e-05 : f32
+  // CHECK-DAG:     %[[C1:.*]] = arith.constant 9.915520e-05 : f32
+  // CHECK-DAG:     %[[C2:.*]] = arith.constant 2.191530e-02 : f32
+  // CHECK-DAG:     %[[C3:.*]] = arith.constant 5.093550e-02 : f32
+  // CHECK-DAG:     %[[C4:.*]] = arith.constant 1.109190e-03 : f32
+  // CHECK-NEXT:    affine.store %[[C0]], %{{.*}}[0, 0, 0, 0] : memref<1x5x1x1xf32>
+  // CHECK-NEXT:    affine.store %[[C1]], %{{.*}}[0, 1, 0, 0] : memref<1x5x1x1xf32>
+  // CHECK-NEXT:    affine.store %[[C2]], %{{.*}}[0, 2, 0, 0] : memref<1x5x1x1xf32>
+  // CHECK-NEXT:    affine.store %[[C3]], %{{.*}}[0, 3, 0, 0] : memref<1x5x1x1xf32>
+  // CHECK-NEXT:    affine.store %[[C4]], %{{.*}}[0, 4, 0, 0] : memref<1x5x1x1xf32>
+
+  // 0-d corner case is always a splat -- so it's not lowered here.
+  "lmhlo.constant"(%z_memref) {value = dense<1.109190e-03> : tensor<f32>} : (memref<f32>) -> ()
+  return
+  // CHECK-NEXT:    lmhlo.constant
+  // CHECK-NEXT:    return
+}
+
 // Gather op.
 // Test case 1: A general GatherOp test case.
 // CHECK-LABEL: func @gather_1

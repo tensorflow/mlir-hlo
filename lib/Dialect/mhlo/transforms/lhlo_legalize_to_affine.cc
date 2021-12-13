@@ -223,6 +223,54 @@ static void fillBuffer(Location loc, Value buffer, Value fillValue,
   builder.create<AffineStoreOp>(loc, initVal, buffer, ivs);
 }
 
+/// Lowers lmhlo.constant that have non-splat attributes (contain a list of
+/// constants) to a sequence of affine.store ops. Splat lmhlo constants are
+/// lowered via the lmhlo to linalg lowering or separately. This lowering is
+/// particularly suitable for small-sized constants since straightline code
+/// is generated here to store the constants in the result memref.
+struct ConstNonSplatOpConverter : public OpRewritePattern<ConstOp> {
+  using OpRewritePattern<ConstOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConstOp op,
+                                PatternRewriter& rewriter) const override {
+    auto valueAttr = op.value().cast<DenseElementsAttr>();
+    if (valueAttr.isSplat()) return failure();
+
+    // Non-splat constant are always expected to generate statically shaped
+    // memrefs. We'll still check for safety.
+    Value memref = op.output();
+    auto memrefType = memref.getType().cast<MemRefType>();
+    if (!memrefType.hasStaticShape()) return failure();
+
+    unsigned rank = memrefType.getRank();
+    assert(rank > 0 && "non-splat attributes always have non-zero rank");
+
+    // Iterate over all the element attributes, creating constants and storing
+    // them. We'll generate the indices (which are all going to be constant)
+    // from the linearized index.
+    SmallVector<AffineExpr, 4> indices(rank);
+    ArrayRef<int64_t> shape = memrefType.getShape();
+    Location loc = op.getLoc();
+    for (auto eltAttrEn : llvm::enumerate(valueAttr.getValues<Attribute>())) {
+      auto eltCst = rewriter.create<arith::ConstantOp>(loc, eltAttrEn.value());
+      // This is constructing a multi-dimensional index vector from a linearized
+      // index.
+      uint64_t runningShape = 1;
+      for (int r = rank - 1; r >= 0; --r) {
+        indices[r] = rewriter.getAffineConstantExpr(
+            (eltAttrEn.index() / runningShape) % shape[r]);
+        runningShape *= shape[r];
+      }
+      auto indexMap = AffineMap::get(/*numDims=*/0, /*numSymbols=*/0, indices,
+                                     rewriter.getContext());
+      rewriter.create<AffineStoreOp>(loc, eltCst, memref, indexMap,
+                                     /*indices=*/ValueRange{});
+    }
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 /// Converts GatherOp to Affine nest form.
 /// Pseudocode:
 ///   1. Fill a temporary output tensor with 0.
@@ -543,6 +591,7 @@ void populateLHLOToAffineConversionPattern(MLIRContext* context,
       BinaryOpConverter<lmhlo::MulOp>,
       BinaryOpConverter<lmhlo::SubOp>,
       ConcatOpConverter,
+      ConstNonSplatOpConverter,
       DotOpConverter,
       GatherOpConverter,
       UnaryOpConverter<lmhlo::LogOp>>(context);
