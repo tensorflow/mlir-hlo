@@ -2297,12 +2297,9 @@ func @real_dynamic_slice(%input: tensor<16x?xf32>, %start_indices: tensor<2xinde
 // CHECK-NEXT: %[[STRIDE1:.*]] = tensor.extract %[[STRIDES]][%[[DIM1]]] : tensor<2xindex>
 
 // 2.2. Since 1-th dimension of result is unknown we compute result size at 1-th
-//      dimension as size[1] = (limit - 1 - start)/(stride + 1)
-// CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : index
-// CHECK-NEXT: %[[LIMIT1_1:.*]] = arith.subi %[[LIMIT1]], %[[ONE]] : index
-// CHECK-NEXT: %[[LIMIT1_1_START1:.*]] = arith.subi %[[LIMIT1_1]], %[[START1]] : index
-// CHECK-NEXT: %[[STRIDE1_1:.*]] = arith.addi %[[STRIDE1]], %[[ONE]] : index
-// CHECK-NEXT: %[[SIZE1:.*]] = arith.floordivsi %[[LIMIT1_1_START1]], %[[STRIDE1_1]] : index
+//      dimension as size[1] = (limit - start)/stride
+// CHECK-NEXT: %[[DELTA1:.*]] = arith.subi %[[LIMIT1]], %[[START1]] : index
+// CHECK-NEXT: %[[SIZE1:.*]] = arith.ceildivui %[[DELTA1]], %[[STRIDE1]] : index
 
 // 2.3. Compute upper bound for starting index = operand_dim[1] - size[1].
 //      where, size[1] is computed at step 2.2

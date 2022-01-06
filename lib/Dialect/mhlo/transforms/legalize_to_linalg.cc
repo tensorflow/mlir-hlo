@@ -1285,17 +1285,11 @@ class RealDynamicSliceConverter
   using OpConversionPattern<mhlo::RealDynamicSliceOp>::OpConversionPattern;
 
   /// Computes size of a slice as :-
-  /// size = (limit - 1 - start)/(stride + 1)
+  /// size = (limit - start)/stride
   static Value computeSize(Location loc, Value start, Value limit, Value stride,
                            ConversionPatternRewriter& rewriter) {
-    Value one =
-        rewriter.create<arith::ConstantOp>(loc, rewriter.getIndexAttr(1));
-    limit = rewriter.create<arith::SubIOp>(loc, limit, one);
-    limit = rewriter.create<arith::SubIOp>(loc, limit, start);
-    stride = rewriter.create<arith::AddIOp>(loc, stride, one);
-    // TODO: Use FloorDivUIOp once it is added in Arithmetic dialect since the
-    //       numerator is guaranteed to be positive.
-    return rewriter.create<arith::FloorDivSIOp>(loc, limit, stride);
+    Value delta = rewriter.create<arith::SubIOp>(loc, limit, start);
+    return rewriter.create<arith::CeilDivUIOp>(loc, delta, stride);
   }
 
   LogicalResult matchAndRewrite(
