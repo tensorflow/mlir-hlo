@@ -42,7 +42,7 @@ func @reduce_add() {
   %in = bufferization.to_tensor %input : memref<2x3xf32>
   %init = mhlo.constant dense<0.000000e+00> : tensor<f32>
 
-  %reduce = "mhlo.reduce"(%in, %init) ( {
+  %reduce = "mhlo.reduce"(%in, %init) ({
   ^bb0(%arg2: tensor<f32>, %arg3: tensor<f32>):
     %1 = mhlo.add %arg2, %arg3 : tensor<f32>
     "mhlo.return"(%1) : (tensor<f32>) -> ()
@@ -79,7 +79,7 @@ func @reduce_max() {
   %in = bufferization.to_tensor %input : memref<2x3xf32>
   %init = mhlo.constant dense<0xff800000> : tensor<f32>
 
-  %reduce = "mhlo.reduce"(%in, %init) ( {
+  %reduce = "mhlo.reduce"(%in, %init) ({
   ^bb0(%arg2: tensor<f32>, %arg3: tensor<f32>):
     %1 = mhlo.maximum %arg2, %arg3 : tensor<f32>
     "mhlo.return"(%1) : (tensor<f32>) -> ()
