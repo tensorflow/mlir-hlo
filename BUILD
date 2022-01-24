@@ -1693,6 +1693,7 @@ cc_binary(
     ],
     deps = [
         ":all_passes",
+        ":gml_st",
         ":hlo_dialect_registration",
         ":lhlo",
         ":lhlo_gpu",
@@ -1770,6 +1771,7 @@ td_library(
     srcs = glob(["include/mlir-hlo/Dialect/gml_st/IR/*.td"]),
     includes = ["include"],
     deps = [
+        "@llvm-project//mlir:InferTypeOpInterfaceTdFiles",
         "@llvm-project//mlir:OpBaseTdFiles",
     ],
 )
@@ -1786,6 +1788,22 @@ gentbl_cc_library(
             ["-gen-op-defs"],
             "include/mlir-hlo/Dialect/gml_st/IR/gml_st_ops.cc.inc",
         ),
+        (
+            ["-gen-dialect-decls"],
+            "include/mlir-hlo/Dialect/gml_st/IR/gml_st_dialect.h.inc",
+        ),
+        (
+            ["-gen-dialect-defs"],
+            "include/mlir-hlo/Dialect/gml_st/IR/gml_st_dialect.cc.inc",
+        ),
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir-hlo/Dialect/gml_st/IR/gml_st_types.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir-hlo/Dialect/gml_st/IR/gml_st_types.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/gml_st/IR/gml_st_ops.td",
@@ -1795,8 +1813,6 @@ gentbl_cc_library(
 cc_library(
     name = "gml_st",
     srcs = [
-        "include/mlir-hlo/Dialect/gml_st/IR/gml_st_ops.cc.inc",
-        "include/mlir-hlo/Dialect/gml_st/IR/gml_st_ops.h.inc",
         "lib/Dialect/gml_st/IR/gml_st_ops.cc",
     ],
     hdrs = [
@@ -1805,6 +1821,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":gml_st_ops_inc_gen",
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:InferTypeOpInterface",
+        "@llvm-project//mlir:ViewLikeInterface",
     ],
 )
