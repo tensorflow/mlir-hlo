@@ -1448,6 +1448,7 @@ cc_library(
 cc_library(
     name = "all_passes",
     hdrs = [
+        "include/mlir-hlo/Dialect/gml_st/transforms/passes.h",
         "include/mlir-hlo/Dialect/lhlo/transforms/register_passes.h",
         "include/mlir-hlo/Dialect/mhlo/transforms/register_passes.h",
         "include/mlir-hlo/Transforms/register_passes.h",
@@ -1462,6 +1463,8 @@ cc_library(
         ":chlo_legalize_to_hlo",
         ":copy_removal",
         ":expand_hlo_tuples",
+        ":gml_st_passes_inc_gen",
+        ":greedy_tiling",
         ":group_reduction_dimensions",
         ":hlo_legalize_shape_ops_to_standard",
         ":hlo_legalize_to_lhlo",
@@ -1830,5 +1833,84 @@ cc_library(
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
         "@llvm-project//mlir:ViewLikeInterface",
+    ],
+)
+
+gentbl_cc_library(
+    name = "tiling_interface_inc_gen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir-hlo/Dialect/gml_st/transforms/tiling_interface.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir-hlo/Dialect/gml_st/transforms/tiling_interface.cc.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/mlir-hlo/Dialect/gml_st/transforms/tiling_interface.td",
+    deps = ["@llvm-project//mlir:OpBaseTdFiles"],
+)
+
+cc_library(
+    name = "tiling_interface",
+    srcs = [
+        "include/mlir-hlo/Dialect/gml_st/transforms/tiling_interface.cc.inc",
+        "include/mlir-hlo/Dialect/gml_st/transforms/tiling_interface.h.inc",
+        "lib/Dialect/gml_st/transforms/tiling_interface.cc",
+    ],
+    hdrs = [
+        "include/mlir-hlo/Dialect/gml_st/transforms/tiling_interface.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":gml_st",
+        ":hlo",
+        ":tiling_interface_inc_gen",
+        "@llvm-project//mlir:ArithmeticDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "gml_st_passes_inc_gen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=GmlSt",
+            ],
+            "include/mlir-hlo/Dialect/gml_st/transforms/passes.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/mlir-hlo/Dialect/gml_st/transforms/passes.td",
+    deps = [
+        "@llvm-project//mlir:PassBaseTdFiles",
+    ],
+)
+
+cc_library(
+    name = "greedy_tiling",
+    srcs = [
+        "include/mlir-hlo/Dialect/gml_st/transforms/pass_detail.h",
+        "lib/Dialect/gml_st/transforms/greedy_tiling.cc",
+    ],
+    hdrs = [
+        "include/mlir-hlo/Dialect/gml_st/transforms/passes.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":gml_st",
+        ":gml_st_passes_inc_gen",
+        ":hlo",
+        ":tiling_interface",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Support",
     ],
 )
