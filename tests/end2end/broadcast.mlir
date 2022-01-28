@@ -1,7 +1,7 @@
 // RUN: mlir-hlo-opt %s -chlo-legalize-to-hlo -hlo-legalize-to-memref \
-// RUN: -hlo-legalize-to-linalg -tensor-bufferize -std-bufferize \
-// RUN: -linalg-bufferize -finalizing-bufferize -canonicalize -buffer-hoisting \
-// RUN: -buffer-deallocation -canonicalize -cse \
+// RUN: -hlo-legalize-to-linalg -tensor-bufferize -tensor-constant-bufferize \
+// RUN: -std-bufferize -linalg-bufferize -finalizing-bufferize -canonicalize \
+// RUN: -buffer-hoisting -buffer-deallocation -canonicalize -cse \
 // RUN: -convert-linalg-to-loops -canonicalize -cse \
 // RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-std \
 // RUN: -convert-memref-to-llvm -convert-std-to-llvm \
