@@ -87,6 +87,10 @@ void populateHLOToLinalgConversionPattern(MLIRContext *context,
                                           TypeConverter &typeConverter,
                                           OwningRewritePatternList *patterns);
 
+// Collection of rewrite patterns for lowering of HLO dim operations.
+void populateHLOShapeComputationPatterns(MLIRContext *context,
+                                         OwningRewritePatternList *patterns);
+
 // Converter to signless intergers to be used with linalg conversion patterns.
 std::unique_ptr<TypeConverter> createHloToLinalgSignedIntegerConverter();
 
