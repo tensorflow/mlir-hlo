@@ -1804,8 +1804,11 @@ td_library(
     srcs = glob(["include/mlir-hlo/Dialect/gml_st/IR/*.td"]),
     includes = ["include"],
     deps = [
+        "@llvm-project//mlir:ControlFlowInterfacesTdFiles",
         "@llvm-project//mlir:InferTypeOpInterfaceTdFiles",
+        "@llvm-project//mlir:LoopLikeInterfaceTdFiles",
         "@llvm-project//mlir:OpBaseTdFiles",
+        "@llvm-project//mlir:SideEffectInterfacesTdFiles",
     ],
 )
 
@@ -1855,8 +1858,13 @@ cc_library(
     deps = [
         ":gml_st_ops_inc_gen",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:ControlFlowInterfaces",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
+        "@llvm-project//mlir:LoopLikeInterface",
+        "@llvm-project//mlir:MemRefDialect",
+        "@llvm-project//mlir:SideEffectInterfaces",
+        "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:ViewLikeInterface",
     ],
 )
