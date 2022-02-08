@@ -3,7 +3,7 @@
 // RUN: -linalg-bufferize -finalizing-bufferize -canonicalize \
 // RUN: -buffer-hoisting -buffer-deallocation -canonicalize -cse \
 // RUN: -convert-linalg-to-loops -canonicalize -cse \
-// RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-std \
+// RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-cf \
 // RUN: -convert-memref-to-llvm -convert-std-to-llvm \
 // RUN: -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \

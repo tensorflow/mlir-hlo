@@ -4,7 +4,7 @@
 // RUN: -canonicalize -buffer-hoisting \
 // RUN: -buffer-deallocation -canonicalize -cse \
 // RUN: -convert-linalg-to-loops -canonicalize -cse \
-// RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-std \
+// RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-cf \
 // RUN: -arith-expand -memref-expand \
 // RUN: -convert-memref-to-llvm -convert-std-to-llvm \
 // RUN: -reconcile-unrealized-casts |\
