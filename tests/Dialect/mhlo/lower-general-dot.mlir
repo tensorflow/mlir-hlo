@@ -123,3 +123,20 @@ func @dot_general_to_dot_dynamic(%arg0: tensor<128x4x?x32xf32>, %arg1: tensor<8x
 // CHECK-DAG: %[[DR3:.+]] = "mhlo.dynamic_reshape"(%[[DOT]], %[[CONCAT3]])
 // CHECK: return %[[DR3]]
 
+
+// -----
+
+func @dot_no_rhs_batch(%arg0: tensor<1x512x768xf32>, %arg1: tensor<768x12x64xf32>) -> tensor<1x512x12x64xf32> {
+  %0 = "mhlo.dot_general"(%arg0, %arg1) {
+    dot_dimension_numbers = #mhlo.dot<
+      lhs_contracting_dimensions = [2],
+      rhs_contracting_dimensions = [0]>
+    } : (tensor<1x512x768xf32>, tensor<768x12x64xf32>) -> tensor<1x512x12x64xf32>
+  return %0 : tensor<1x512x12x64xf32>
+}
+
+// CHECK-LABEL:  func @dot_no_rhs_batch
+// CHECK:          %[[RESHAPEL:.+]] = "mhlo.reshape"(%arg0) : (tensor<1x512x768xf32>) -> tensor<512x768xf32>
+// CHECK:          %[[RESHAPER:.+]] = "mhlo.reshape"(%arg1) : (tensor<768x12x64xf32>) -> tensor<768x768xf32>
+// CHECK:          %[[DOT:.+]] = "mhlo.dot"(%[[RESHAPEL]], %[[RESHAPER]]) : (tensor<512x768xf32>, tensor<768x768xf32>) -> tensor<512x768xf32>
+// CHECK:          %[[OUT:.+]] = "mhlo.reshape"(%[[DOT]]) : (tensor<512x768xf32>) -> tensor<1x512x12x64xf32>
