@@ -4,7 +4,7 @@
 // RUN: -buffer-hoisting -buffer-deallocation -canonicalize -cse \
 // RUN: -convert-linalg-to-loops -canonicalize -cse \
 // RUN: -convert-linalg-to-llvm -lower-affine -convert-scf-to-cf \
-// RUN: -convert-memref-to-llvm -convert-std-to-llvm \
+// RUN: -convert-memref-to-llvm -convert-func-to-llvm \
 // RUN: -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext |\
