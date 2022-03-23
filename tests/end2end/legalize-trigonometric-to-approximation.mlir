@@ -12,13 +12,13 @@ func @print_f32(%arg : f32) {
   %c0 = arith.constant 0 : index
   memref.store %arg, %mem[%c0] : memref<1xf32>
   %mem_unranked = memref.cast %mem : memref<1xf32> to memref<*xf32>
-  call @print_memref_f32(%mem_unranked) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%mem_unranked) : (memref<*xf32>) -> ()
   return
 }
 
 func @tanh_f32(%arg : f32) {
   %res = math.tanh %arg : f32
-  call @print_f32(%res) : (f32) -> ()
+  func.call @print_f32(%res) : (f32) -> ()
   return
 }
 
@@ -41,35 +41,35 @@ func @main() {
   %cf_50_0 = arith.constant 50.0 : f32
 
   // Tanh.
-  call @tanh_f32(%cf_n50_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_n50_0) : (f32) -> ()
   // CHECK: -1
-  call @tanh_f32(%cf_n5_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_n5_0) : (f32) -> ()
   // CHECK: -0.999{{.*}}
-  call @tanh_f32(%cf_n3_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_n3_0) : (f32) -> ()
   // CHECK: -0.995{{.*}}
-  call @tanh_f32(%cf_n2_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_n2_0) : (f32) -> ()
   // CHECK: -0.964{{.*}}
-  call @tanh_f32(%cf_n1_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_n1_0) : (f32) -> ()
   // CHECK: -0.761{{.*}}
-  call @tanh_f32(%cf_n0_5) : (f32) -> ()
+  func.call @tanh_f32(%cf_n0_5) : (f32) -> ()
   // CHECK: -0.462{{.*}}
-  call @tanh_f32(%cf_n0_1) : (f32) -> ()
+  func.call @tanh_f32(%cf_n0_1) : (f32) -> ()
   // CHECK: -0.099{{.*}}
-  call @tanh_f32(%cf_0_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_0_0) : (f32) -> ()
   // CHECK: 0
-  call @tanh_f32(%cf_0_1) : (f32) -> ()
+  func.call @tanh_f32(%cf_0_1) : (f32) -> ()
   // CHECK: 0.099{{.*}}
-  call @tanh_f32(%cf_0_5) : (f32) -> ()
+  func.call @tanh_f32(%cf_0_5) : (f32) -> ()
   // CHECK: 0.462{{.*}}
-  call @tanh_f32(%cf_1_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_1_0) : (f32) -> ()
   // CHECK: 0.761{{.*}}
-  call @tanh_f32(%cf_2_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_2_0) : (f32) -> ()
   // CHECK: 0.964{{.*}}
-  call @tanh_f32(%cf_3_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_3_0) : (f32) -> ()
   // CHECK: 0.995{{.*}}
-  call @tanh_f32(%cf_5_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_5_0) : (f32) -> ()
   // CHECK: 0.999{{.*}}
-  call @tanh_f32(%cf_50_0) : (f32) -> ()
+  func.call @tanh_f32(%cf_50_0) : (f32) -> ()
   // CHECK: 1
 
   return

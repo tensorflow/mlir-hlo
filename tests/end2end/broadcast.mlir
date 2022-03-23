@@ -11,16 +11,16 @@
 // RUN: FileCheck %s
 
 func @main() -> () {
-  call @trivial_broadcast_wrapper() : () -> ()
-  call @broadcast_in_X_dim_wrapper() : () -> ()
-  call @broadcast_in_Y_dim_wrapper() : () -> ()
-  call @broadcast_in_X_dim_transpose_wrapper() : () -> ()
-  call @broadcast_in_Y_dim_transpose_wrapper() : () -> ()
-  call @broadcast_scalar_1d_wrapper() : () -> ()
-  call @broadcast_scalar_2d_wrapper() : () -> ()
-  call @broadcast_to_the_same_shape() : () -> ()
-  call @broadcast_1d_to_2d() : () -> ()
-  call @broadcast_1d_to_2d_with_transpose() : () -> ()
+  func.call @trivial_broadcast_wrapper() : () -> ()
+  func.call @broadcast_in_X_dim_wrapper() : () -> ()
+  func.call @broadcast_in_Y_dim_wrapper() : () -> ()
+  func.call @broadcast_in_X_dim_transpose_wrapper() : () -> ()
+  func.call @broadcast_in_Y_dim_transpose_wrapper() : () -> ()
+  func.call @broadcast_scalar_1d_wrapper() : () -> ()
+  func.call @broadcast_scalar_2d_wrapper() : () -> ()
+  func.call @broadcast_to_the_same_shape() : () -> ()
+  func.call @broadcast_1d_to_2d() : () -> ()
+  func.call @broadcast_1d_to_2d_with_transpose() : () -> ()
   return
 }
 
@@ -50,7 +50,7 @@ func @trivial_broadcast_wrapper() {
   %output_buf = bufferization.to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   1,   1,   1]
   // CHECK-NEXT: [2,   2,   2,   2]
@@ -68,7 +68,7 @@ func @trivial_broadcast_wrapper() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   1,   1,   1]
   // CHECK-NEXT: [2,   2,   2,   2]
@@ -100,7 +100,7 @@ func @broadcast_in_X_dim_wrapper() {
   %output_buf = bufferization.to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   2,   3,   4]
   // CHECK-NEXT: [1,   2,   3,   4]
@@ -117,7 +117,7 @@ func @broadcast_in_X_dim_wrapper() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   2,   3,   4]
   // CHECK-NEXT: [1,   2,   3,   4]
@@ -146,7 +146,7 @@ func @broadcast_in_Y_dim_wrapper() {
   %output_buf = bufferization.to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   1,   1,   1]
   // CHECK-NEXT: [2,   2,   2,   2]
@@ -164,7 +164,7 @@ func @broadcast_in_Y_dim_wrapper() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   1,   1,   1]
   // CHECK-NEXT: [2,   2,   2,   2]
@@ -196,7 +196,7 @@ func @broadcast_in_X_dim_transpose_wrapper() {
   %output_buf = bufferization.to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   2,   3,   4]
   // CHECK-NEXT: [1,   2,   3,   4]
@@ -213,7 +213,7 @@ func @broadcast_in_X_dim_transpose_wrapper() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1,   2,   3,   4]
   // CHECK-NEXT: [1,   2,   3,   4]
@@ -242,7 +242,7 @@ func @broadcast_in_Y_dim_transpose_wrapper() {
   %output_buf = bufferization.to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT-NEXT: [1,   1,   1,   1]
   // CHECK-NEXT-NEXT: [2,   2,   2,   2]
@@ -260,7 +260,7 @@ func @broadcast_in_Y_dim_transpose_wrapper() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT-NEXT: [1,   1,   1,   1]
   // CHECK-NEXT-NEXT: [2,   2,   2,   2]
@@ -283,7 +283,7 @@ func @broadcast_scalar_1d_wrapper() {
   %output_buf = bufferization.to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
@@ -301,7 +301,7 @@ func @broadcast_scalar_1d_wrapper() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
@@ -324,7 +324,7 @@ func @broadcast_scalar_2d_wrapper() {
   %output_buf = bufferization.to_memref %output : memref<3x4xf32>
 
   %unranked_output = memref.cast %output_buf : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
@@ -342,7 +342,7 @@ func @broadcast_scalar_2d_wrapper() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x4xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 4] strides = [4, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
@@ -377,7 +377,7 @@ func @broadcast_to_the_same_shape() {
   %output_buf = bufferization.to_memref %output : memref<2x3xf32>
 
   %unraked_output = memref.cast %output_buf : memref<2x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   2,   3]
   // CHECK-NEXT: [1,   2,   3]
@@ -392,7 +392,7 @@ func @broadcast_to_the_same_shape() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<2x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   2,   3]
   // CHECK-NEXT: [1,   2,   3]
@@ -422,7 +422,7 @@ func @broadcast_1d_to_2d() {
   %output_buf = bufferization.to_memref %output : memref<3x3xf32>
 
   %unraked_output = memref.cast %output_buf : memref<3x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   1,   1]
   // CHECK-NEXT: [2,   2,   2]
@@ -440,7 +440,7 @@ func @broadcast_1d_to_2d() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   1,   1]
   // CHECK-NEXT: [2,   2,   2]
@@ -471,7 +471,7 @@ func @broadcast_1d_to_2d_with_transpose() {
   %output_buf = bufferization.to_memref %output : memref<3x3xf32>
 
   %unraked_output = memref.cast %output_buf : memref<3x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unraked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   2,   3]
   // CHECK-NEXT: [1,   2,   3]
@@ -488,7 +488,7 @@ func @broadcast_1d_to_2d_with_transpose() {
 
   %unranked_dyn_output = memref.cast %dyn_output_buf
     : memref<3x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_dyn_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   2,   3]
   // CHECK-NEXT: [1,   2,   3]

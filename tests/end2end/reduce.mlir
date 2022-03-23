@@ -13,8 +13,8 @@
 // RUN: FileCheck %s
 
 func @main() -> () {
-  call @reduce_add() : () -> ()
-  call @reduce_max() : () -> ()
+  func.call @reduce_add() : () -> ()
+  func.call @reduce_max() : () -> ()
   return
 }
 
@@ -34,7 +34,7 @@ func @reduce_add() {
     memref.store %i_f32, %input[%i, %j] : memref<2x3xf32>
   }
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_input) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_input) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
   // CHECK: [0,   0,   0]
   // CHECK: [1,   1,   1]
@@ -51,7 +51,7 @@ func @reduce_add() {
 
   %output = bufferization.to_memref %reduce : memref<2xf32>
   %unranked_output = memref.cast %output : memref<2xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 1 offset = 0 sizes = [2] strides = [1]
   // CHECK: [0,  3]
   return
@@ -71,7 +71,7 @@ func @reduce_max() {
     memref.store %i_f32, %input[%i, %j] : memref<2x3xf32>
   }
   %unranked_input = memref.cast %input : memref<2x3xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_input) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_input) : (memref<*xf32>) -> ()
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
   // CHECK: [0,   0,   0]
   // CHECK: [1,   1,   1]
@@ -88,7 +88,7 @@ func @reduce_max() {
 
   %output = bufferization.to_memref %reduce : memref<2xf32>
   %unranked_output = memref.cast %output : memref<2xf32> to memref<*xf32>
-  call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
+  func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 1 offset = 0 sizes = [2] strides = [1]
   // CHECK: [0,  1]
   return
