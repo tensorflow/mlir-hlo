@@ -10,7 +10,7 @@
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext |\
 // RUN: FileCheck %s
 
-func @main() -> () {
+func.func @main() -> () {
   func.call @trivial_broadcast_wrapper() : () -> ()
   func.call @broadcast_in_X_dim_wrapper() : () -> ()
   func.call @broadcast_in_Y_dim_wrapper() : () -> ()
@@ -24,10 +24,10 @@ func @main() -> () {
   return
 }
 
-func private @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
-func @trivial_broadcast_wrapper() {
+func.func @trivial_broadcast_wrapper() {
   %input_buf = memref.alloc() : memref<3xf32>
 
   %c1f32 = arith.constant 1.0 : f32
@@ -76,7 +76,7 @@ func @trivial_broadcast_wrapper() {
   return
 }
 
-func @broadcast_in_X_dim_wrapper() {
+func.func @broadcast_in_X_dim_wrapper() {
   %input_buf = memref.alloc() : memref<1x4xf32>
   %c1f32 = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
@@ -125,7 +125,7 @@ func @broadcast_in_X_dim_wrapper() {
   return
 }
 
-func @broadcast_in_Y_dim_wrapper() {
+func.func @broadcast_in_Y_dim_wrapper() {
   %input_buf = memref.alloc() : memref<3x1xf32>
   %c1f32 = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
@@ -172,7 +172,7 @@ func @broadcast_in_Y_dim_wrapper() {
   return
 }
 
-func @broadcast_in_X_dim_transpose_wrapper() {
+func.func @broadcast_in_X_dim_transpose_wrapper() {
   %input_buf = memref.alloc() : memref<4x1xf32>
   %c1f32 = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
@@ -221,7 +221,7 @@ func @broadcast_in_X_dim_transpose_wrapper() {
   return
 }
 
-func @broadcast_in_Y_dim_transpose_wrapper() {
+func.func @broadcast_in_Y_dim_transpose_wrapper() {
   %input_buf = memref.alloc() : memref<1x3xf32>
   %c1f32 = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
@@ -268,7 +268,7 @@ func @broadcast_in_Y_dim_transpose_wrapper() {
   return
 }
 
-func @broadcast_scalar_1d_wrapper() {
+func.func @broadcast_scalar_1d_wrapper() {
   %input_buf = memref.alloc() : memref<1xf32>
   %c1f32 = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
@@ -309,7 +309,7 @@ func @broadcast_scalar_1d_wrapper() {
   return
 }
 
-func @broadcast_scalar_2d_wrapper() {
+func.func @broadcast_scalar_2d_wrapper() {
   %input_buf = memref.alloc() : memref<1x1xf32>
   %c1f32 = arith.constant 1.0 : f32
   %c0 = arith.constant 0 : index
@@ -350,7 +350,7 @@ func @broadcast_scalar_2d_wrapper() {
   return
 }
 
-func @broadcast_to_the_same_shape() {
+func.func @broadcast_to_the_same_shape() {
   %input_buf = memref.alloc() : memref<2x3xf32>
 
   %c1f32 = arith.constant 1.0 : f32
@@ -399,7 +399,7 @@ func @broadcast_to_the_same_shape() {
   return
 }
 
-func @broadcast_1d_to_2d() {
+func.func @broadcast_1d_to_2d() {
   %input_buf = memref.alloc() : memref<3xf32>
 
   %c1f32 = arith.constant 1.0 : f32
@@ -448,7 +448,7 @@ func @broadcast_1d_to_2d() {
   return
 }
 
-func @broadcast_1d_to_2d_with_transpose() {
+func.func @broadcast_1d_to_2d_with_transpose() {
   %input_buf = memref.alloc() : memref<3xf32>
 
   %c1f32 = arith.constant 1.0 : f32

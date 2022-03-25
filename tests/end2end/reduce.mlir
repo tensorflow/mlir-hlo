@@ -12,15 +12,15 @@
 // RUN: -shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
-func @main() -> () {
+func.func @main() -> () {
   func.call @reduce_add() : () -> ()
   func.call @reduce_max() : () -> ()
   return
 }
 
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
-func @reduce_add() {
+func.func @reduce_add() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
 
@@ -57,7 +57,7 @@ func @reduce_add() {
   return
 }
 
-func @reduce_max() {
+func.func @reduce_max() {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
 

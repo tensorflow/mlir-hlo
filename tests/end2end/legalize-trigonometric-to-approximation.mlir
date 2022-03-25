@@ -4,10 +4,10 @@
 // RUN: mlir-cpu-runner -e main -entry-point-result=void --shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext |\
 // RUN: FileCheck %s
 
-func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 // Helper function to print scalar values.
-func @print_f32(%arg : f32) {
+func.func @print_f32(%arg : f32) {
   %mem = memref.alloca() : memref<1xf32>
   %c0 = arith.constant 0 : index
   memref.store %arg, %mem[%c0] : memref<1xf32>
@@ -16,13 +16,13 @@ func @print_f32(%arg : f32) {
   return
 }
 
-func @tanh_f32(%arg : f32) {
+func.func @tanh_f32(%arg : f32) {
   %res = math.tanh %arg : f32
   func.call @print_f32(%res) : (f32) -> ()
   return
 }
 
-func @main() {
+func.func @main() {
   // Some constants to use as arguments.
   %cf_n50_0 = arith.constant -50.0 : f32
   %cf_n5_0 = arith.constant -5.0 : f32
