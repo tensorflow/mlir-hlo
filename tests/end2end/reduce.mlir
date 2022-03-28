@@ -15,7 +15,7 @@
 func.func @main() -> () {
   func.call @reduce_add() : () -> ()
   func.call @reduce_max() : () -> ()
-  return
+  func.return
 }
 
 func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
@@ -54,7 +54,7 @@ func.func @reduce_add() {
   func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 1 offset = 0 sizes = [2] strides = [1]
   // CHECK: [0,  3]
-  return
+  func.return
 }
 
 func.func @reduce_max() {
@@ -91,5 +91,5 @@ func.func @reduce_max() {
   func.call @print_memref_f32(%unranked_output) : (memref<*xf32>) -> ()
   // CHECK: rank = 1 offset = 0 sizes = [2] strides = [1]
   // CHECK: [0,  1]
-  return
+  func.return
 }

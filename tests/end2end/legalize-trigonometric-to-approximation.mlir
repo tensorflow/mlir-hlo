@@ -13,13 +13,13 @@ func.func @print_f32(%arg : f32) {
   memref.store %arg, %mem[%c0] : memref<1xf32>
   %mem_unranked = memref.cast %mem : memref<1xf32> to memref<*xf32>
   func.call @print_memref_f32(%mem_unranked) : (memref<*xf32>) -> ()
-  return
+  func.return
 }
 
 func.func @tanh_f32(%arg : f32) {
   %res = math.tanh %arg : f32
   func.call @print_f32(%res) : (f32) -> ()
-  return
+  func.return
 }
 
 func.func @main() {
@@ -72,5 +72,5 @@ func.func @main() {
   func.call @tanh_f32(%cf_50_0) : (f32) -> ()
   // CHECK: 1
 
-  return
+  func.return
 }

@@ -21,7 +21,7 @@ func.func @main() -> () {
   func.call @broadcast_to_the_same_shape() : () -> ()
   func.call @broadcast_1d_to_2d() : () -> ()
   func.call @broadcast_1d_to_2d_with_transpose() : () -> ()
-  return
+  func.return
 }
 
 func.func private @print_memref_i8(memref<*xi8>) attributes { llvm.emit_c_interface }
@@ -73,7 +73,7 @@ func.func @trivial_broadcast_wrapper() {
   // CHECK-NEXT: [1,   1,   1,   1]
   // CHECK-NEXT: [2,   2,   2,   2]
   // CHECK-NEXT: [3,   3,   3,   3]
-  return
+  func.return
 }
 
 func.func @broadcast_in_X_dim_wrapper() {
@@ -122,7 +122,7 @@ func.func @broadcast_in_X_dim_wrapper() {
   // CHECK-NEXT: [1,   2,   3,   4]
   // CHECK-NEXT: [1,   2,   3,   4]
   // CHECK-NEXT: [1,   2,   3,   4]
-  return
+  func.return
 }
 
 func.func @broadcast_in_Y_dim_wrapper() {
@@ -169,7 +169,7 @@ func.func @broadcast_in_Y_dim_wrapper() {
   // CHECK-NEXT: [1,   1,   1,   1]
   // CHECK-NEXT: [2,   2,   2,   2]
   // CHECK-NEXT: [3,   3,   3,   3]
-  return
+  func.return
 }
 
 func.func @broadcast_in_X_dim_transpose_wrapper() {
@@ -218,7 +218,7 @@ func.func @broadcast_in_X_dim_transpose_wrapper() {
   // CHECK-NEXT: [1,   2,   3,   4]
   // CHECK-NEXT: [1,   2,   3,   4]
   // CHECK-NEXT: [1,   2,   3,   4]
-  return
+  func.return
 }
 
 func.func @broadcast_in_Y_dim_transpose_wrapper() {
@@ -265,7 +265,7 @@ func.func @broadcast_in_Y_dim_transpose_wrapper() {
   // CHECK-NEXT-NEXT: [1,   1,   1,   1]
   // CHECK-NEXT-NEXT: [2,   2,   2,   2]
   // CHECK-NEXT-NEXT: [3,   3,   3,   3]
-  return
+  func.return
 }
 
 func.func @broadcast_scalar_1d_wrapper() {
@@ -306,7 +306,7 @@ func.func @broadcast_scalar_1d_wrapper() {
   // CHECK-NEXT: [1, 1, 1, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
-  return
+  func.return
 }
 
 func.func @broadcast_scalar_2d_wrapper() {
@@ -347,7 +347,7 @@ func.func @broadcast_scalar_2d_wrapper() {
   // CHECK-NEXT: [1, 1, 1, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
   // CHECK-NEXT: [1, 1, 1, 1]
-  return
+  func.return
 }
 
 func.func @broadcast_to_the_same_shape() {
@@ -396,7 +396,7 @@ func.func @broadcast_to_the_same_shape() {
   // CHECK: rank = 2 offset = 0 sizes = [2, 3] strides = [3, 1]
   // CHECK-NEXT: [1,   2,   3]
   // CHECK-NEXT: [1,   2,   3]
-  return
+  func.return
 }
 
 func.func @broadcast_1d_to_2d() {
@@ -445,7 +445,7 @@ func.func @broadcast_1d_to_2d() {
   // CHECK-NEXT: [1,   1,   1]
   // CHECK-NEXT: [2,   2,   2]
   // CHECK-NEXT: [3,   3,   3]
-  return
+  func.return
 }
 
 func.func @broadcast_1d_to_2d_with_transpose() {
@@ -493,5 +493,5 @@ func.func @broadcast_1d_to_2d_with_transpose() {
   // CHECK-NEXT: [1,   2,   3]
   // CHECK-NEXT: [1,   2,   3]
   // CHECK-NEXT: [1,   2,   3]
-  return
+  func.return
 }
