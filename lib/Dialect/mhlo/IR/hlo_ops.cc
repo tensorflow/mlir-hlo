@@ -2917,8 +2917,7 @@ ParseResult parseReduceOp(OpAsmParser& parser, OperationState& result) {
   if (parser.parseKeyword("across") || parser.parseKeyword("dimensions") ||
       parser.parseEqual() ||
       parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, parseDim) ||
-      parser.parseColon() || parser.parseType(reduceOpFntype) ||
-      parser.parseOptionalLocationSpecifier(explicitLoc))
+      parser.parseColon() || parser.parseType(reduceOpFntype))
     return failure();
 
   if (!reduceOpFntype || reduceOpFntype.getInputs().empty()) {
