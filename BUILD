@@ -1481,6 +1481,7 @@ cc_library(
     ],
     deps = [
         ":MhloPassIncGen",
+        "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
     ],
 )
@@ -1658,6 +1659,7 @@ cc_library(
     ],
     deps = [
         ":transforms_pass_inc_gen",
+        "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
     ],
 )
