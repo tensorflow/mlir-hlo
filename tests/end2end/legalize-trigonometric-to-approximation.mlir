@@ -4,7 +4,7 @@
 // RUN: mlir-cpu-runner -e main -entry-point-result=void --shared-libs=%mlir_runner_utils_dir/libmlir_runner_utils%shlibext |\
 // RUN: FileCheck %s
 
-func.func private @print_memref_f32(memref<*xf32>) attributes { llvm.emit_c_interface }
+func.func private @printMemrefF32(memref<*xf32>) attributes { llvm.emit_c_interface }
 
 // Helper function to print scalar values.
 func.func @print_f32(%arg : f32) {
@@ -12,7 +12,7 @@ func.func @print_f32(%arg : f32) {
   %c0 = arith.constant 0 : index
   memref.store %arg, %mem[%c0] : memref<1xf32>
   %mem_unranked = memref.cast %mem : memref<1xf32> to memref<*xf32>
-  func.call @print_memref_f32(%mem_unranked) : (memref<*xf32>) -> ()
+  func.call @printMemrefF32(%mem_unranked) : (memref<*xf32>) -> ()
   func.return
 }
 
