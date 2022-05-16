@@ -1635,6 +1635,7 @@ cc_library(
         ":sink_constants_to_control_flow",
         ":symbolic_shape_optimization",
         ":test_passes",
+        ":tile_loops_pass",
         ":transforms_pass_details",
         ":transforms_pass_inc_gen",
         ":userange_analysis",
@@ -1711,6 +1712,7 @@ cc_library(
     ],
     deps = [
         ":transforms_pass_inc_gen",
+        "@llvm-project//mlir:Affine",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
     ],
@@ -1764,6 +1766,7 @@ cc_library(
     deps = [
         ":hlo",
         ":transforms_pass_inc_gen",
+        "@llvm-project//mlir:Affine",
         "@llvm-project//mlir:Analysis",
         "@llvm-project//mlir:ArithmeticDialect",
         "@llvm-project//mlir:BufferizationTransforms",
@@ -1786,6 +1789,7 @@ cc_library(
     deps = [
         ":hlo",
         ":transforms_pass_inc_gen",
+        "@llvm-project//mlir:Affine",
         "@llvm-project//mlir:Analysis",
         "@llvm-project//mlir:BufferizationTransforms",
         "@llvm-project//mlir:FuncDialect",
@@ -1809,6 +1813,7 @@ cc_library(
         ":hlo",
         ":lhlo",
         ":transforms_pass_inc_gen",
+        "@llvm-project//mlir:Affine",
         "@llvm-project//mlir:Analysis",
         "@llvm-project//mlir:BufferizationTransforms",
         "@llvm-project//mlir:CopyOpInterface",
@@ -1830,6 +1835,7 @@ cc_library(
         ":shape_component_analysis",
         ":transforms_pass_inc_gen",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Affine",
         "@llvm-project//mlir:ArithmeticDialect",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
@@ -1962,6 +1968,7 @@ cc_library(
         ":hlo",
         ":transforms_pass_inc_gen",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Affine",
         "@llvm-project//mlir:GPUDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:LLVMDialect",
@@ -1985,6 +1992,7 @@ cc_library(
     deps = [
         ":hlo",
         ":transforms_pass_inc_gen",
+        "@llvm-project//mlir:Affine",
         "@llvm-project//mlir:ArithmeticDialect",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
@@ -2008,6 +2016,7 @@ cc_library(
         ":transforms_pass_inc_gen",
         "//third_party/tensorflow/compiler/mlir/tools/kernel_gen/transforms:kernel_gen_passes_inc_gen",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Affine",
         "@llvm-project//mlir:ArithmeticDialect",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
@@ -2015,6 +2024,30 @@ cc_library(
         "@llvm-project//mlir:Shape",
         "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:TransformUtils",
+    ],
+)
+
+cc_library(
+    name = "tile_loops_pass",
+    srcs = [
+        "lib/Transforms/tile_loops_pass.cc",
+    ],
+    hdrs = [
+        "include/mlir-hlo/Transforms/PassDetail.h",
+        "include/mlir-hlo/Transforms/passes.h",
+    ],
+    deps = [
+        ":hlo",
+        ":transforms_pass_inc_gen",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Affine",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:MemRefDialect",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:SCFDialect",
+        "@llvm-project//mlir:SCFTransforms",
+        "@llvm-project//mlir:SCFUtils",
     ],
 )
 
