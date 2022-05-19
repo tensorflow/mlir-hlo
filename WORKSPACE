@@ -26,9 +26,9 @@ http_archive(
     ],
 )
 
-LLVM_COMMIT = "9c6a2f29660b886044a267bb4de662cd801079bc"
+LLVM_COMMIT = "bff4673b41781ec5bff6b96b52cf321d2271726c"
 
-LLVM_SHA256 = "158b4474d55f745cf3996a18814381de6f1260cb03785ce599cae0046326a9a1"
+LLVM_SHA256 = "f76a2ebfc9e8373979671589aebaf09aa1b73306ccb4f1105b18ac135cdbc1b1"
 
 http_archive(
     name = "llvm-raw",
