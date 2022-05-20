@@ -510,6 +510,7 @@ cc_library(
     hdrs = ["include/mlir-hlo/utils/convert_op_folder.h"],
     includes = ["include"],
     deps = [
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
     ],
 )
