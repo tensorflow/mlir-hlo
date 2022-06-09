@@ -12,7 +12,7 @@ exports_files([
 ])
 
 # Python extension sources.
-exports_files(["python/MlirHloModule.cpp"])
+exports_files(["python/MlirHloModule.cc"])
 
 filegroup(
     name = "hlo_ops_td_filegroup",
@@ -2209,10 +2209,10 @@ CAPI_HEADERS = [
 ]
 
 CAPI_SOURCES = [
-    "lib/CAPI/Attributes.cpp",
-    "lib/CAPI/Dialects.cpp",
-    "lib/CAPI/Passes.cpp",
-    "lib/CAPI/Types.cpp",
+    "lib/CAPI/Attributes.cc",
+    "lib/CAPI/Dialects.cc",
+    "lib/CAPI/Passes.cc",
+    "lib/CAPI/Types.cc",
 ]
 
 cc_library(
@@ -2251,7 +2251,7 @@ cc_library(
 
 cc_binary(
     name = "mlir-hlo-opt",
-    srcs = ["tools/mlir-hlo-opt/mlir-hlo-opt.cpp"],
+    srcs = ["tools/mlir-hlo-opt/mlir-hlo-opt.cc"],
     deps = [
         ":all_passes",
         ":all_test_passes",
@@ -2460,7 +2460,7 @@ cc_library(
 
 cc_library(
     name = "gml_st_bufferizable_op_interface",
-    srcs = ["lib/Dialect/gml_st/transforms/bufferizable_op_interface_impl.cpp"],
+    srcs = ["lib/Dialect/gml_st/transforms/bufferizable_op_interface_impl.cc"],
     hdrs = [
         "include/mlir-hlo/Dialect/gml_st/transforms/bufferizable_op_interface_impl.h",
     ],

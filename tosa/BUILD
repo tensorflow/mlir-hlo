@@ -12,7 +12,7 @@ package_group(
 
 cc_binary(
     name = "mhlo-tosa-opt",
-    srcs = ["mhlo_tosa_opt.cpp"],
+    srcs = ["mhlo_tosa_opt.cc"],
     deps = [
         "//third_party/llvm/llvm-project/llvm:Support",
         "//third_party/llvm/llvm-project/mlir:AllPassesAndDialects",
