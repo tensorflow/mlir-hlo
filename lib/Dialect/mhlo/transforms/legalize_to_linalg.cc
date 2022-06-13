@@ -172,8 +172,10 @@ bool isSplatValue(DenseIntElementsAttr attr, uint64_t value) {
 ///
 /// * Input dimensions have order: (batch_count, spatial_dims,
 ///   input_channel_count).
-/// * Filter dimensions have order: (spatial_dims, input_channel_count,
-///   output_channel_count).
+/// * Filter dimensions have order:
+///   (spatial_dims, input_channel_count, output_channel_count)  OR
+///   following order in case of transposed convolution:
+///   (spatial_dims, output_channel_count, input_channel_count)  
 /// * Output dimensions have order: (batch_count, spatial_dims,
 ///   output_channel_count).
 static bool HasCanonicalDimensionNumbers(
@@ -188,16 +190,21 @@ static bool HasCanonicalDimensionNumbers(
     return false;
   }
 
-  const int kernel_spatial_rank =
+ const int kernel_spatial_rank =
       llvm::size(dimension_numbers.getKernelSpatialDimensions());
   // The dimensions for filter should follow the order of
-  // spatial_dims..., input_feature_count, num_output_feature_count.
-  if (dimension_numbers.getKernelInputFeatureDimension() !=
-          kernel_spatial_rank ||
-      dimension_numbers.getKernelOutputFeatureDimension() !=
-          (kernel_spatial_rank + 1)) {
-    return false;
-  }
+  // (spatial_dims..., input_channel_count, output_channel_count)
+  // Or, in case of transposed convolution, the order should be 
+  // (spatial_dims..., output_channel_count, input_channel_count)
+ const int kernel_input_feature =
+     dimension_numbers.getKernelInputFeatureDimension();
+ const int kernel_output_feature =
+     dimension_numbers.getKernelOutputFeatureDimension();
+ if (!((kernel_input_feature == kernel_spatial_rank &&
+      kernel_output_feature == (kernel_spatial_rank + 1)) ||
+     (kernel_output_feature == kernel_spatial_rank &&
+      kernel_input_feature == (kernel_spatial_rank + 1))))
+   return false;
 
   const int output_spatial_rank =
       llvm::size(dimension_numbers.getOutputSpatialDimensions());
@@ -1846,7 +1853,8 @@ struct NormalConvOpOnTensorsConversion
     Attribute strides = op.window_stridesAttr();
     // TODO(ataei): Only support dilated kernel right now. We need to consider
     // input dilation for deconvolution cases.
-    Attribute dilations = op.rhs_dilationAttr();
+    Attribute rhs_dilations = op.rhs_dilationAttr();
+    Attribute lhs_dilations = op.lhs_dilationAttr();
 
     // Check if padding is zero or not. If it is not zero, we should pad the
     // input.
@@ -1866,19 +1874,19 @@ struct NormalConvOpOnTensorsConversion
     case 3: {
       res = rewriter.create<linalg::Conv1DNwcWcfOp>(
           loc, result_type, ValueRange{input, filter}, ValueRange{zero_tensor},
-          strides, dilations, PruneAttributeList(op));
+          strides, rhs_dilations, PruneAttributeList(op));
       break;
     }
     case 4: {
       res = rewriter.create<linalg::Conv2DNhwcHwcfOp>(
           loc, result_type, ValueRange{input, filter}, ValueRange{zero_tensor},
-          strides, dilations, PruneAttributeList(op));
+          strides, rhs_dilations, lhs_dilations, PruneAttributeList(op));
       break;
     }
     case 5: {
       res = rewriter.create<linalg::Conv3DNdhwcDhwcfOp>(
           loc, result_type, ValueRange{input, filter}, ValueRange{zero_tensor},
-          strides, dilations, PruneAttributeList(op));
+          strides, rhs_dilations, PruneAttributeList(op));
       break;
     }
     default:
