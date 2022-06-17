@@ -2318,6 +2318,7 @@ cc_library(
         "@llvm-project//mlir:LoopLikeInterface",
         "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:TensorUtils",
         "@llvm-project//mlir:ViewLikeInterface",
     ],
 )
@@ -2527,6 +2528,7 @@ cc_library(
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:LinalgTransforms",
         "@llvm-project//mlir:SCFUtils",
+        "@llvm-project//mlir:TensorUtils",
     ],
 )
 
