@@ -2255,6 +2255,7 @@ td_library(
         "@llvm-project//mlir:LoopLikeInterfaceTdFiles",
         "@llvm-project//mlir:OpBaseTdFiles",
         "@llvm-project//mlir:SideEffectInterfacesTdFiles",
+        "@llvm-project//mlir:ViewLikeInterfaceTdFiles",
     ],
 )
 
@@ -2388,10 +2389,13 @@ cc_library(
     includes = ["include"],
     deps = [
         ":gml_st",
+        "@llvm-project//mlir:ArithmeticDialect",
         "@llvm-project//mlir:BufferizationDialect",
         "@llvm-project//mlir:BufferizationTransforms",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:ViewLikeInterface",
     ],
 )
 
