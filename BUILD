@@ -2160,6 +2160,7 @@ cc_library(
     deps = [
         ":bufferize_pass",
         ":gml_st_tiling",
+        ":gml_st_vectorization",
         ":legalize_mhlo_to_gml",
         ":legalize_to_linalg",
         "@llvm-project//mlir:BufferizationTransforms",
@@ -2555,6 +2556,28 @@ cc_library(
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:Transforms",
+    ],
+)
+
+cc_library(
+    name = "gml_st_vectorization",
+    srcs = [
+        "include/mlir-hlo/Dialect/gml_st/transforms/pass_detail.h",
+        "lib/Dialect/gml_st/transforms/vectorization.cc",
+    ],
+    hdrs = [
+        "include/mlir-hlo/Dialect/gml_st/transforms/passes.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":gml_st",
+        ":gml_st_passes_inc_gen",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:LinalgDialect",
+        "@llvm-project//mlir:LinalgTransforms",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:VectorDialect",
     ],
 )
 
