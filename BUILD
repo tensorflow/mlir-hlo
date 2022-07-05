@@ -2447,6 +2447,7 @@ cc_library(
         "@llvm-project//mlir:LinalgDialect",
         "@llvm-project//mlir:LinalgTransforms",
         "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TensorUtils",
     ],
 )
 
