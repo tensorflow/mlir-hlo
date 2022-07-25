@@ -29,7 +29,7 @@ namespace mlir {
 namespace lmhlo {
 namespace {
 
-// Builds an affine loop nest iterating from zeros to "upper_bounds" with unit
+// Builds a affine loop nest iterating from zeros to "upper_bounds" with unit
 // steps, and populates the body of the innermost loop using "body_builder".
 static void BuildBoundedAffineLoopNest(
     OpBuilder& builder, Location location, ArrayRef<int64_t> upper_bounds,
