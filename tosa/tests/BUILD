@@ -15,6 +15,6 @@ filegroup(
     testonly = True,
     data = [
         "//third_party/llvm/llvm-project/llvm:FileCheck",
-        "//third_party/tensorflow/compiler/mlir/hlo/tosa:mhlo-tosa-opt",
+        "//third_party/tensorflow/compiler/xla/mlir_hlo/tosa:mhlo-tosa-opt",
     ],
 )

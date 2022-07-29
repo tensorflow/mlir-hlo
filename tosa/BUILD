@@ -5,7 +5,7 @@ load("//third_party/llvm/llvm-project/mlir:tblgen.bzl", "gentbl_cc_library")
 package(
     default_visibility = [
         ":internal",
-        "//third_party/tensorflow/compiler/mlir/hlo/tosa:__subpackages__",
+        "//third_party/tensorflow/compiler/xla/mlir_hlo/tosa:__subpackages__",
     ],
     licenses = ["notice"],
 )
@@ -28,7 +28,7 @@ gentbl_cc_library(
     deps = [
         "//third_party/llvm/llvm-project/mlir:OpBaseTdFiles",
         "//third_party/llvm/llvm-project/mlir:TosaDialectTdFiles",
-        "//third_party/tensorflow/compiler/mlir/hlo:hlo_ops_td_files",
+        "//third_party/tensorflow/compiler/xla/mlir_hlo:hlo_ops_td_files",
     ],
 )
 
@@ -88,6 +88,6 @@ cc_binary(
         "//third_party/llvm/llvm-project/mlir:Pass",
         "//third_party/llvm/llvm-project/mlir:Support",
         "//third_party/llvm/llvm-project/mlir:TosaDialect",
-        "//third_party/tensorflow/compiler/mlir/hlo:hlo_dialect_registration",
+        "//third_party/tensorflow/compiler/xla/mlir_hlo:hlo_dialect_registration",
     ],
 )
