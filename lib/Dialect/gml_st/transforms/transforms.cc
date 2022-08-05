@@ -18,6 +18,7 @@ limitations under the License.
 #include <utility>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -124,9 +125,9 @@ void generateLoopNest(OpBuilder &b, Location loc, ArrayRef<Range> loopRanges,
                       ArrayRef<StringRef> distributionTypes) {
   SmallVector<Value, 4> lbs, ubs, steps;
   for (Range range : loopRanges) {
-    lbs.emplace_back(range.offset);
-    ubs.emplace_back(range.size);
-    steps.emplace_back(range.stride);
+    lbs.emplace_back(getValueOrCreateConstantIndexOp(b, loc, range.offset));
+    ubs.emplace_back(getValueOrCreateConstantIndexOp(b, loc, range.size));
+    steps.emplace_back(getValueOrCreateConstantIndexOp(b, loc, range.stride));
   }
 
   auto wrappedBuilderFn = [&](OpBuilder &nestedBuilder, Location nestedLoc,
@@ -184,7 +185,8 @@ FailureOr<linalg::TiledLinalgOp> tileLinalgOpImpl(
   mlir::linalg::LoopIndexToRangeIndexMap loopIndexToRangeIndex;
   std::tie(loopRanges, loopIndexToRangeIndex) =
       mlir::linalg::makeTiledLoopRanges(b, op.getLoc(), shapeSizesToLoopsMap,
-                                        allShapeSizes, tileSizes);
+                                        allShapeSizes,
+                                        getAsOpFoldResult(tileSizes));
 
   SmallVector<Attribute, 4> iteratorTypes;
   for (const auto &attr :
@@ -207,10 +209,11 @@ FailureOr<linalg::TiledLinalgOp> tileLinalgOpImpl(
                static_cast<size_t>(op.getNumInputsAndOutputs()) &&
            "expect the number of operands and inputs and outputs to match");
     SmallVector<Value> valuesToTile = operandValuesToUse;
-    auto sizeBounds =
-        applyMapToValues(b, loc, shapeSizesToLoopsMap, allShapeSizes);
+    auto sizeBounds = makeComposedFoldedMultiResultAffineApply(
+        b, loc, shapeSizesToLoopsMap, allShapeSizes);
     SmallVector<Value, 4> tiledOperands =
-        makeTiledShapes(b, loc, op, valuesToTile, ivs, tileSizes, sizeBounds,
+        makeTiledShapes(b, loc, op, valuesToTile, getAsOpFoldResult(ivs),
+                        getAsOpFoldResult(tileSizes), sizeBounds,
                         /*omitPartialTileCheck=*/false);
 
     SmallVector<Type, 4> resultTensorTypes;
