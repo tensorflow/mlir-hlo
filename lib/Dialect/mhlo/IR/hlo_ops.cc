@@ -722,7 +722,8 @@ void ConstantOp::build(OpBuilder& /*builder*/, OperationState& result,
     // All XLA types must be tensor types. In the build() method, we want to
     // provide more flexibility by allowing attributes of scalar types. But we
     // need to wrap it up with ElementsAttr to construct valid XLA constants.
-    type = RankedTensorType::get(/*shape=*/{}, value.getType());
+    type =
+        RankedTensorType::get(/*shape=*/{}, value.cast<TypedAttr>().getType());
     value = DenseElementsAttr::get(type.cast<TensorType>(), value);
   }
 
@@ -735,7 +736,7 @@ void ConstantOp::build(OpBuilder& /*builder*/, OperationState& result,
 LogicalResult ConstantOp::inferReturnTypes(
     MLIRContext*, Optional<Location>, ValueRange, DictionaryAttr attributes,
     RegionRange, SmallVectorImpl<Type>& inferredReturnTypes) {
-  Type type = attributes.get("value").getType();
+  Type type = attributes.get("value").cast<TypedAttr>().getType();
   inferredReturnTypes.push_back(type);
   return success();
 }
@@ -9338,7 +9339,8 @@ LogicalResult deriveShapeFromOperand(
 Operation* MhloDialect::materializeConstant(OpBuilder& builder, Attribute value,
                                             Type type, Location loc) {
   // HLO dialect constants require the type of value and result to match.
-  if (type != value.getType()) return nullptr;
+  if (type != value.cast<TypedAttr>().getType())
+    return nullptr;
   // HLO dialect constants only support ElementsAttr unlike standard dialect
   // constant which supports all attributes.
   if (auto elementsAttr = value.dyn_cast<ElementsAttr>())

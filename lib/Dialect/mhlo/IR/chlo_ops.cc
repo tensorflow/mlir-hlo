@@ -345,7 +345,8 @@ BROADCAST_BINARY_OP_DEFS(BroadcastZetaOp);
 #undef BROADCAST_BINARY_OP_DEFS
 
 LogicalResult ConstantLikeOp::verify() {
-  if (value().getType() != getType().cast<ShapedType>().getElementType())
+  if (value().cast<TypedAttr>().getType() !=
+      getType().cast<ShapedType>().getElementType())
     return emitOpError() << "value's type doesn't match element return type";
   return success();
 }
@@ -376,7 +377,7 @@ LogicalResult ConstantLikeOp::inferReturnTypeComponents(
     SmallVectorImpl<ShapedTypeComponents>& inferedReturnShapes) {
   ConstantLikeOp::Adaptor op(operands, attributes);
   if (failed(op.verify(location.getValue()))) return failure();
-  Type elementType = op.value().getType();
+  Type elementType = op.value().cast<TypedAttr>().getType();
   Type operandType = op.operand().getType();
   if (operandType.isa<UnrankedTensorType>()) {
     inferedReturnShapes.emplace_back(elementType);
@@ -397,7 +398,8 @@ LogicalResult ConstantLikeOp::reifyReturnTypeShapes(
 OpFoldResult ConstantLikeOp::fold(ArrayRef<Attribute> /*operands*/) {
   auto opType = operand().getType().cast<ShapedType>();
   if (!opType.hasStaticShape()) return {};
-  auto type = RankedTensorType::get(opType.getShape(), value().getType());
+  auto type = RankedTensorType::get(opType.getShape(),
+                                    value().cast<TypedAttr>().getType());
   return DenseElementsAttr::get(type, value());
 }
 
