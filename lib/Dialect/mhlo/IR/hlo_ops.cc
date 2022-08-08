@@ -722,7 +722,8 @@ void ConstantOp::build(OpBuilder& /*builder*/, OperationState& result,
     // All XLA types must be tensor types. In the build() method, we want to
     // provide more flexibility by allowing attributes of scalar types. But we
     // need to wrap it up with ElementsAttr to construct valid XLA constants.
-    type = RankedTensorType::get(/*shape=*/{}, value.getType());
+    type =
+        RankedTensorType::get(/*shape=*/{}, value.cast<TypedAttr>().getType());
     value = DenseElementsAttr::get(type.cast<TensorType>(), value);
   }
 
@@ -735,7 +736,7 @@ void ConstantOp::build(OpBuilder& /*builder*/, OperationState& result,
 LogicalResult ConstantOp::inferReturnTypes(
     MLIRContext*, Optional<Location>, ValueRange, DictionaryAttr attributes,
     RegionRange, SmallVectorImpl<Type>& inferredReturnTypes) {
-  Type type = attributes.get("value").getType();
+  Type type = attributes.get("value").cast<TypedAttr>().getType();
   inferredReturnTypes.push_back(type);
   return success();
 }
@@ -866,8 +867,8 @@ LogicalResult CustomCallOp::verify() {
   };
 
   // At this point both `operand_layouts` and `result_layouts` are defined.
-  ArrayAttr operandLayouts = this->operand_layouts().getValue();
-  ArrayAttr resultLayouts = this->result_layouts().getValue();
+  ArrayAttr operandLayouts = this->operand_layouts().value();
+  ArrayAttr resultLayouts = this->result_layouts().value();
 
   // Full support for layouts for arbitrary nesting of tuples is not
   // supported yet.
@@ -1148,8 +1149,7 @@ struct DotGeneralToDot : public OpRewritePattern<DotGeneralOp> {
     if (rhsContract.front() != 0) return failure();
 
     rewriter.replaceOpWithNewOp<mhlo::DotOp>(
-        dot, dot.getType(), lhs, rhs,
-        dot.precision_config().getValueOr(nullptr));
+        dot, dot.getType(), lhs, rhs, dot.precision_config().value_or(nullptr));
 
     return success();
   }
@@ -1745,7 +1745,7 @@ LogicalResult GatherOp::inferReturnTypeComponents(
   // This can get called before other op verify methods, so we have to do a
   // bunch of verification up front. With a better story for ordering and/or
   // multi-phase op verification, this should hopefully all go away.
-  Location loc = location.getValueOr(UnknownLoc::get(context));
+  Location loc = location.value_or(UnknownLoc::get(context));
   auto errorEmitter = [&loc]() {
     return mlir::emitError(loc)
            << "'" << GatherOp::getOperationName() << "' op ";
@@ -1791,7 +1791,7 @@ LogicalResult DynamicGatherOp::inferReturnTypeComponents(
   // This can get called before other op verify methods, so we have to do a
   // bunch of verification up front. With a better story for ordering and/or
   // multi-phase op verification, this should hopefully all go away.
-  Location loc = location.getValueOr(UnknownLoc::get(context));
+  Location loc = location.value_or(UnknownLoc::get(context));
   auto errorEmitter = [&loc]() {
     return mlir::emitError(loc)
            << "'" << DynamicGatherOp::getOperationName() << "' op ";
@@ -2400,7 +2400,7 @@ struct ConvolutionIsDot : public OpRewritePattern<mhlo::ConvolutionOp> {
           op.getContext(), {}, {}, {lhsContractDim}, {rhsContractDim});
       auto dotOp = rewriter.create<mhlo::DotGeneralOp>(
           op.getLoc(), op.getType(), lhs, rhs, dotNums,
-          op.precision_config().getValueOr(nullptr));
+          op.precision_config().value_or(nullptr));
 
       rewriter.replaceOp(op, dotOp.getResult());
       return success();
@@ -2436,7 +2436,7 @@ struct ConvolutionIsDot : public OpRewritePattern<mhlo::ConvolutionOp> {
         {lhsContractDim + 1}, {rhsContractDim == 0 ? 2 : 0});
     auto dotOp = rewriter.create<mhlo::DotGeneralOp>(
         op.getLoc(), dotTy, lhs, rhs, dotNums,
-        op.precision_config().getValueOr(nullptr));
+        op.precision_config().value_or(nullptr));
 
     llvm::SmallVector<int64_t> perms;
     perms.resize(3, dNums.getOutputBatchDimension() == 0 ? 0 : 2);
@@ -5106,8 +5106,8 @@ ParseResult ReduceOp::parse(OpAsmParser& parser, OperationState& result) {
     for (auto argAndLoc :
          llvm::zip(result.regions.front()->front().getArguments(), reducerLocs))
       if (std::get<1>(argAndLoc))
-        std::get<0>(argAndLoc).setLoc(std::get<1>(argAndLoc).getValue());
-    result.location = trailingLoc.getValueOr(currLocation);
+        std::get<0>(argAndLoc).setLoc(std::get<1>(argAndLoc).value());
+    result.location = trailingLoc.value_or(currLocation);
     return success();
   }
 
@@ -5154,7 +5154,7 @@ ParseResult ReduceOp::parse(OpAsmParser& parser, OperationState& result) {
 
   // If location of reduce-op is explicitly provided, then use it; Else use
   // the parser's current location.
-  Location reduceOpLoc = explicitLoc.getValueOr(currLocation);
+  Location reduceOpLoc = explicitLoc.value_or(currLocation);
 
   // Derive the SSA-values for reduce-op's operands.
   if (parser.resolveOperands(operands, reduceOpFntype.getInputs(), loc,
@@ -5629,7 +5629,7 @@ LogicalResult SetDimensionSizeOp::inferReturnTypes(
     MLIRContext* context, Optional<Location> location, ValueRange operands,
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type>& inferredReturnTypes) {
-  Location loc = location.getValueOr(UnknownLoc::get(context));
+  Location loc = location.value_or(UnknownLoc::get(context));
 
   SetDimensionSizeOp::Adaptor adaptor(operands, attributes, regions);
   if (failed(adaptor.verify(loc))) return failure();
@@ -9331,7 +9331,7 @@ static void buildSortComparisonBody(llvm::ArrayRef<Type> elementTypes,
 
   ComparisonType typeAttr;
   if (compareType)
-    typeAttr = symbolizeComparisonType(*compareType).getValue();
+    typeAttr = symbolizeComparisonType(*compareType).value();
   else
     typeAttr = ComparisonType::NOTYPE;
   Value compare = builder->create<mhlo::CompareOp>(
@@ -9386,7 +9386,8 @@ LogicalResult deriveShapeFromOperand(
 Operation* MhloDialect::materializeConstant(OpBuilder& builder, Attribute value,
                                             Type type, Location loc) {
   // HLO dialect constants require the type of value and result to match.
-  if (type != value.getType()) return nullptr;
+  if (type != value.cast<TypedAttr>().getType())
+    return nullptr;
   // HLO dialect constants only support ElementsAttr unlike standard dialect
   // constant which supports all attributes.
   if (auto elementsAttr = value.dyn_cast<ElementsAttr>())

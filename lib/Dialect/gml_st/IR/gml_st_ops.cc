@@ -483,7 +483,7 @@ void LoopOp::build(OpBuilder &builder, OperationState &result,
 
   if (distributionTypes.has_value())
     result.addAttribute(getDistributionTypesAttrName(),
-                        distributionTypes.getValue());
+                        distributionTypes.value());
 
   // Add output types for `RankedTensorType` output arguments.
   for (Value output : outputs) {
@@ -546,7 +546,7 @@ void LoopOp::print(OpAsmPrinter &p) {
     p << " iterators" << iterator_types();
 
   if (distribution_types().has_value())
-    p << " distribution" << distribution_types().getValue();
+    p << " distribution" << distribution_types().value();
 
   p << ' ';
   p.printRegion(region(), /*printEntryBlockArgs=*/false);
@@ -1800,34 +1800,6 @@ Value TileOp::compose(OpBuilder &builder) {
 //===----------------------------------------------------------------------===//
 // PointOp
 //===----------------------------------------------------------------------===//
-
-namespace {
-
-// TODO(frgossen): Move this upstream to the ViewLikeInterface
-SmallVector<OpFoldResult> getMixedImpl(ArrayAttr staticValues,
-                                       ValueRange dynamicValues,
-                                       const int64_t dynamicValuePlaceholder) {
-  int64_t idxDynamic = 0;
-  SmallVector<OpFoldResult> result;
-  for (const auto &staticAttr : staticValues) {
-    int64_t staticInt = staticAttr.cast<IntegerAttr>().getInt();
-    if (staticInt == dynamicValuePlaceholder) {
-      result.push_back(dynamicValues[idxDynamic++]);
-    } else {
-      result.push_back(staticAttr);
-    }
-  }
-  return result;
-}
-
-// TODO(frgossen): Move this upstream to the ViewLikeInterface
-SmallVector<OpFoldResult> getMixedStridesOrOffsets(ArrayAttr staticValues,
-                                                   ValueRange dynamicValues) {
-  return getMixedImpl(staticValues, dynamicValues,
-                      ShapedType::kDynamicStrideOrOffset);
-}
-
-}  // namespace
 
 Value PointOp::compose(OpBuilder &builder) {
   auto supersetOp = llvm::dyn_cast_or_null<TileOp>(superset().getDefiningOp());
