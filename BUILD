@@ -24,6 +24,7 @@ td_library(
     srcs = glob(["include/mlir-hlo/Dialect/mhlo/IR/*.td"]),
     includes = ["include"],
     deps = [
+        "@llvm-project//mlir:BuiltinDialectTdFiles",
         "@llvm-project//mlir:ControlFlowInterfacesTdFiles",
         "@llvm-project//mlir:CopyOpInterfaceTdFiles",
         "@llvm-project//mlir:InferTypeOpInterfaceTdFiles",
