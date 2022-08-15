@@ -193,15 +193,15 @@ void LoopOp::build(OpBuilder &builder, OperationState &result,
   result.addOperands(outputs);
   result.addAttribute(
       LoopOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(lowerBounds.size()),
-                                static_cast<int32_t>(upperBounds.size()),
-                                static_cast<int32_t>(steps.size()),
-                                static_cast<int32_t>(inputs.size()),
-                                static_cast<int32_t>(outputs.size())}));
-  result.addAttribute(getIteratorTypesAttrName(), iteratorTypes);
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(lowerBounds.size()),
+                                    static_cast<int32_t>(upperBounds.size()),
+                                    static_cast<int32_t>(steps.size()),
+                                    static_cast<int32_t>(inputs.size()),
+                                    static_cast<int32_t>(outputs.size())}));
+  result.addAttribute(getThisIteratorTypesAttrName(), iteratorTypes);
 
   if (distributionTypes.has_value())
-    result.addAttribute(getDistributionTypesAttrName(),
+    result.addAttribute(getThisDistributionTypesAttrName(),
                         distributionTypes.getValue());
 
   // Add output types for `RankedTensorType` output arguments.
@@ -367,18 +367,18 @@ ParseResult LoopOp::parse(OpAsmParser &parser, OperationState &result) {
         builder.getStringAttr(LoopOp::getParallelIteratorTypeName());
     iterTypes = SmallVector<Attribute, 4>(ivs.size(), parallelIter);
   }
-  result.addAttribute(LoopOp::getIteratorTypesAttrName(),
+  result.addAttribute(LoopOp::getThisIteratorTypesAttrName(),
                       builder.getArrayAttr(iterTypes));
   if (!distributionTypes.empty())
-    result.addAttribute(LoopOp::getDistributionTypesAttrName(),
+    result.addAttribute(LoopOp::getThisDistributionTypesAttrName(),
                         builder.getArrayAttr(distributionTypes));
   result.addAttribute(
       LoopOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(lower.size()),
-                                static_cast<int32_t>(upper.size()),
-                                static_cast<int32_t>(steps.size()),
-                                static_cast<int32_t>(inputs.size()),
-                                static_cast<int32_t>(outputs.size())}));
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(lower.size()),
+                                    static_cast<int32_t>(upper.size()),
+                                    static_cast<int32_t>(steps.size()),
+                                    static_cast<int32_t>(inputs.size()),
+                                    static_cast<int32_t>(outputs.size())}));
 
   // Parse the body.
   Region *body = result.addRegion();
@@ -550,7 +550,7 @@ ParseResult parseLoopLikeOp(OpAsmParser &parser, OperationState &result) {
 
   // Add segment sizes.
   result.addAttribute(LoopTy::getOperandSegmentSizeAttr(),
-                      builder.getI32VectorAttr(segmentSizes));
+                      builder.getDenseI32ArrayAttr(segmentSizes));
 
   return success();
 }
@@ -577,9 +577,9 @@ void ParallelOp::build(
   result.addTypes(resultTypes);
   result.addAttribute(
       LoopOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(lowerBounds.size()),
-                                static_cast<int32_t>(upperBounds.size()),
-                                static_cast<int32_t>(steps.size())}));
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(lowerBounds.size()),
+                                    static_cast<int32_t>(upperBounds.size()),
+                                    static_cast<int32_t>(steps.size())}));
 
   OpBuilder::InsertionGuard guard(builder);
   unsigned numIvs = steps.size();
@@ -659,10 +659,10 @@ void ForOp::build(
   result.addTypes(resultTypes);
   result.addAttribute(
       LoopOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(lowerBounds.size()),
-                                static_cast<int32_t>(upperBounds.size()),
-                                static_cast<int32_t>(steps.size()),
-                                static_cast<int32_t>(outputs.size())}));
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(lowerBounds.size()),
+                                    static_cast<int32_t>(upperBounds.size()),
+                                    static_cast<int32_t>(steps.size()),
+                                    static_cast<int32_t>(outputs.size())}));
 
   OpBuilder::InsertionGuard guard(builder);
   unsigned numIvs = steps.size();

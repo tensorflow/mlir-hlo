@@ -220,14 +220,12 @@ linalg::LinalgOp createLinalgOpOnBuffers(ConversionPatternRewriter &rewriter,
 }
 
 /// Get a variadic operand segment.
-ValueRange getVariadicOperands(DenseIntElementsAttr sizeAttr,
-                               ValueRange operands, unsigned index) {
-  const uint32_t *sizeIt = &*sizeAttr.value_begin<uint32_t>();
-  if (sizeAttr.isSplat()) return operands.slice(*sizeIt * index, *sizeIt);
-
+ValueRange getVariadicOperands(DenseI32ArrayAttr sizeAttr, ValueRange operands,
+                               unsigned index) {
   unsigned start = 0;
-  for (unsigned i = 0; i < index; ++i) start += sizeIt[i];
-  return operands.slice(start, sizeIt[index]);
+  for (unsigned i = 0; i < index; ++i)
+    start += sizeAttr[i];
+  return operands.slice(start, sizeAttr[index]);
 }
 
 // Bufferize LinalgOps in-place.
@@ -243,7 +241,7 @@ struct BufferizeLinalgOp
 
     // An op with two variadic operand groups expects a segment size attribute.
     auto operandSegments =
-        op->getAttrOfType<DenseIntElementsAttr>("operand_segment_sizes");
+        op->getAttrOfType<DenseI32ArrayAttr>("operand_segment_sizes");
     if (!operandSegments) return failure();
 
     const auto getOperands = [&](unsigned index) {
