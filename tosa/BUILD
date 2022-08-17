@@ -73,6 +73,7 @@ cc_library(
         "//third_party/llvm/llvm-project/mlir:QuantOps",
         "//third_party/llvm/llvm-project/mlir:TosaDialect",
         "//third_party/llvm/llvm-project/mlir:Transforms",
+        "//third_party/tensorflow/compiler/xla/mlir_hlo",
     ],
 )
 
