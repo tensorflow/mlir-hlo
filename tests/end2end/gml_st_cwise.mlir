@@ -1,5 +1,5 @@
 // RUN: mlir-hlo-opt --split-input-file %s \
-// RUN:   --gml-st-pipeline="tile-sizes=4 fuse lower-to-loops" \
+// RUN:   --gml-st-pipeline="tile-sizes=[2] fuse lower-to-loops" \
 // RUN:   --convert-scf-to-cf \
 // RUN:   --generic-host-to-llvm | \
 // RUN: mlir-cpu-runner \
@@ -8,7 +8,7 @@
 // RUN: FileCheck %s
 
 // RUN: mlir-hlo-opt --split-input-file %s \
-// RUN:   --gml-st-pipeline="tile-sizes=1 fuse lower-to-loops" \
+// RUN:   --gml-st-pipeline="tile-sizes=[1] fuse lower-to-loops" \
 // RUN:   --convert-scf-to-cf \
 // RUN:   --generic-host-to-llvm | \
 // RUN: mlir-cpu-runner \

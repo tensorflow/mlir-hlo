@@ -1,5 +1,5 @@
 // RUN: mlir-hlo-opt %s \
-// RUN:   --gml-st-pipeline="tile-sizes=1,1 fuse lower-to-loops" \
+// RUN:   --gml-st-pipeline="tile-sizes=[1,1] fuse lower-to-loops" \
 // RUN:   --convert-scf-to-cf \
 // RUN:   --generic-host-to-llvm | \
 // RUN: mlir-cpu-runner \
@@ -29,8 +29,8 @@ func.func @main() {
   // CHECK: sizes = [2, 5]
   // CHECK: strides = [5, 1]
   // CHECK: data =
-  // CHECK: 1.11, 1.12, 2.11, 212, 2.13
-  // CHECK: 1.21, 1.22, 2.21, 2.22, 2.23
+  // CHECK:   1.11, 1.12, 2.11, 212, 2.13
+  // CHECK:   1.21, 1.22, 2.21, 2.22, 2.23
   %test_concat_unranked = tensor.cast %test_concat
       : tensor<?x?xf32> to tensor<*xf32>
   func.call @printMemrefF32(%test_concat_unranked) : (tensor<*xf32>) -> ()

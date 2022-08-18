@@ -1,5 +1,5 @@
 // RUN: mlir-hlo-opt %s \
-// RUN:   --gml-st-pipeline="tile-sizes=1,1,1 fuse lower-to-loops" \
+// RUN:   --gml-st-pipeline="tile-sizes=[1,1,1] fuse lower-to-loops" \
 // RUN:   --convert-scf-to-cf \
 // RUN:   --generic-host-to-llvm | \
 // RUN: mlir-cpu-runner \
