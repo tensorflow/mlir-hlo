@@ -2909,6 +2909,7 @@ td_library(
     srcs = glob(["include/mlir-hlo/Dialect/thlo/IR/*.td"]),
     includes = ["include"],
     deps = [
+        "@llvm-project//mlir:ControlFlowInterfacesTdFiles",
         "@llvm-project//mlir:OpBaseTdFiles",
         "@llvm-project//mlir:SideEffectInterfacesTdFiles",
     ],
