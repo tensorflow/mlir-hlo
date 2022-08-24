@@ -6,6 +6,11 @@ package(
     licenses = ["notice"],
 )
 
+filegroup(
+    name = "stablehlo_ops_td_filegroup",
+    srcs = glob(["dialect/*.td"]),
+)
+
 cc_library(
     name = "base",
     srcs = [
