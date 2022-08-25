@@ -1,10 +1,15 @@
 load("//third_party/llvm/build_defs:lit.bzl", "glob_lit_tests")
-load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
+
+exports_files([
+    "integrations/python/ChloModule.cpp",
+    "integrations/python/StablehloModule.cpp",
+])
 
 filegroup(
     name = "stablehlo_ops_td_filegroup",
@@ -45,7 +50,7 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "dialect/Base.td",
-    deps = [":stablehlo_td_files"],
+    deps = [":stablehlo_ops_td_files"],
 )
 
 td_library(
@@ -92,7 +97,23 @@ gentbl_cc_library(
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "dialect/ChloOps.td",
     deps = [
-        ":chlo_td_files",
+        ":chlo_ops_td_files",
+    ],
+)
+
+cc_library(
+    name = "chlo_capi",
+    srcs = [
+        "integrations/c/ChloAttributes.cpp",
+        "integrations/c/ChloDialect.cpp",
+    ],
+    hdrs = [
+        "integrations/c/ChloAttributes.h",
+        "integrations/c/ChloDialect.h",
+    ],
+    deps = [
+        ":chlo_ops",
+        "@llvm-project//mlir:CAPIIR",
     ],
 )
 
@@ -111,7 +132,7 @@ gentbl_cc_library(
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "dialect/ChloOps.td",
     deps = [
-        ":chlo_td_files",
+        ":chlo_ops_td_files",
     ],
 )
 
@@ -130,12 +151,50 @@ gentbl_cc_library(
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "dialect/ChloOps.td",
     deps = [
-        ":chlo_td_files",
+        ":chlo_ops_td_files",
+    ],
+)
+
+filegroup(
+    name = "chlo_ops_py_files",
+    srcs = [
+        "integrations/python/mlir/dialects/chlo.py",
+        ":chlo_ops_py_gen",
+    ],
+)
+
+gentbl_filegroup(
+    name = "chlo_ops_py_gen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=chlo",
+            ],
+            "integrations/python/mlir/dialects/_chlo_ops_gen.py",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "integrations/python/mlir/dialects/ChloOps.td",
+    deps = [
+        ":chlo_ops_py_td_files",
     ],
 )
 
 td_library(
-    name = "chlo_td_files",
+    name = "chlo_ops_py_td_files",
+    srcs = [
+        "@llvm-project//mlir:include/mlir/Bindings/Python/Attributes.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":chlo_ops_td_files",
+        "@llvm-project//mlir:OpBaseTdFiles",
+    ],
+)
+
+td_library(
+    name = "chlo_ops_td_files",
     srcs = [
         "dialect/ChloEnums.td",
         "dialect/ChloOps.td",
@@ -204,7 +263,25 @@ gentbl_cc_library(
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "dialect/StablehloOps.td",
     deps = [
-        ":stablehlo_td_files",
+        ":stablehlo_ops_td_files",
+    ],
+)
+
+cc_library(
+    name = "stablehlo_capi",
+    srcs = [
+        "integrations/c/StablehloAttributes.cpp",
+        "integrations/c/StablehloDialect.cpp",
+        "integrations/c/StablehloTypes.cpp",
+    ],
+    hdrs = [
+        "integrations/c/StablehloAttributes.h",
+        "integrations/c/StablehloDialect.h",
+        "integrations/c/StablehloTypes.h",
+    ],
+    deps = [
+        ":stablehlo_ops",
+        "@llvm-project//mlir:CAPIIR",
     ],
 )
 
@@ -223,7 +300,7 @@ gentbl_cc_library(
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "dialect/StablehloOps.td",
     deps = [
-        ":stablehlo_td_files",
+        ":stablehlo_ops_td_files",
     ],
 )
 
@@ -242,12 +319,50 @@ gentbl_cc_library(
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "dialect/StablehloOps.td",
     deps = [
-        ":stablehlo_td_files",
+        ":stablehlo_ops_td_files",
+    ],
+)
+
+filegroup(
+    name = "stablehlo_ops_py_files",
+    srcs = [
+        "integrations/python/mlir/dialects/stablehlo.py",
+        ":stablehlo_ops_py_gen",
+    ],
+)
+
+gentbl_filegroup(
+    name = "stablehlo_ops_py_gen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=stablehlo",
+            ],
+            "integrations/python/mlir/dialects/_stablehlo_ops_gen.py",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "integrations/python/mlir/dialects/StablehloOps.td",
+    deps = [
+        ":stablehlo_ops_py_td_files",
     ],
 )
 
 td_library(
-    name = "stablehlo_td_files",
+    name = "stablehlo_ops_py_td_files",
+    srcs = [
+        "@llvm-project//mlir:include/mlir/Bindings/Python/Attributes.td",
+    ],
+    includes = ["."],
+    deps = [
+        ":stablehlo_ops_td_files",
+        "@llvm-project//mlir:OpBaseTdFiles",
+    ],
+)
+
+td_library(
+    name = "stablehlo_ops_td_files",
     srcs = [
         "dialect/Base.td",
         "dialect/StablehloAttrs.td",
