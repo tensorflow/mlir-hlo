@@ -24,7 +24,7 @@ td_library(
     srcs = glob(["include/mlir-hlo/Dialect/mhlo/IR/*.td"]),
     includes = ["include"],
     deps = [
-        "//third_party/tensorflow/compiler/xla/mlir_hlo/stablehlo:base_td_files",
+        "//stablehlo:base_td_files",
         "@llvm-project//mlir:BuiltinDialectTdFiles",
         "@llvm-project//mlir:ControlFlowInterfacesTdFiles",
         "@llvm-project//mlir:CopyOpInterfaceTdFiles",
@@ -477,7 +477,7 @@ cc_library(
         ":hlo_ops_enums_inc_gen",
         ":hlo_ops_inc_gen",
         ":hlo_ops_pattern_gen",
-        "//third_party/tensorflow/compiler/xla/mlir_hlo/stablehlo:base",
+        "//stablehlo:base",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Analysis",
         "@llvm-project//mlir:ArithmeticDialect",

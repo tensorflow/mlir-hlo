@@ -1,4 +1,3 @@
-load("//third_party/llvm/build_defs:lit.bzl", "glob_lit_tests")
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 
 package(
@@ -417,17 +416,11 @@ cc_binary(
     ],
 )
 
-glob_lit_tests(
-    data = [":test_data"],
-    driver = "@llvm-project//mlir:run_lit.sh",
-    test_file_exts = ["mlir"],
-)
-
 filegroup(
     name = "test_data",
     testonly = True,
     data = [
-        "//third_party/tensorflow/compiler/xla/mlir_hlo/stablehlo:stablehlo-opt",
+        ":stablehlo-opt",
         "@llvm-project//llvm:FileCheck",
     ],
 )
