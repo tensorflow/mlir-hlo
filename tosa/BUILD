@@ -90,5 +90,6 @@ cc_binary(
         "//third_party/llvm/llvm-project/mlir:Support",
         "//third_party/llvm/llvm-project/mlir:TosaDialect",
         "//third_party/tensorflow/compiler/xla/mlir_hlo:hlo_dialect_registration",
+        "//third_party/tensorflow/compiler/xla/mlir_hlo/stablehlo:register",
     ],
 )
