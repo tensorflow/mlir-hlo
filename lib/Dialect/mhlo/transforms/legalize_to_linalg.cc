@@ -2028,7 +2028,7 @@ struct ConvolutionOpGeneralConversion
 
     // Decompose the reversal dims into its own step
     auto reversals = op.window_reversal();
-    if (reversals.value()) {
+    if (reversals.has_value()) {
       llvm::SmallVector<int64_t> reversedDims;
       for (auto& idxAndBool :
            llvm::enumerate(reversals.value().getValues<bool>()))
@@ -2203,7 +2203,7 @@ struct ConvolutionOpGeneralConversion
       auto dim1 = mlir::getAffineDimExpr(nextDim++, ctx);
 
       auto stride = dim0;
-      if (op.window_strides().value())
+      if (op.window_strides().has_value())
         stride = stride * op.window_strides().value().getValues<int64_t>()[i];
       AffineExpr srcExpr = stride + dim1;
 

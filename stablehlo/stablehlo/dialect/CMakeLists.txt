@@ -33,6 +33,11 @@ add_mlir_library(StablehloBase
   MLIRSupport
 )
 
+target_include_directories(StablehloBase INTERFACE
+  ${STABLEHLO_SOURCE_DIR}
+  $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
+)
+
 add_mlir_library(StablehloBroadcastUtils
   PARTIAL_SOURCES_INTENDED
   BroadcastUtils.cpp
@@ -41,6 +46,10 @@ add_mlir_library(StablehloBroadcastUtils
   MLIRIR
   MLIRShapeDialect
   MLIRSupport
+)
+
+target_include_directories(StablehloBroadcastUtils INTERFACE
+  ${STABLEHLO_SOURCE_DIR}
 )
 
 set(LLVM_TARGET_DEFINITIONS ChloOps.td)
@@ -69,6 +78,11 @@ add_mlir_dialect_library(ChloOps
   MLIRQuantDialect
 )
 
+target_include_directories(ChloOps INTERFACE
+  ${STABLEHLO_SOURCE_DIR}
+  $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
+)
+
 add_mlir_dialect_library(StablehloRegister
   PARTIAL_SOURCES_INTENDED
   Register.cpp
@@ -80,6 +94,11 @@ add_mlir_dialect_library(StablehloRegister
   LINK_LIBS PUBLIC
   ChloOps
   StablehloOps
+)
+
+target_include_directories(StablehloRegister INTERFACE
+  ${STABLEHLO_SOURCE_DIR}
+  $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
 )
 
 set(LLVM_TARGET_DEFINITIONS StablehloOps.td)
@@ -108,4 +127,9 @@ add_mlir_dialect_library(StablehloOps
   MLIRSparseTensorDialect
   MLIRSupport
   MLIRTensorDialect
+)
+
+target_include_directories(StablehloOps INTERFACE
+  ${STABLEHLO_SOURCE_DIR}
+  $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
 )
