@@ -130,6 +130,29 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "hlo_ops_typedefs_inc_gen",
+    tbl_outs = [
+        (
+            [
+                "-gen-typedef-decls",
+                "--typedefs-dialect=mhlo",
+            ],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_typedefs.h.inc",
+        ),
+        (
+            [
+                "-gen-typedef-defs",
+                "--typedefs-dialect=mhlo",
+            ],
+            "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_typedefs.cc.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops.td",
+    deps = [":hlo_ops_td_files"],
+)
+
+gentbl_cc_library(
     name = "hlo_ops_pattern_gen",
     strip_include_prefix = "lib/Dialect/mhlo/IR/",
     tbl_outs = [
@@ -396,6 +419,8 @@ cc_library(
         "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_attrs.h.inc",
         "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_enums.cc.inc",
         "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_enums.h.inc",
+        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_typedefs.cc.inc",
+        "include/mlir-hlo/Dialect/mhlo/IR/hlo_ops_typedefs.h.inc",
         "lib/Dialect/mhlo/IR/hlo_ops.cc",
         "lib/utils/hlo_utils.cc",
     ],
@@ -412,6 +437,7 @@ cc_library(
         ":hlo_ops_enums_inc_gen",
         ":hlo_ops_inc_gen",
         ":hlo_ops_pattern_gen",
+        ":hlo_ops_typedefs_inc_gen",
         "//stablehlo:base",
         "//stablehlo:broadcast_utils",
         "//stablehlo:chlo_ops",
