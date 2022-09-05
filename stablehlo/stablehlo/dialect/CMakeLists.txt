@@ -34,6 +34,11 @@ add_mlir_library(StablehloBase
   MLIRSupport
 )
 
+target_include_directories(StablehloBase INTERFACE
+  ${STABLEHLO_SOURCE_DIR}
+  $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
+)
+
 add_mlir_library(StablehloBroadcastUtils
   PARTIAL_SOURCES_INTENDED
   BroadcastUtils.cpp
@@ -53,6 +58,10 @@ mlir_tablegen(ChloAttrs.h.inc -gen-attrdef-decls)
 mlir_tablegen(ChloAttrs.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(ChloOpsIncGen)
 add_dependencies(mlir-headers ChloOpsIncGen)
+
+target_include_directories(StablehloBroadcastUtils INTERFACE
+  ${STABLEHLO_SOURCE_DIR}
+)
 
 add_mlir_dialect_library(ChloOps
   PARTIAL_SOURCES_INTENDED
