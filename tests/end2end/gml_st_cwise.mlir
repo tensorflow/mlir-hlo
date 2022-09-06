@@ -4,7 +4,7 @@
 // RUN:   --generic-host-to-llvm | \
 // RUN: mlir-cpu-runner \
 // RUN:   -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 // RUN: mlir-hlo-opt --split-input-file %s \
@@ -13,7 +13,7 @@
 // RUN:   --generic-host-to-llvm | \
 // RUN: mlir-cpu-runner \
 // RUN:   -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext,%mlir_runner_utils_dir/libmlir_runner_utils%shlibext | \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 func.func @abs(%arg0: tensor<5xf32>) -> tensor<5xf32> {
