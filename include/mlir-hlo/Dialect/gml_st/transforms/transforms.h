@@ -17,15 +17,8 @@ limitations under the License.
 #define MLIR_HLO_DIALECT_GML_ST_TRANSFORMS_TRANSFORMS_H
 
 #include "mlir-hlo/Dialect/gml_st/IR/gml_st_ops.h"
+#include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
-
-namespace mlir {
-namespace linalg {
-class LinalgOp;
-class TiledLinalgOp;
-class LinalgTilingOptions;
-}  // namespace linalg
-}  // namespace mlir
 
 namespace mlir {
 namespace gml_st {
