@@ -297,24 +297,24 @@ LogicalResult IsPosInfOp::inferReturnTypes(
         builder, getOperation(), operands, reifiedReturnShapes);           \
   }
 
-BROADCAST_BINARY_OP_DEFS(BroadcastAddOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastAndOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastAtan2Op)
-BROADCAST_BINARY_OP_DEFS(BroadcastDivOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastMaxOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastMinOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastMulOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastNextAfterOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastOrOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastPolygammaOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastPowOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastRemOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastShiftLeftOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastShiftRightArithmeticOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastShiftRightLogicalOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastSubOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastXorOp)
-BROADCAST_BINARY_OP_DEFS(BroadcastZetaOp)
+BROADCAST_BINARY_OP_DEFS(BroadcastAddOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastAndOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastAtan2Op);
+BROADCAST_BINARY_OP_DEFS(BroadcastDivOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastMaxOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastMinOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastMulOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastNextAfterOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastOrOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastPolygammaOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastPowOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastRemOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastShiftLeftOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastShiftRightArithmeticOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastShiftRightLogicalOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastSubOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastXorOp);
+BROADCAST_BINARY_OP_DEFS(BroadcastZetaOp);
 
 #undef BROADCAST_BINARY_OP_DEFS
 
@@ -434,7 +434,7 @@ LogicalResult RankSpecializationClusterOp::verify() {
 
   // All operands of nested ops must be defined in the body or declared by the
   // cluster.
-  Block* body = getBody();
+  Block* body = SingleBlock::getBody();
   for (Operation& nested : body->without_terminator()) {
     if (!llvm::all_of(nested.getOpOperands(), [&](OpOperand& operand) {
           Operation* def = operand.get().getDefiningOp();
@@ -543,7 +543,7 @@ Attribute ChloDialect::parseAttribute(DialectAsmParser& parser,
   StringRef attrTag;
   Attribute attr;
   auto parseResult = generatedAttributeParser(parser, &attrTag, type, attr);
-  if (parseResult.has_value()) return attr;
+  if (parseResult.hasValue()) return attr;
   parser.emitError(parser.getNameLoc(), "unknown chlo attribute");
   return Attribute();
 }

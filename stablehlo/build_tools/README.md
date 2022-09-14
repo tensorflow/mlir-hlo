@@ -1,7 +1,6 @@
 # Build instructions
 
-To build the code in this repository, you need a clone of the LLVM/MLIR
-git repository:
+To build the code in this repository, you need a clone of the LLVM/MLIR git repository:
 
 `$ git clone https://github.com/llvm/llvm-project.git`
 

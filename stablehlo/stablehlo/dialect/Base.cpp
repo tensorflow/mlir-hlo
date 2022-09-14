@@ -134,8 +134,8 @@ TensorType getSameShapeTensorType(TensorType tensorType, Type elementType) {
 
 // TODO(hinsu): Add verification for bounds that it has the same size as rank
 // of the tensor and static dimensions don't have bounds.
-LogicalResult verifyBounds(ArrayRef<int64_t> /*bounds*/, ShapedType /*type*/,
-                           function_ref<InFlightDiagnostic()> /*emitError*/) {
+LogicalResult verifyBounds(ArrayRef<int64_t> bounds, ShapedType type,
+                           function_ref<InFlightDiagnostic()> emitError) {
   return success();
 }
 

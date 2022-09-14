@@ -1,4 +1,3 @@
-# pylint: disable=missing-module-docstring
 # Copyright 2021 The TensorFlow Authors. All Rights Reserved.
 # Copyright 2022 The StableHLO Authors.
 #

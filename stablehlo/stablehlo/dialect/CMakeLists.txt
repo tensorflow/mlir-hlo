@@ -17,7 +17,6 @@ set(LLVM_TARGET_DEFINITIONS Base.td)
 mlir_tablegen(BaseAttrInterfaces.h.inc -gen-attr-interface-decls)
 mlir_tablegen(BaseAttrInterfaces.cpp.inc -gen-attr-interface-defs)
 add_public_tablegen_target(StablehloBaseIncGen)
-add_dependencies(mlir-headers StablehloBaseIncGen)
 
 add_mlir_library(StablehloBase
   PARTIAL_SOURCES_INTENDED
@@ -52,7 +51,6 @@ mlir_tablegen(ChloEnums.cpp.inc -gen-enum-defs)
 mlir_tablegen(ChloAttrs.h.inc -gen-attrdef-decls)
 mlir_tablegen(ChloAttrs.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(ChloOpsIncGen)
-add_dependencies(mlir-headers ChloOpsIncGen)
 
 add_mlir_dialect_library(ChloOps
   PARTIAL_SOURCES_INTENDED
@@ -92,7 +90,6 @@ mlir_tablegen(StablehloEnums.cpp.inc -gen-enum-defs)
 mlir_tablegen(StablehloAttrs.h.inc -gen-attrdef-decls)
 mlir_tablegen(StablehloAttrs.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(StablehloOpsIncGen)
-add_dependencies(mlir-headers StablehloOpsIncGen)
 
 add_mlir_dialect_library(StablehloOps
   PARTIAL_SOURCES_INTENDED

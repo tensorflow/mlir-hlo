@@ -74,7 +74,7 @@ LogicalResult verifyBounds(ArrayRef<int64_t> bounds, ShapedType type,
 class BoundedDialectInterface
     : public DialectInterface::Base<BoundedDialectInterface> {
  public:
-  explicit BoundedDialectInterface(Dialect *dialect) : Base(dialect) {}
+  BoundedDialectInterface(Dialect *dialect) : Base(dialect) {}
   virtual Attribute createBoundedAttr(ArrayRef<int64_t> bounds) const = 0;
 };
 

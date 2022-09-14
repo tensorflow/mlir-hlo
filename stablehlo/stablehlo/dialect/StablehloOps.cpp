@@ -575,12 +575,12 @@ LogicalResult TypeExtensionsAttr::verifyEncoding(
 //===----------------------------------------------------------------------===//
 
 void AllReduceOp::build(
-    ::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,
-    ::mlir::Type resultType, ::mlir::Value operand,
-    ::mlir::DenseIntElementsAttr replicaGroups,
-    /*optional*/ ::mlir::stablehlo::ChannelHandleAttr channelHandle) {
-  AllReduceOp::build(odsBuilder, odsState, resultType, operand,
-                     replicaGroups, channelHandle, nullptr);
+    ::mlir::OpBuilder& ods_builder, ::mlir::OperationState& ods_state,
+    ::mlir::Type result_type, ::mlir::Value operand,
+    ::mlir::DenseIntElementsAttr replica_groups,
+    /*optional*/ ::mlir::stablehlo::ChannelHandleAttr channel_handle) {
+  AllReduceOp::build(ods_builder, ods_state, result_type, operand,
+                     replica_groups, channel_handle, nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -653,9 +653,9 @@ LogicalResult ReduceScatterOp::verify() {
     return failure();
 
   return verifyReduceScatter(*this,
-                             /*operandTypes=*/{operand().getType()},
-                             /*resultTypes=*/{getType()},
-                             /*scatterDimension=*/scatter_dimension());
+                             /*operand_types=*/{operand().getType()},
+                             /*result_types=*/{getType()},
+                             /*scatter_dimension=*/scatter_dimension());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1855,8 +1855,7 @@ LogicalResult verifyCollectivePermuteSourceTargetPairs(
 }
 
 LogicalResult CollectivePermuteOp::verify() {
-  return verifyCollectivePermuteSourceTargetPairs(*this,
-                                                       source_target_pairs());
+  return verifyCollectivePermuteSourceTargetPairs(*this, source_target_pairs());
 }
 
 //===----------------------------------------------------------------------===//
@@ -5500,12 +5499,13 @@ LogicalResult WhileOp::verify() {
 /// assignment ::= ssa-value `=` ssa-value
 void WhileOp::print(OpAsmPrinter& p) {
   p << '(';
-  llvm::interleaveComma(llvm::zip(getBody()->getArguments(), getOperands()), p,
-                        [&](auto zip) {
-                          p.printOperand(std::get<0>(zip));
-                          p << " = ";
-                          p.printOperand(std::get<1>(zip));
-                        });
+  llvm::interleaveComma(
+      llvm::zip(SingleBlock::getBody()->getArguments(), getOperands()), p,
+      [&](auto zip) {
+        p.printOperand(std::get<0>(zip));
+        p << " = ";
+        p.printOperand(std::get<1>(zip));
+      });
   p << ")";
   if (getNumOperands()) {
     p << " : ";
@@ -5677,7 +5677,7 @@ ParseResult parseSameOperandsAndResultType(OpAsmParser& parser,
 //    %1 : tensor<i1>
 //    %2 : tensor<f32>
 //    %3 : tuple<tensor<i1>, tensor<f32>>
-void printTupleOpType(OpAsmPrinter& p, Operation*, TypeRange /*operands*/,
+void printTupleOpType(OpAsmPrinter& p, Operation*, TypeRange operands,
                       Type result) {
   p.printType(result);
 }
@@ -5710,7 +5710,7 @@ ParseResult parseTupleOpType(OpAsmParser& parser,
 //    %3 : tensor<i1>
 //    %4 : tensor<f32>
 void printPairwiseOpType(OpAsmPrinter& p, Operation*, TypeRange operands,
-                         TypeRange /*results*/) {
+                         TypeRange results) {
   llvm::interleaveComma(operands, p);
 }
 
@@ -5793,7 +5793,7 @@ Attribute StablehloDialect::parseAttribute(DialectAsmParser& parser,
   StringRef attrTag;
   Attribute attr;
   auto parseResult = generatedAttributeParser(parser, &attrTag, type, attr);
-  if (parseResult.has_value()) return attr;
+  if (parseResult.hasValue()) return attr;
   parser.emitError(parser.getNameLoc(), "unknown stablehlo attribute");
   return Attribute();
 }
@@ -6212,8 +6212,8 @@ ParseResult parseConvolutionDimensions(AsmParser& parser,
       int64_t spatialDim;
       auto dimLocation = parser.getCurrentLocation();
       OptionalParseResult parseResult = parser.parseOptionalInteger(spatialDim);
-      if (parseResult.has_value()) {
-        if (parseResult.value().failed()) {
+      if (parseResult.hasValue()) {
+        if (parseResult.getValue().failed()) {
           return failure();
         }
         // We were successful in parsing an integer. Check if it is a valid
