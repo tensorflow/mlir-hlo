@@ -1,12 +1,7 @@
-# MHLO -> TOSA bridge.
-load("//third_party/tensorflow:tensorflow.google.bzl", "get_compatible_with_cloud")
-load("//third_party/llvm/llvm-project/mlir:tblgen.bzl", "gentbl_cc_library")
+load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
-    default_visibility = [
-        ":internal",
-        "//third_party/tensorflow/compiler/xla/mlir_hlo/tosa:__subpackages__",
-    ],
+    default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
@@ -23,12 +18,12 @@ gentbl_cc_library(
             "include/mhlo_tosa/Transforms/legalize_mhlo.pdll.h.inc",
         ),
     ],
-    tblgen = "//third_party/llvm/llvm-project/mlir:mlir-pdll",
+    tblgen = "@llvm-project//mlir:mlir-pdll",
     td_file = "lib/Transforms/legalize_mhlo.pdll",
     deps = [
-        "//third_party/llvm/llvm-project/mlir:OpBaseTdFiles",
-        "//third_party/llvm/llvm-project/mlir:TosaDialectTdFiles",
-        "//third_party/tensorflow/compiler/xla/mlir_hlo:hlo_ops_td_files",
+        "//:hlo_ops_td_files",
+        "@llvm-project//mlir:OpBaseTdFiles",
+        "@llvm-project//mlir:TosaDialectTdFiles",
     ],
 )
 
@@ -44,10 +39,10 @@ gentbl_cc_library(
             "include/mhlo_tosa/Transforms/passes.h.inc",
         ),
     ],
-    tblgen = "//third_party/llvm/llvm-project/mlir:mlir-tblgen",
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mhlo_tosa/Transforms/passes.td",
     deps = [
-        "//third_party/llvm/llvm-project/mlir:PassBaseTdFiles",
+        "@llvm-project//mlir:PassBaseTdFiles",
     ],
 )
 
@@ -63,14 +58,14 @@ cc_library(
     deps = [
         ":MHLOTOSAPDLLPatternsIncGen",
         ":MHLOTOSATransformsPassIncGen",
-        "//third_party/llvm/llvm-project/mlir:FuncDialect",
-        "//third_party/llvm/llvm-project/mlir:IR",
-        "//third_party/llvm/llvm-project/mlir:Parser",
-        "//third_party/llvm/llvm-project/mlir:Pass",
-        "//third_party/llvm/llvm-project/mlir:QuantOps",
-        "//third_party/llvm/llvm-project/mlir:TosaDialect",
-        "//third_party/llvm/llvm-project/mlir:Transforms",
         "//third_party/tensorflow/compiler/xla/mlir_hlo",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Parser",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:QuantOps",
+        "@llvm-project//mlir:TosaDialect",
+        "@llvm-project//mlir:Transforms",
     ],
 )
 
@@ -79,14 +74,14 @@ cc_binary(
     srcs = ["mhlo_tosa_opt.cc"],
     deps = [
         ":MHLOTOSATransforms",
-        "//third_party/llvm/llvm-project/llvm:Support",
-        "//third_party/llvm/llvm-project/mlir:AllPassesAndDialects",
-        "//third_party/llvm/llvm-project/mlir:IR",
-        "//third_party/llvm/llvm-project/mlir:MlirOptLib",
-        "//third_party/llvm/llvm-project/mlir:Pass",
-        "//third_party/llvm/llvm-project/mlir:Support",
-        "//third_party/llvm/llvm-project/mlir:TosaDialect",
-        "//third_party/stablehlo:register",
-        "//third_party/tensorflow/compiler/xla/mlir_hlo:hlo_dialect_registration",
+        "//:hlo_dialect_registration",
+        "//stablehlo:register",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:AllPassesAndDialects",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:MlirOptLib",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TosaDialect",
     ],
 )
