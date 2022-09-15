@@ -2130,6 +2130,7 @@ cc_library(
     hdrs = ["include/mlir-hlo/Transforms/passes.h"],
     deps = [
         ":mlir_hlo",
+        ":thlo",
         ":transforms_pass_inc_gen",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithmeticDialect",
