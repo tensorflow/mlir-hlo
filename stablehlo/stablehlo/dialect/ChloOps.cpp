@@ -24,6 +24,7 @@ limitations under the License.
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/PatternMatch.h"
 #include "stablehlo/dialect/BroadcastUtils.h"
+#include "stablehlo/dialect/ChloBytecode.h"
 
 // Include order matters
 #include "stablehlo/dialect/ChloEnums.cpp.inc"
@@ -526,6 +527,8 @@ ChloDialect::ChloDialect(MLIRContext* context)
 #define GET_ATTRDEF_LIST
 #include "stablehlo/dialect/ChloAttrs.cpp.inc"
       >();
+
+  addBytecodeInterface(this);
 }
 
 Operation* ChloDialect::materializeConstant(OpBuilder& builder, Attribute value,
@@ -543,7 +546,7 @@ Attribute ChloDialect::parseAttribute(DialectAsmParser& parser,
   StringRef attrTag;
   Attribute attr;
   auto parseResult = generatedAttributeParser(parser, &attrTag, type, attr);
-  if (parseResult.hasValue()) return attr;
+  if (parseResult.has_value()) return attr;
   parser.emitError(parser.getNameLoc(), "unknown chlo attribute");
   return Attribute();
 }

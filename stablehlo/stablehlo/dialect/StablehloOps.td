@@ -35,7 +35,7 @@ def StableHLO_Dialect : Dialect {
     a portability layer between ML frameworks and ML compilers.
   }];
 
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
+  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 0;
 }
@@ -678,12 +678,20 @@ def StableHLO_ComplexOp: StableHLO_BinaryElementwiseOp<"complex", [NoSideEffect,
   let description = [{
     Performs element-wise conversion of a pair of real and imaginary values to
     a complex value.
+
+    Example:
+
+    ```mlir
+    %0 = stablehlo.complex %arg0, %arg0 : tensor<4xcomplex<f32>>
+    ```
   }];
   let arguments = (ins HLO_Fp32Or64Tensor:$lhs, HLO_Fp32Or64Tensor:$rhs);
   let results = (outs HLO_ComplexTensor:$result);
 
-  // TODO(b/241767457): Remove parens when cleaning up BinaryOps.
-  let assemblyFormat = "`(`operands`)` attr-dict `:` `(`type(operands)`)` `->` type($result)";
+  let assemblyFormat = [{
+    operands attr-dict 
+      `:` custom<ComplexOpType>(type($lhs), type($rhs), type($result))
+  }];
 }
 
 def StableHLO_DivOp : StableHLO_BinaryElementwiseOp<"divide",
@@ -1068,14 +1076,17 @@ def StableHLO_AfterAllOp : StableHLO_Op<"after_all", [NoSideEffect]> {
     Example:
 
     ```mlir
-    %0 = stablehlo.after_all %arg0, %arg1 : (!stablehlo.token, !stablehlo.token) -> !stablehlo.token
+    %0 = stablehlo.after_all %arg0, %arg1 : !stablehlo.token
     ```
   }];
 
   let arguments = (ins Variadic<HLO_Token>:$operands);
-  let results = (outs HLO_Token);
+  let results = (outs HLO_Token:$result);
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat = [{
+    $operands attr-dict
+      `:` custom<VariadicSameOperandsAndResultType>(ref($operands), type($operands), type($result))
+  }];
 }
 
 // Xla Client API has two separate calls for indexed and predicated conditional,
@@ -1259,6 +1270,7 @@ def StableHLO_AllToAllOp : StableHLO_Op<"all_to_all",
 def StableHLO_ReduceOp: StableHLO_ShapedInterfaceOp<"reduce", [
       RecursiveSideEffects,
       SameVariadicOperandSize,
+      InferTensorTypeWithReify,
       SingleBlockImplicitTerminator<"ReturnOp">
     ]> {
   let summary = "Reduce operator";
@@ -1281,11 +1293,21 @@ def StableHLO_ReduceOp: StableHLO_ShapedInterfaceOp<"reduce", [
       "DenseIntElementsAttr":$dimensions)>];
 
   let hasCustomAssemblyFormat = 1;
-  let hasVerifier = 1;
 
   // TODO(hinsu): Verify that the attached body arguments and results are
   // compatible with reduce op's operands.
   let regions = (region SizedRegion<1>:$body);
+
+  let extraClassDeclaration = [{
+    // Method from InferTypeOpInterface interface.
+    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+      if (l.size() != r.size()) return false;
+      for (auto [lt, rt] : llvm::zip(l, r))
+        if (!mlir::hlo::isCompatibleForHloTypeInference(lt, rt))
+          return false;
+      return true;
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1460,7 +1482,8 @@ def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [NoSideEffect,
         "grad_offset"]>,
     AllShapesMatch<["operand", "grad_output"]>,
     AllElementTypesMatch<["operand", "grad_scale", "grad_offset"]>,
-    AllTypesMatch<["operand", "grad_operand"]>]> {
+    AllTypesMatch<["operand", "grad_operand"]>,
+    InferTensorType]> {
   let summary = "Batch Normalization Gradient";
   let description = [{
     Calculates gradients of batch norm.
@@ -1478,7 +1501,6 @@ def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [NoSideEffect,
     I64Attr:$feature_index
   );
 
-  let results = (outs Variadic<HLO_TensorOrToken>);
   let results = (outs
       RankedTensorOf<[HLO_Float]>:$grad_operand,
       1DTensorOf<[HLO_Float]>:$grad_scale,
@@ -1489,7 +1511,8 @@ def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [NoSideEffect,
 
 def StableHLO_BatchNormInferenceOp : StableHLO_Op<"batch_norm_inference",
     [NoSideEffect, AllTypesMatch<["operand", "result"]>,
-    AllShapesMatch<["scale", "offset", "mean", "variance"]>]> {
+    AllShapesMatch<["scale", "offset", "mean", "variance"]>,
+    InferTensorType]> {
   let summary = "Batch Normalization for Inference";
   let description = [{
     Normalizes an array across batch and spatial dimensions.
@@ -1515,7 +1538,8 @@ def StableHLO_BatchNormInferenceOp : StableHLO_Op<"batch_norm_inference",
 def StableHLO_BatchNormTrainingOp : StableHLO_Op<"batch_norm_training",
     [NoSideEffect, AllTypesMatch<["operand", "output"]>,
     AllElementTypesMatch<["operand", "batch_mean", "batch_var"]>,
-    AllShapesMatch<["scale", "offset", "batch_mean", "batch_var"]>]> {
+    AllShapesMatch<["scale", "offset", "batch_mean", "batch_var"]>,
+    InferTensorType]> {
   let summary = "Batch Normalization for Training";
   let description = [{
     Normalizes an array across batch and spatial dimensions.
@@ -1709,6 +1733,7 @@ def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [NoSideEffect,
 
     ```mlir
     %0 = stablehlo.clamp %arg0, %arg1, %arg2 : (tensor<f32>, tensor<4xf32>, tensor<f32>) -> tensor<4xf32>
+    %1 = stablehlo.clamp %arg1, %arg1, %arg1 : tensor<4xf32>
     ```
   }];
 
@@ -1717,7 +1742,7 @@ def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [NoSideEffect,
     HLO_Tensor:$operand,
     HLO_Tensor:$max
   );
-  let results = (outs HLO_Tensor);
+  let results = (outs HLO_Tensor:$result);
 
   let hasVerifier = 1;
 
@@ -1732,7 +1757,10 @@ def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [NoSideEffect,
     }
   }];
 
-  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+  let assemblyFormat = [{
+    $min `,` $operand `,` $max attr-dict 
+      `:` custom<SameOperandsAndResultType>(type($min), type($operand), type($max), type($result))
+  }];
 }
 
 def StableHLO_ConcatenateOp : StableHLO_ShapedInterfaceOp<"concatenate",
@@ -1878,7 +1906,15 @@ def StableHLO_CustomCallOp: StableHLO_Op<"custom_call",
        result tuple.
 
     See https://www.tensorflow.org/xla/operation_semantics#customcall.
+
+    Example:
+
+    ```mlir
+    %1 = stablehlo.custom_call "foo"(%arg0, %arg1) {backend_config = "bar", has_side_effect = true}
+          : (tensor<2x3xf32>, tensor<5x5xf32>) -> tensor<1x2x3xf32>
+    ```
   }];
+
   let arguments = (ins
     Variadic<HLO_TensorOrTokenOrTuple>:$operands,
     StrAttr:$call_target_name,
@@ -1896,6 +1932,11 @@ def StableHLO_CustomCallOp: StableHLO_Op<"custom_call",
   );
   let results = (outs Variadic<HLO_TensorOrTokenOrTuple>);
   let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $call_target_name `(` $operands `)` attr-dict
+      `:` functional-type(operands, results)
+  }];
 }
 
 def StableHLO_DotOp: StableHLO_Op<"dot",
@@ -2039,7 +2080,7 @@ def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size", [NoSideEffe
 
 def StableHLO_MapOp: StableHLO_ShapedInterfaceOp<"map",
       [RecursiveSideEffects, SameOperandsAndResultShape,
-       SingleBlockImplicitTerminator<"ReturnOp">]> {
+       SingleBlockImplicitTerminator<"ReturnOp">, InferTensorTypeWithReify]> {
   let summary = "Map operator";
   let description = [{
   Applies a scalar function over the given operands arrays, producing an array
@@ -2059,7 +2100,6 @@ def StableHLO_MapOp: StableHLO_ShapedInterfaceOp<"map",
   );
   let regions = (region SizedRegion<1>:$computation);
   let results = (outs HLO_Tensor);
-  let hasVerifier = 1;
 }
 
 def StableHLO_ReshapeOp: StableHLO_Op<"reshape",
@@ -2146,6 +2186,13 @@ def StableHLO_SelectOp: StableHLO_Op<"select", [NoSideEffect, HLO_BroadcastingEl
     broadcasted.
 
     See https://www.tensorflow.org/xla/operation_semantics#select.
+
+    Example:
+
+    ```mlir
+    %0 = stablehlo.select %arg0, %arg1, %arg1 : tensor<2x3xi1>, tensor<2x3xi32>
+    %1 = stablehlo.select %arg0, %arg2, %arg3 : (tensor<2x3xi1>, tensor<2x?xi32>, tensor<?x2xi32>) -> tensor<2x?xi32>
+    ```
   }];
   let arguments = (ins
     HLO_PredTensor:$pred,
@@ -2153,7 +2200,7 @@ def StableHLO_SelectOp: StableHLO_Op<"select", [NoSideEffect, HLO_BroadcastingEl
     HLO_Tensor:$on_false
   );
 
-  let results = (outs HLO_Tensor);
+  let results = (outs HLO_Tensor:$result);
 
   let hasVerifier = 1;
 
@@ -2161,6 +2208,11 @@ def StableHLO_SelectOp: StableHLO_Op<"select", [NoSideEffect, HLO_BroadcastingEl
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
       return succeeded(mlir::verifyCompatibleShapes(l, r));
     }
+  }];
+
+  let assemblyFormat = [{
+    operands attr-dict `:`
+      custom<SelectOpType>(type($pred), type($on_true), type($on_false), type($result))
   }];
 }
 
@@ -2348,7 +2400,7 @@ def StableHLO_TransposeOp: StableHLO_ShapedInterfaceOp<"transpose",
 }
 
 def StableHLO_TriangularSolveOp: StableHLO_Op<"triangular_solve",
-    [NoSideEffect, SameOperandsAndResultElementType]> {
+    [NoSideEffect, SameOperandsAndResultElementType, InferTensorType]> {
   let summary = "TriangularSolve operator";
   let description = [{
     Solves systems of linear equations with lower or upper triangular
@@ -2378,14 +2430,13 @@ def StableHLO_TriangularSolveOp: StableHLO_Op<"triangular_solve",
     StableHLO_TransposeAttr:$transpose_a
   );
   let results = (outs HLO_FpOrComplexTensor);
-
-  let hasVerifier = 1;
 }
 
 def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
       RecursiveSideEffects,
       SameVariadicOperandSize,
-      SingleBlockImplicitTerminator<"ReturnOp">
+      SingleBlockImplicitTerminator<"ReturnOp">,
+      InferTensorType,
     ]> {
   let summary = "ReduceWindow operator";
   let description = [{
@@ -2395,9 +2446,6 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
     See https://www.tensorflow.org/xla/operation_semantics#reducewindow.
   }];
 
-  // TODO(hinsu): Verify that padding attribute is 2-d and the remaining
-  // attributes are 1-d. Attributes' leading dimension should match rank of the
-  // operands.
   let arguments = (ins
     Variadic<HLO_Tensor>:$operands,
     Variadic<HLO_Tensor>:$init_values,
@@ -2413,8 +2461,6 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
 
   let results = (outs Variadic<HLO_Tensor>);
 
-  // TODO(hinsu): Verify that the attached body arguments and results are
-  // compatible with reduce op's operands.
   let regions = (region SizedRegion<1>:$body);
 
   // Builder for non-variadic version of the operation.
@@ -2433,12 +2479,21 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
     }]>
   ];
 
-  let hasVerifier = 1;
   // TODO(hinsu): Implement custom printer and parser.
 
   let extraClassDeclaration = [{
-     // Get the operation used for reduction applied to `result_index`th result.
-     Operation *getReductionOp(int result_index);
+    // Get the operation used for reduction applied to `result_index`th result.
+    Operation *getReductionOp(int result_index);
+
+    // Relax the strict default implementation with one that allows
+    // for StableHLO-specific differences.
+    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+      if (l.size() != r.size()) return false;
+      for (auto [lt, rt] : llvm::zip(l, r))
+        if (!mlir::hlo::isCompatibleForHloTypeInference(lt, rt))
+          return false;
+      return true;
+    }
   }];
 }
 
@@ -2627,6 +2682,12 @@ def StableHLO_ReducePrecisionOp :
     implementations.
 
     See https://www.tensorflow.org/xla/operation_semantics#reduceprecision.
+
+    Example:
+
+    ```mlir
+    %0 = stablehlo.reduce_precision %arg0, format = e8m10 : tensor<3x4xf32>
+    ```
   }];
   let arguments = (ins
     HLO_FpTensor:$operand,
@@ -2635,6 +2696,11 @@ def StableHLO_ReducePrecisionOp :
   );
   let hasVerifier = 1;
   let results = (outs HLO_FpTensor:$output);
+
+  let assemblyFormat = [{
+    $operand `,` `format` `=` custom<ExponentMantissa>($exponent_bits, $mantissa_bits)
+      attr-dict `:` custom<SameOperandsAndResultType>(type($operand), type($output))
+  }];
 }
 
 def StableHLO_RealDynamicSliceOp: StableHLO_ShapedInterfaceOp<
@@ -2759,13 +2825,18 @@ def StableHLO_ComputeReshapeShapeOp :
     ```
     %0 = hlo.compute_reshape_shape 12, [2, -1] -> [2, 6]
     ```
+
+    Example:
+
+    ```mlir
+    %0 = stablehlo.compute_reshape_shape %arg0, %arg1 : (index, tensor<2xi32>) -> tensor<2xi32>
+    ```
   }];
 
   let arguments = (ins Index:$num_elements, 1DTensorOf<[AnyInteger, Index]>:$dynamic_shape);
   let results = (outs 1DTensorOf<[AnyInteger, Index]>:$result);
 
-  // TODO (b/241767462): Use functional-type for type printing for consistency.
-  let assemblyFormat = "$num_elements `,` $dynamic_shape attr-dict `:` type($num_elements) `,` type($dynamic_shape) `->` type($result)";
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 def StableHLO_CstrReshapableOp :
@@ -2780,13 +2851,18 @@ def StableHLO_CstrReshapableOp :
     %0 = stablehlo.cstr_reshapable 12, [2, -1] -> success
     %1 = stablehlo.cstr_reshapable 13, [2, -1] -> failure
     ```
+
+    Example:
+
+    ```mlir
+    %0 = stablehlo.cstr_reshapable %arg0, %arg1 : (index, tensor<3xi32>) -> !shape.witness
+    ```
   }];
 
   let arguments = (ins Index:$num_elements, 1DTensorOf<[AnyInteger, Index]>:$dynamic_shape);
   let results = (outs Shape_WitnessType:$result);
 
-  // TODO (b/241767462): Use functional-type for type printing for consistency.
-  let assemblyFormat = "$num_elements `,` $dynamic_shape attr-dict `:` type($num_elements) `,` type($dynamic_shape)";
+  let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
 #endif // STABLEHLO_DIALECT_STABLEHLO_OPS

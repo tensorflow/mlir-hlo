@@ -64,6 +64,7 @@ tool_dirs = [
 ]
 tools = [
     'stablehlo-opt',
+    'stablehlo-interpreter',
     'mlir-cpu-runner',
 ]
 
