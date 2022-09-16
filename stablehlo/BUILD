@@ -5,16 +5,6 @@ package(
     licenses = ["notice"],
 )
 
-filegroup(
-    name = "stablehlo_github_filegroup",
-    srcs = glob(["**"]),
-)
-
-filegroup(
-    name = "stablehlo_metadata_filegroup",
-    srcs = ["METADATA"],
-)
-
 exports_files([
     "LICENSE",
     "stablehlo/integrations/python/ChloModule.cpp",
