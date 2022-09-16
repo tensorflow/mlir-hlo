@@ -2694,6 +2694,7 @@ cc_library(
     deps = [
         ":gml_st",
         "@llvm-project//mlir:ArithmeticDialect",
+        "@llvm-project//mlir:ArithmeticUtils",
         "@llvm-project//mlir:BufferizationDialect",
         "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:Support",
