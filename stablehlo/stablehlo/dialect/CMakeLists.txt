@@ -34,6 +34,11 @@ add_mlir_library(StablehloBase
   MLIRSupport
 )
 
+target_include_directories(StablehloBase INTERFACE
+  $<BUILD_INTERFACE:${STABLEHLO_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
+)
+
 add_mlir_library(StablehloBroadcastUtils
   PARTIAL_SOURCES_INTENDED
   BroadcastUtils.cpp
@@ -42,6 +47,10 @@ add_mlir_library(StablehloBroadcastUtils
   MLIRIR
   MLIRShapeDialect
   MLIRSupport
+)
+
+target_include_directories(StablehloBroadcastUtils INTERFACE
+  $<BUILD_INTERFACE:${STABLEHLO_SOURCE_DIR}>
 )
 
 set(LLVM_TARGET_DEFINITIONS ChloOps.td)
@@ -106,6 +115,7 @@ add_mlir_dialect_library(StablehloOps
   LINK_LIBS PUBLIC
   StablehloBase
   MLIRArithmeticDialect
+  MLIRDataLayoutInterfaces
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRQuantDialect
