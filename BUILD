@@ -149,7 +149,7 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "hlo_ops_pattern_gen",
+    name = "hlo_ops_pattern_inc_gen",
     strip_include_prefix = "lib/Dialect/mhlo/IR/",
     tbl_outs = [
         (
@@ -362,7 +362,7 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "lhlo_structured_interface_gen",
+    name = "lhlo_structured_interface_inc_gen",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
@@ -387,7 +387,7 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
-        ":lhlo_structured_interface_gen",
+        ":lhlo_structured_interface_inc_gen",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
     ],
@@ -430,7 +430,7 @@ cc_library(
         ":hlo_ops_common",
         ":hlo_ops_enums_inc_gen",
         ":hlo_ops_inc_gen",
-        ":hlo_ops_pattern_gen",
+        ":hlo_ops_pattern_inc_gen",
         ":hlo_ops_typedefs_inc_gen",
         "//stablehlo:base",
         "//stablehlo:broadcast_utils",
