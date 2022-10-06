@@ -7,8 +7,8 @@ still plenty to do to review the existing implementations for completeness and
 provide new implementations where none exist.
 
 This live document is for the developers and the users to track the progress on
-various aspects of the opset - pretty printing, verification, type inference,
-specification, interpreter etc.
+various aspects of the opset - specification, verification, type inference,
+pretty printing, interpreter, etc.
 
 ### How to use it
 
@@ -18,128 +18,128 @@ one of the following tracking labels.
 
  - Generic labels
     - **yes**: complete
-    - **wip**: semi-complete: Work in progress or under review.
     - **no**: not complete yet, but part of [the roadmap](https://github.com/openxla/stablehlo#roadmap).
- - Customized labels
-    - Verifier
-       - **match-xla**:  verifier in sync with  [XLA semantics](https://www.tensorflow.org/xla/operation_semantics).
-       - **match-spec**: verifier in sync with [StableHLO semantics](https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md).
+ - Customized labels for Verifier and Type Inference
+    - **yes\***: in sync with  [XLA semantics](https://www.tensorflow.org/xla/operation_semantics).
+    - **yes**: in sync with [StableHLO semantics](https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md).
+    - **yes(need-revisit)**: implemented but need revisit for the sync with XLA or spec
+    - **infeasible**: infeasible to implement by design
 
 ## Status
 
-| StableHLO Op (114) | Specification (21) | Verification | Type Inference | Prettyprinting | Interpreter (2) |
-|:--|:--:|:--:|:--:|:--:|:--:|
-| AbsOp |yes||||no|
-| AddOp |yes|||| yes|
-| AfterAllOp |no||||no |
-| AllGatherOp |no||||no|
-| AllReduceOp |no||||no|
-| AllToAllOp |no||||no|
-| AndOp |yes|||| no|
-| Atan2Op |no||||no|
-| BatchNormGradOp |no||||no|
-| BatchNormInferenceOp |no||||no|
-| BatchNormTrainingOp |no||||no|
-| BitcastConvertOp |no||||no|
-| BroadcastInDimOp |no||||no|
-| BroadcastOp |no||||no|
-| CaseOp |no||||no|
-| CbrtOp |no||||no|
-| CeilOp |yes||||no|
-| CholeskyOp |no||||no|
-| ClampOp |no||||no|
-| ClzOp |no||||no|
-| CollectivePermuteOp |no||||no|
-| CompareOp |no||||no|
-| ComplexOp |no||||no|
-| ComputeReshapeShapeOp |no||||no|
-| ConcatenateOp |no||||no|
-| ConstantOp |yes|||| yes|
-| ConvertOp |no||||no|
-| ConvolutionOp |no||||no|
-| CosineOp |yes||||no|
-| CreateTokenOp |no||||no|
-| CrossReplicaSumOp |no||||no|
-| CstrReshapableOp |no||||no|
-| CustomCallOp |no||||no|
-| DivOp |yes||||no|
-| DotGeneralOp |no||||no|
-| DotOp |no||||no|
-| DynamicBroadcastInDimOp |no||||no|
-| DynamicConvOp |no||||no|
-| DynamicGatherOp |no||||no|
-| DynamicIotaOp |no||||no|
-| DynamicPadOp |no||||no|
-| DynamicReshapeOp |no||||no|
-| DynamicSliceOp |no||||no|
-| DynamicUpdateSliceOp |no||||no|
-| EinsumOp |no||||no|
-| Expm1Op |no||||no|
-| ExpOp |no||||no|
-| FftOp |no||||no|
-| FloorOp |yes||||no|
-| GatherOp |no||||no|
-| GetDimensionSizeOp |no||||no|
-| GetTupleElementOp |no||||no|
-| IfOp |no||||no|
-| ImagOp |no||||no|
-| InfeedOp |no||||no|
-| IotaOp |no||||no|
-| IsFiniteOp |no||||no|
-| Log1pOp |no||||no|
-| LogisticOp |yes||||no|
-| LogOp |yes||||no|
-| MapOp |no||||no|
-| MaxOp |yes||||no|
-| MinOp |yes||||no|
-| MulOp |no||||no|
-| NegOp |yes||||no|
-| NotOp |yes||||no|
-| OptimizationBarrierOp |no||||no|
-| OrOp |yes||||no|
-| OutfeedOp |no||||no|
-| PadOp |no||||no|
-| PopulationCountOp |no||||no|
-| PowOp |no||||no|
-| RealDynamicSliceOp |no||||no|
-| RealOp |no||||no|
-| RecvOp |no||||no|
-| ReduceOp |no||||no|
-| ReducePrecisionOp |no||||no|
-| ReduceScatterOp |no||||no|
-| ReduceWindowOp |no||||no|
-| RemOp |yes||||no|
-| ReplicaIdOp |no||||no|
-| ReshapeOp |no||||no|
-| ReturnOp |no||||no|
-| ReverseOp |no||||no|
-| RngBitGeneratorOp |no||||no|
-| RngOp |no||||no|
-| RoundNearestEvenOp |no||||no|
-| RoundOp |no||||no|
-| RsqrtOp |yes||||no|
-| ScatterOp |no||||no|
-| SelectAndScatterOp |no||||no|
-| SelectOp |no||||no|
-| SendOp |no||||no|
-| SetDimensionSizeOp |no||||no|
-| ShiftLeftOp |no||||no|
-| ShiftRightArithmeticOp |no||||no|
-| ShiftRightLogicalOp |no||||no|
-| SignOp |no||||no|
-| SineOp |yes||||no|
-| SliceOp |no||||no|
-| SortOp |no||||no|
-| SqrtOp |yes||||no|
-| SubtractOp |no||||no|
-| TanhOp |yes||||no|
-| TorchIndexSelectOp |no||||no|
-| TraceOp |no||||no|
-| TransposeOp |no||||no|
-| TriangularSolveOp |no||||no|
-| TupleOp |no||||no|
-| UnaryEinsumOp |no||||no|
-| UniformDequantizeOp |no||||no|
-| UniformQuantizeOp |no||||no|
-| WhileOp |no||||no|
-| XorOp |yes||||no|
+| StableHLO Op             | Specification | Verification |  Type Inference   |  Pretty Printing  | Interpreter |
+|:-------------------------|:-------------:|:------------:|:-----------------:|:-----------------:|:-----------:|
+| abs                      |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| add                      |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| after_all                |      no       |      no      |        no         |        yes        |     no      |
+| all_gather               |      no       |     yes*     |        no         |        no         |     no      |
+| all_reduce               |      no       |      no      |        no         |        no         |     no      |
+| all_to_all               |      no       |     yes*     |       yes*        |        no         |     no      |
+| and                      |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| atan2                    |      no       |     yes*     |       yes*        |        yes        |     no      |
+| batch_norm_grad          |      no       |     yes*     |       yes*        |        no         |     no      |
+| batch_norm_inference     |      no       |     yes*     |       yes*        |        no         |     no      |
+| batch_norm_training      |      no       |     yes*     |       yes*        |        no         |     no      |
+| bitcast_convert          |      no       |     yes*     |    infeasible     |        yes        |     no      |
+| broadcast_in_dim         |      no       |     yes*     |    infeasible     |        no         |     no      |
+| broadcast                |      no       |     yes*     |       yes*        |        no         |     no      |
+| case                     |      no       |     yes*     |       yes*        |        no         |     no      |
+| cbrt                     |      no       |     yes*     |       yes*        |        yes        |     no      |
+| ceil                     |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| cholesky                 |      no       |     yes*     |       yes*        |        yes        |     no      |
+| clamp                    |      no       |     yes*     |       yes*        |        yes        |     no      |
+| count_leading_zeros      |      no       |     yes*     |       yes*        |        yes        |     no      |
+| collective_permute       |      no       |     yes*     |       yes*        |        no         |     no      |
+| compare                  |      no       |     yes*     |       yes*        |        yes        |     no      |
+| complex                  |      no       |     yes*     |       yes*        |        yes        |     no      |
+| compute_reshape_shape    |      no       |      no      |        no         |        yes        |     no      |
+| concatenate              |      no       |     yes*     |       yes*        |        yes        |     no      |
+| constant                 |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| convert                  |      no       |     yes*     |    infeasible     |        yes        |     no      |
+| convolution              |      no       |     yes*     |        no         | yes(need-revisit) |     no      |
+| cosine                   |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| create_token             |      no       |     yes*     |        no         |        yes        |     no      |
+| cross-replica-sum        |      no       |      no      |       yes*        |        no         |     no      |
+| cstr_reshapable          |      no       |     yes*     |        no         |        yes        |     no      |
+| custom_call              |      no       |     yes*     |    infeasible     |        yes        |     no      |
+| divide                   |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| dot                      |      no       |     yes*     | yes(need-revisit) |        yes        |     no      |
+| dot_general              |      no       |     yes*     |       yes*        |        no         |     no      |
+| dynamic_broadcast_in_dim |      no       |     yes*     |        no         |        no         |     no      |
+| dynamic_conv             |      no       |      no      |        no         |        no         |     no      |
+| dynamic_gather           |      no       |      no      | yes(need-revisit) |        no         |     no      |
+| dynamic_iota             |      no       |      no      |        no         |        yes        |     no      |
+| dynamic_pad              |      no       |     yes*     |        no         |        yes        |     no      |
+| dynamic_reshape          |      no       |     yes*     |        no         |        yes        |     no      |
+| dynamic_slice            |      no       |     yes*     |       yes*        |        no         |     no      |
+| dynamic_update_slice     |      no       |     yes*     |        no         |        yes        |     no      |
+| einsum                   |      no       |      no      |        no         |        no         |     no      |
+| exponential              |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| exponential_minus_one    |      no       |     yes*     |       yes*        |        yes        |     no      |
+| fft                      |      no       |     yes*     |       yes*        |        no         |     no      |
+| floor                    |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| gather                   |      no       |     yes*     |       yes*        |        no         |     no      |
+| get_dimension_size       |      no       |     yes*     |        no         |        yes        |     no      |
+| get_tuple_element        |      no       |     yes*     | yes(need-revisit) |        yes        |     no      |
+| if                       |      no       |     yes*     |       yes*        |        no         |     no      |
+| imag                     |      no       |     yes*     |       yes*        |        yes        |     no      |
+| infeed                   |      no       |     yes*     |        no         |        no         |     no      |
+| iota                     |      no       |     yes*     |    infeasible     |        yes        |     no      |
+| is_finite                |      no       |     yes*     |       yes*        |        yes        |     no      |
+| log                      |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| log_plus_one             |      no       |     yes*     |       yes*        |        yes        |     no      |
+| logistic                 |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| map                      |      no       |     yes*     |        no         |        no         |     no      |
+| maximum                  |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| minimum                  |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| multiply                 |      no       |     yes*     |       yes*        |        yes        |     no      |
+| negate                   |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| not                      |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| optimization_barrier     |      no       |     yes*     |        no         |        yes        |     no      |
+| or                       |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| outfeed                  |      no       |     yes*     |        no         |        no         |     no      |
+| pad                      |      no       |     yes*     |       yes*        |        no         |     no      |
+| popcnt                   |      no       |     yes*     |       yes*        |        yes        |     no      |
+| power                    |      no       |     yes*     |       yes*        |        yes        |     no      |
+| real_dynamic_slice       |      no       |     yes*     |        no         |        yes        |     no      |
+| real                     |      no       |     yes*     |       yes*        |        yes        |     no      |
+| recv                     |      no       |     yes*     |        no         |        no         |     no      |
+| reduce                   |      no       |     yes*     |       yes*        | yes(need-revisit) |     no      |
+| reduce_precision         |      no       |     yes*     |       yes*        |        yes        |     no      |
+| reduce_scatter           |      no       |     yes*     |        no         |        no         |     no      |
+| reduce_window            |      no       |     yes*     |       yes*        |        no         |     no      |
+| remainder                |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| replica_id               |      no       |     yes*     | yes(need-revisit) |        yes        |     no      |
+| reshape                  |      yes      |     yes      |    infeasible     |        yes        |     yes     |
+| return                   |      no       |     yes*     |        no         |        yes        |     no      |
+| reverse                  |      no       |     yes*     |       yes*        |        no         |     no      |
+| rng_bit_generator        |      no       |     yes*     |    infeasible     |        yes        |     no      |
+| rng                      |      no       |     yes*     |       yes*        |        yes        |     no      |
+| round_nearest_afz        |      no       |     yes*     |       yes*        |        yes        |     no      |
+| round_nearest_even       |      no       |     yes*     |       yes*        |        yes        |     no      |
+| rsqrt                    |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| scatter                  |      no       |     yes*     |        no         |        no         |     no      |
+| select                   |      no       |     yes*     |       yes*        |        yes        |     no      |
+| select_and_scatter       |      no       |     yes*     |        no         |        no         |     no      |
+| send                     |      no       |     yes*     |        no         |        no         |     no      |
+| set_dimension_size       |      no       |     yes*     | yes(need-revisit) |        yes        |     no      |
+| shift_left               |      no       |     yes*     |       yes*        |        yes        |     no      |
+| shift_right_arithmetic   |      no       |     yes*     |       yes*        |        yes        |     no      |
+| shift_right_logical      |      no       |     yes*     |       yes*        |        yes        |     no      |
+| sign                     |      no       |     yes*     |       yes*        |        yes        |     no      |
+| sine                     |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| slice                    |      no       |     yes*     |       yes*        |        no         |     no      |
+| sort                     |      no       |     yes*     |       yes*        |        no         |     no      |
+| sqrt                     |      yes      |     yes*     |       yes*        |        yes        |     no      |
+| subtract                 |      yes      |     yes      |        yes        |        yes        |     yes     |
+| tanh                     |      yes      |     yes*     |       yes*        |        yes        |     yes     |
+| torch_index_select       |      no       |      no      |        no         |        no         |     no      |
+| trace                    |      no       |     yes*     |        no         |        yes        |     no      |
+| transpose                |      yes      |     yes      |        yes        |        no         |     yes     |
+| triangular_solve         |      no       |     yes*     |        no         |        no         |     no      |
+| tuple                    |      no       |     yes*     | yes(need-revisit) |        yes        |     no      |
+| unary_einsum             |      no       |      no      |        no         |        no         |     no      |
+| uniform_dequantize       |      no       |     yes*     |       yes*        |        yes        |     no      |
+| uniform_quantize         |      no       |     yes*     |    infeasible     |        yes        |     no      |
+| while                    |      no       |     yes*     |       yes*        | yes(need-revisit) |     no      |
+| xor                      |      yes      |     yes*     |       yes*        |        yes        |     no      |

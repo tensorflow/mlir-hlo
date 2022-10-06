@@ -275,7 +275,9 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":reference_types",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:ComplexDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
     ],
@@ -293,6 +295,7 @@ cc_library(
     deps = [
         ":reference_ops",
         ":reference_tensor",
+        ":reference_types",
         ":stablehlo_ops",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
@@ -313,6 +316,7 @@ cc_library(
     deps = [
         ":reference_element",
         ":reference_tensor",
+        ":reference_types",
         ":stablehlo_ops",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
@@ -322,18 +326,35 @@ cc_library(
 cc_library(
     name = "reference_tensor",
     srcs = [
+        "stablehlo/reference/Index.cpp",
         "stablehlo/reference/Tensor.cpp",
     ],
     hdrs = [
+        "stablehlo/reference/Index.h",
         "stablehlo/reference/Tensor.h",
     ],
     includes = ["."],
     deps = [
         ":reference_element",
+        ":reference_types",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:AsmParser",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
+    name = "reference_types",
+    srcs = [
+        "stablehlo/reference/Types.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/Types.h",
+    ],
+    includes = ["."],
+    deps = [
+        "@llvm-project//mlir:IR",
     ],
 )
 

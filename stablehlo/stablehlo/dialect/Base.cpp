@@ -108,6 +108,13 @@ bool isCompatibleForHloTypeInference(Type tp1, Type tp2) {
   return etp1 == etp2;
 }
 
+bool isCompatibleForHloTypeInference(TypeRange tp1, TypeRange tp2) {
+  if (tp1.size() != tp2.size()) return false;
+  for (auto [lt, rt] : llvm::zip(tp1, tp2))
+    if (!isCompatibleForHloTypeInference(lt, rt)) return false;
+  return true;
+}
+
 LogicalResult deriveShapeFromOperand(
     OpBuilder* builder, Operation* op, Value operand,
     SmallVectorImpl<Value>* reifiedReturnShapes) {
