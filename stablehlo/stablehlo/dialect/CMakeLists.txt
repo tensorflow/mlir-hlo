@@ -72,6 +72,11 @@ add_mlir_dialect_library(ChloOps
   MLIRQuantDialect
 )
 
+target_include_directories(ChloOps INTERFACE
+  $<BUILD_INTERFACE:${STABLEHLO_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
+)
+
 add_mlir_dialect_library(StablehloRegister
   PARTIAL_SOURCES_INTENDED
   Register.cpp
@@ -83,6 +88,15 @@ add_mlir_dialect_library(StablehloRegister
   LINK_LIBS PUBLIC
   ChloOps
   StablehloOps
+)
+
+add_mlir_dialect_library(StablehloTypeInference
+  PARTIAL_SOURCES_INTENDED
+  TypeInference.cpp 
+
+  LINK_LIBS PUBLIC
+  MLIRInferTypeOpInterface
+  MLIRIR
 )
 
 set(LLVM_TARGET_DEFINITIONS StablehloOps.td)
@@ -105,7 +119,9 @@ add_mlir_dialect_library(StablehloOps
 
   LINK_LIBS PUBLIC
   StablehloBase
+  StablehloTypeInference
   MLIRArithDialect
+  MLIRDataLayoutInterfaces
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRQuantDialect
@@ -113,4 +129,9 @@ add_mlir_dialect_library(StablehloOps
   MLIRSparseTensorDialect
   MLIRSupport
   MLIRTensorDialect
+)
+
+target_include_directories(StablehloOps INTERFACE
+  $<BUILD_INTERFACE:${STABLEHLO_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
 )
