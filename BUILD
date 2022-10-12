@@ -1275,6 +1275,7 @@ cc_library(
         "lib/Dialect/gml_st/transforms/tiling.cc",
         "lib/Dialect/gml_st/transforms/tiling_cwise.cc",
         "lib/Dialect/gml_st/transforms/tiling_reduction.cc",
+        "lib/Dialect/gml_st/transforms/tiling_softmax.cc",
         "lib/Dialect/gml_st/transforms/vectorization.cc",
     ],
     hdrs = [
