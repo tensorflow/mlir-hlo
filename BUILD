@@ -1442,6 +1442,7 @@ td_library(
     includes = ["include"],
     deps = [
         "@llvm-project//mlir:ControlFlowInterfacesTdFiles",
+        "@llvm-project//mlir:DialectUtilsTdFiles",
         "@llvm-project//mlir:InferTypeOpInterfaceTdFiles",
         "@llvm-project//mlir:LoopLikeInterfaceTdFiles",
         "@llvm-project//mlir:OpBaseTdFiles",
@@ -1478,6 +1479,14 @@ gentbl_cc_library(
             ["-gen-typedef-defs"],
             "include/mlir-hlo/Dialect/gml_st/IR/gml_st_types.cc.inc",
         ),
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir-hlo/Dialect/gml_st/IR/gml_st_attrs.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir-hlo/Dialect/gml_st/IR/gml_st_attrs.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/mlir-hlo/Dialect/gml_st/IR/gml_st_ops.td",
@@ -1500,6 +1509,7 @@ cc_library(
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:ControlFlowInterfaces",
+        "@llvm-project//mlir:DialectUtils",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
         "@llvm-project//mlir:LoopLikeInterface",
