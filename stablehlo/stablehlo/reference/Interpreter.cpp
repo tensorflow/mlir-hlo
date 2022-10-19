@@ -18,25 +18,16 @@ limitations under the License.
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Errc.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/DebugStringHelper.h"
 #include "stablehlo/dialect/StablehloOps.h"
+#include "stablehlo/reference/Errors.h"
 #include "stablehlo/reference/Ops.h"
 
 namespace mlir {
 namespace stablehlo {
-
-namespace {
-
-template <typename... Ts>
-inline llvm::Error invalidArgument(char const *Fmt, const Ts &...Vals) {
-  return createStringError(llvm::errc::invalid_argument, Fmt, Vals...);
-}
-
-}  // namespace
 
 llvm::Expected<SmallVector<Tensor>> eval(func::FuncOp func,
                                          ArrayRef<Tensor> args) {
@@ -65,8 +56,7 @@ llvm::Expected<SmallVector<Tensor>> eval(func::FuncOp func,
     auto fetchOperand = [&](Value value) -> Tensor {
       auto it = stackFrame.find(value);
       if (it != stackFrame.end()) return it->second;
-      report_fatal_error(
-          invalidArgument("Expected a terminator when evaluating func"));
+      llvm::report_fatal_error("Expected a terminator when evaluating func");
     };
     auto populateResults = [&](ArrayRef<Tensor> runtimeValues) {
       assert(op.getNumResults() == runtimeValues.size());
@@ -80,6 +70,11 @@ llvm::Expected<SmallVector<Tensor>> eval(func::FuncOp func,
       Tensor runtimeLhs = fetchOperand(addOp.getLhs());
       Tensor runtimeRhs = fetchOperand(addOp.getRhs());
       Tensor runtimeResult = eval(addOp, runtimeLhs, runtimeRhs);
+      populateResults({runtimeResult});
+    } else if (auto andOp = dyn_cast<AndOp>(op)) {
+      Tensor runtimeLhs = fetchOperand(andOp.getLhs());
+      Tensor runtimeRhs = fetchOperand(andOp.getRhs());
+      Tensor runtimeResult = eval(andOp, runtimeLhs, runtimeRhs);
       populateResults({runtimeResult});
     } else if (auto ceilOp = dyn_cast<CeilOp>(op)) {
       Tensor runtimeOperand = fetchOperand(ceilOp.getOperand());
@@ -99,10 +94,6 @@ llvm::Expected<SmallVector<Tensor>> eval(func::FuncOp func,
     } else if (auto iotaOp = dyn_cast<IotaOp>(op)) {
       Tensor runtimeResult = eval(iotaOp);
       populateResults({runtimeResult});
-    } else if (auto negOp = dyn_cast<NegOp>(op)) {
-      Tensor runtimeOperand = fetchOperand(negOp.getOperand());
-      Tensor runtimeResult = eval(negOp, runtimeOperand);
-      populateResults({runtimeResult});
     } else if (auto maxOp = dyn_cast<MaxOp>(op)) {
       Tensor runtimeLhs = fetchOperand(maxOp.getLhs());
       Tensor runtimeRhs = fetchOperand(maxOp.getRhs());
@@ -112,6 +103,24 @@ llvm::Expected<SmallVector<Tensor>> eval(func::FuncOp func,
       Tensor runtimeLhs = fetchOperand(minOp.getLhs());
       Tensor runtimeRhs = fetchOperand(minOp.getRhs());
       Tensor runtimeResult = eval(minOp, runtimeLhs, runtimeRhs);
+      populateResults({runtimeResult});
+    } else if (auto multiplyOp = dyn_cast<MulOp>(op)) {
+      Tensor runtimeLhs = fetchOperand(multiplyOp.getLhs());
+      Tensor runtimeRhs = fetchOperand(multiplyOp.getRhs());
+      Tensor runtimeResult = eval(multiplyOp, runtimeLhs, runtimeRhs);
+      populateResults({runtimeResult});
+    } else if (auto negOp = dyn_cast<NegOp>(op)) {
+      Tensor runtimeOperand = fetchOperand(negOp.getOperand());
+      Tensor runtimeResult = eval(negOp, runtimeOperand);
+      populateResults({runtimeResult});
+    } else if (auto notOp = dyn_cast<NotOp>(op)) {
+      Tensor runtimeOperand = fetchOperand(notOp.getOperand());
+      Tensor runtimeResult = eval(notOp, runtimeOperand);
+      populateResults({runtimeResult});
+    } else if (auto orOp = dyn_cast<OrOp>(op)) {
+      Tensor runtimeLhs = fetchOperand(orOp.getLhs());
+      Tensor runtimeRhs = fetchOperand(orOp.getRhs());
+      Tensor runtimeResult = eval(orOp, runtimeLhs, runtimeRhs);
       populateResults({runtimeResult});
     } else if (auto reshapeOp = dyn_cast<ReshapeOp>(op)) {
       Tensor runtimeOperand = fetchOperand(reshapeOp.getOperand());
@@ -139,6 +148,11 @@ llvm::Expected<SmallVector<Tensor>> eval(func::FuncOp func,
     } else if (auto transposeOp = dyn_cast<TransposeOp>(op)) {
       Tensor runtimeOperand = fetchOperand(transposeOp.getOperand());
       Tensor runtimeResult = eval(transposeOp, runtimeOperand);
+      populateResults({runtimeResult});
+    } else if (auto xorOp = dyn_cast<XorOp>(op)) {
+      Tensor runtimeLhs = fetchOperand(xorOp.getLhs());
+      Tensor runtimeRhs = fetchOperand(xorOp.getRhs());
+      Tensor runtimeResult = eval(xorOp, runtimeLhs, runtimeRhs);
       populateResults({runtimeResult});
     } else {
       return invalidArgument("Unsupported op: %s", debugString(op).c_str());

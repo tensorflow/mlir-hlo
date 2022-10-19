@@ -414,6 +414,17 @@ LogicalResult verifyReducerShape(
   return success();
 }
 
+// Returns output dimension size for slice result for the given arguments.
+// Returns -1 if arguments are illegal.
+static int64_t inferSliceDim(int64_t inputDim, int64_t start, int64_t end,
+                             int64_t stride) {
+  if (inputDim == -1 || start < 0 || start > end || end > inputDim ||
+      stride == 0)
+    return -1;
+
+  return llvm::divideCeil(end - start, stride);
+}
+
 //===----------------------------------------------------------------------===//
 // Shape functions for ops.
 //===----------------------------------------------------------------------===//
@@ -452,9 +463,9 @@ LogicalResult inferBatchNormTrainingOp(
   return success();
 }
 
-LogicalResult inferConditionalOp(
-    Optional<Location> location, RegionRange branches,
-    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+LogicalResult inferConditionalOp(Optional<Location> location,
+                                 RegionRange branches,
+                                 SmallVectorImpl<Type>& inferredReturnTypes) {
   if (branches.empty())
     return emitOptionalError(location, "expect at least one branch");
 
@@ -476,14 +487,13 @@ LogicalResult inferConditionalOp(
                                branch0ResultTypes, " vs ", branchResultTypes);
   }
   for (auto resultType : branch0ResultTypes)
-    inferredReturnShapes.emplace_back(resultType.cast<ShapedType>());
+    inferredReturnTypes.push_back(resultType);
   return success();
 }
 
-LogicalResult inferCaseOp(
-    Optional<Location> location, RegionRange branches,
-    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
-  return inferConditionalOp(location, branches, inferredReturnShapes);
+LogicalResult inferCaseOp(Optional<Location> location, RegionRange branches,
+                          SmallVectorImpl<Type>& inferredReturnTypes) {
+  return inferConditionalOp(location, branches, inferredReturnTypes);
 }
 
 LogicalResult inferDotGeneralOp(
@@ -606,10 +616,9 @@ LogicalResult inferDotGeneralOp(
   return success();
 }
 
-LogicalResult inferIfOp(
-    Optional<Location> location, RegionRange branches,
-    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
-  return inferConditionalOp(location, branches, inferredReturnShapes);
+LogicalResult inferIfOp(Optional<Location> location, RegionRange branches,
+                        SmallVectorImpl<Type>& inferredReturnTypes) {
+  return inferConditionalOp(location, branches, inferredReturnTypes);
 }
 
 LogicalResult inferMapOp(
@@ -891,6 +900,84 @@ LogicalResult inferReduceWindowOp(
   return success();
 }
 
+// The following properties are already enforced by the ODS:
+//  type(start_indices) == type(limit_indices) == type(strides).
+// Verify the following properties:
+//  P1. Verify rank(start_indices) == 1.
+//  P2. Verify size(start_indices) == rank(operand).
+//  P3~5. Verify 0 <= start_indices[i] <= limit_indices[i] <= shape(operand)[i].
+//  P6. Verify stride[i] > 0.
+LogicalResult inferSliceOp(Optional<Location> location, Value operand,
+                           DenseIntElementsAttr startIndices,
+                           DenseIntElementsAttr limitIndices,
+                           DenseIntElementsAttr strides,
+                           SmallVectorImpl<Type>& inferredReturnTypes) {
+  Type ty = operand.getType();
+  RankedTensorType rankedTy = ty.dyn_cast<RankedTensorType>();
+  if (!rankedTy) {
+    // The operand type is unranked, so the best we can infer for the result
+    // type is an unranked tensor with the same element type as the operand
+    // type.
+    inferredReturnTypes.assign({ty});
+    return success();
+  }
+
+  ShapedType attrTy = startIndices.getType();
+  // P1.
+  // Note: ODS has type(start_indices) == type(limit_indices) == type(strides)
+  // So this implies rank(limit_indices) == rank(strides) == 1 also.
+  if (attrTy.getRank() != 1) {
+    return emitOptionalError(location, "start_indices has rank ",
+                             attrTy.getRank(), " instead of required rank 1");
+  }
+
+  // P2.
+  int64_t rank = rankedTy.getRank();
+  if (attrTy.getNumElements() != rank) {
+    return emitOptionalError(
+        location, "the number of elements in start_indices (",
+        attrTy.getNumElements(), ") does not match the rank of the operand (",
+        rank, ")");
+  }
+
+  SmallVector<int64_t, 4> start(startIndices.getValues<int64_t>());
+  SmallVector<int64_t, 4> limit(limitIndices.getValues<int64_t>());
+  SmallVector<int64_t, 4> strideVals(strides.getValues<int64_t>());
+
+  SmallVector<int64_t, 4> shape;
+  shape.reserve(rank);
+  for (int64_t i = 0, e = rank; i != e; i++) {
+    if (hlo::isDynamicDimSize(rankedTy.getDimSize(i))) {
+      shape.push_back(ShapedType::kDynamicSize);
+      continue;
+    }
+    // P3.
+    if (start[i] < 0)
+      return emitOptionalError(location, "negative start index ", start[i],
+                               " in dimension ", i);
+    // P4.
+    if (limit[i] > rankedTy.getDimSize(i))
+      return emitOptionalError(location, "limit index ", limit[i],
+                               " is larger than dimension size ",
+                               rankedTy.getDimSize(i), " in dimension ", i);
+    // P5.
+    if (start[i] > limit[i])
+      return emitOptionalError(location, "start index ", start[i],
+                               " is larger than limit index ", limit[i],
+                               " in dimension ", i);
+    // P6.
+    if (strideVals[i] <= 0)
+      return emitOptionalError(location, "stride must be positive but got ",
+                               strideVals[i], " in dimension ", i);
+
+    shape.push_back(inferSliceDim(rankedTy.getDimSize(i), start[i], limit[i],
+                                  strideVals[i]));
+  }
+  inferredReturnTypes.assign(
+      {RankedTensorType::get(shape, rankedTy.getElementType())});
+  return success();
+}
+
 LogicalResult inferSortOp(
     Optional<Location> location, ValueRange inputs, uint64_t dimension,
     Region& comparator,
@@ -945,6 +1032,63 @@ LogicalResult inferSortOp(
 
   for (auto resultType : operandTypes)
     inferredReturnShapes.emplace_back(resultType.cast<ShapedType>());
+  return success();
+}
+
+LogicalResult inferTransposeOp(Optional<Location> loc, Value operand,
+                               DenseIntElementsAttr permutation,
+                               SmallVectorImpl<Type>& inferredReturnTypes) {
+  auto type = operand.getType();
+  auto rankedTy = type.dyn_cast<RankedTensorType>();
+  if (!rankedTy) {
+    inferredReturnTypes.emplace_back(type);
+    return success();
+  }
+  int64_t rank = rankedTy.getRank();
+  if (permutation.getType().getRank() != 1)
+    return emitOptionalError(loc, "TransposeOp permutation has rank ",
+                             permutation.getType().getRank(),
+                             " instead of rank 1");
+
+  if (permutation.size() != rank)
+    return emitOptionalError(loc, "TransposeOp operand rank ", rank,
+                             " does not match permutation size ",
+                             permutation.size());
+
+  std::vector<int64_t> range(rank);
+  std::iota(range.begin(), range.end(), 0);
+  if (!std::is_permutation(range.begin(), range.end(), permutation.begin()))
+    return emitOptionalError(loc,
+                             "attribute permutation must be a permutation"
+                             " of [",
+                             range, "] but got ", permutation);
+
+  llvm::SmallVector<int64_t, 4> inputBounds(rank, ShapedType::kDynamicSize);
+  bool hasBounds = false;
+  BoundedDialectInterface* dialect = nullptr;
+  if (auto encoding =
+          rankedTy.getEncoding().dyn_cast_or_null<BoundedAttrInterface>()) {
+    dialect = cast<BoundedDialectInterface>(&encoding.getDialect());
+    inputBounds = llvm::to_vector<4>(encoding.getBounds());
+    hasBounds = true;
+  }
+
+  SmallVector<int64_t> resultShape;
+  SmallVector<int64_t> resultBounds;
+  ArrayRef<int64_t> inputShape = rankedTy.getShape();
+  for (int64_t dim : permutation.getValues<int64_t>()) {
+    resultShape.push_back(inputShape[dim]);
+    if (hasBounds) {
+      resultBounds.push_back(inputBounds[dim]);
+    }
+  }
+
+  // If the input type doesn't have bounds, propagate the input type's encoding
+  // to handle sparse tensor encoding.
+  Attribute encoding = hasBounds ? dialect->createBoundedAttr(resultBounds)
+                                 : rankedTy.getEncoding();
+  inferredReturnTypes.emplace_back(
+      RankedTensorType::get(resultShape, rankedTy.getElementType(), encoding));
   return success();
 }
 
@@ -1008,9 +1152,9 @@ LogicalResult inferTriangularSolveOp(
   return success();
 }
 
-LogicalResult inferWhileOp(
-    Optional<Location> location, ValueRange operand, Region& cond, Region& body,
-    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+LogicalResult inferWhileOp(Optional<Location> location, ValueRange operand,
+                           Region& cond, Region& body,
+                           SmallVectorImpl<Type>& inferredReturnTypes) {
   auto operandTypes = operand.getTypes();
   auto condArgsTypes = cond.front().getArgumentTypes();
   auto bodyArgsTypes = body.front().getArgumentTypes();
@@ -1046,7 +1190,7 @@ LogicalResult inferWhileOp(
         condReturnTypes[0]);
 
   for (const auto& resultType : operand.getType())
-    inferredReturnShapes.emplace_back(resultType.cast<ShapedType>());
+    inferredReturnTypes.push_back(resultType);
   return success();
 }
 

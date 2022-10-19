@@ -790,10 +790,11 @@ def StableHLO_MulOp : StableHLO_BinaryElementwiseOp<"multiply",
       [Commutative, Pure, HLO_CompatibleOperandsAndResultType]> {
   let summary = "Multiplication operator";
   let description = [{
-    Returns `lhs * rhs` element-wise.
+    Performs element-wise product of two tensors `lhs` and `rhs` and produces a
+    `result` tensor.
 
     See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_binary_arithmetic_operations.
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlomultiply
 
     Example:
 
@@ -1137,19 +1138,22 @@ def StableHLO_AfterAllOp : StableHLO_Op<"after_all", [Pure]> {
 def StableHLO_IfOp: StableHLO_Op<"if", [
     RecursiveMemoryEffects,
     SingleBlockImplicitTerminator<"ReturnOp">,
-    InferTensorType]> {
+    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "If operator";
 
   let description = [{
-    Executes the function `true_branch` if `pred` is true or `false_branch` if
-    pred is false, and returns the result.
+    Produces the output from executing exactly one branch from `true_branch` or
+    `false_branch` depending on the value of `pred`.
 
-    The type of the returned values of `true_branch` and `false_branch`
-    functions must be the same and equal to the types of the values returned by
-    the operation.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloif
 
-    Note that only one of two functions will be executed depending on the value
-    of `pred`.
+    Example:
+    %result = "stablehlo.if"(%pred) ({
+      "stablehlo.return"(%result_true_branch) : (tensor<i32>) -> ()
+    }, {
+      "stablehlo.return"(%result_false_branch) : (tensor<i32>) -> ()
+    }) : (tensor<i1>) -> tensor<i32>
   }];
 
   let arguments = (ins
@@ -1160,17 +1164,6 @@ def StableHLO_IfOp: StableHLO_Op<"if", [
                         SizedRegion<1>:$false_branch);
 
   let results = (outs Variadic<HLO_TensorOrToken>);
-
-  let extraClassDeclaration = [{
-    // Method from InferTypeOpInterface interface.
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      if (l.size() != r.size()) return false;
-      for (auto [lt, rt] : llvm::zip(l, r))
-        if (!mlir::hlo::isCompatibleForHloTypeInference(lt, rt))
-          return false;
-      return true;
-    }
-  }];
 }
 
 // Xla Client API has two separate calls for indexed and predicated conditional,
@@ -1179,18 +1172,22 @@ def StableHLO_IfOp: StableHLO_Op<"if", [
 def StableHLO_CaseOp: StableHLO_Op<"case", [
       RecursiveMemoryEffects,
       SingleBlockImplicitTerminator<"ReturnOp">,
-      InferTensorType
+      DeclareOpInterfaceMethods<InferTypeOpInterface>
     ]> {
   let summary = "Switch-Case operator";
   let description = [{
-    Returns the result of executing `branches[index]`. If `index` is < 0 or >=
-    N, then `branches[N-1]` is executed as the default branch.
+    Produces the output from executing exactly one `function` from `branches`
+    depending on the value of `index`.
 
-    The type of the returned values of each branch must be the same and equal
-    to the types of the values returned by the operation.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocase
 
-    Note that only one of the branches will be executed depending on the value
-    of index.
+    Example:
+    %result = "stablehlo.case"(%index) ({
+      "stablehlo.return"(%result_branch0) : (tensor<i32>) -> ()
+    }, {
+      "stablehlo.return"(%result_branch1) : (tensor<i32>) -> ()
+    }) : (tensor<i32>) -> tensor<i32>
   }];
 
   let arguments = (ins
@@ -1200,24 +1197,13 @@ def StableHLO_CaseOp: StableHLO_Op<"case", [
   let regions = (region VariadicRegion<SizedRegion<1>>:$branches);
 
   let results = (outs Variadic<HLO_TensorOrToken>);
-
-  let extraClassDeclaration = [{
-    // Method from InferTypeOpInterface interface.
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      if (l.size() != r.size()) return false;
-      for (auto [lt, rt] : llvm::zip(l, r))
-        if (!mlir::hlo::isCompatibleForHloTypeInference(lt, rt))
-          return false;
-      return true;
-    }
-  }];
 }
 
 
 def StableHLO_WhileOp: StableHLO_Op<"while", [
       RecursiveMemoryEffects,
       SingleBlockImplicitTerminator<"ReturnOp">,
-      InferTensorType,
+      DeclareOpInterfaceMethods<InferTypeOpInterface>,
       OpAsmOpInterface
     ]> {
   let summary = "While operator";
@@ -1471,6 +1457,23 @@ def StableHLO_SliceOp: StableHLO_Op<
       [Pure, SameOperandsAndResultElementType,
        AllTypesMatch<["start_indices", "limit_indices", "strides"]>,
        DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "Slice operator";
+  let description = [{
+    Extracts a sub-tensor from the `operand` and produces a `result` tensor.
+
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloslice
+
+    Example:
+    ```mlir
+    %0 = "stablehlo.slice" (%arg0) {
+      start_indices = dense<2> : tensor<1xi64>,
+      limit_indices = dense<4> : tensor<1xi64>,
+      strides = dense<1> : tensor<1xi64>
+    } : (tensor<5xi64>) -> tensor<2xi64>
+    ```
+  }];
+
   let arguments = (ins
     HLO_Tensor:$operand,
     I64ElementsAttr:$start_indices,
@@ -1673,20 +1676,18 @@ def StableHLO_BroadcastInDimOp : StableHLO_Op<"broadcast_in_dim",
       [Pure, SameOperandsAndResultElementType]> {
   let summary = "Broadcast a tensor into the given shape by adding dimensions.";
   let description = [{
-    Broadcasts the `operand` tensor to a higher rank. This is not the limited
-    form of broadcasting exposed as the XLA client broadcast op, but rather the
-    more powerful "InDim" broadcasting, which is closer to the HLO broadcast op
-    and exposed in the XLA client BroadcastInDim method.
+    Expands the dimensions and/or rank of an input tensor by duplicating the
+    data in the `operand` tensor and produces a `result` tensor.
 
-    `broadcast_dimensions` maps the operand dimension number to the target shape
-    dimension number. It must have the same size as the rank of the operand. The
-    mapped dimensions must either be the same size or the dimension being
-    broadcast from must be size 1 (degenerate broadcasting).
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobroadcast_in_dim
 
-    For a scalar (0D tensor) operand, `broadcast_dimensions` must be empty. The
-    The scalar value will be broadcast to every element in the target shape.
-
-    See https://www.tensorflow.org/xla/broadcasting.
+    Example:
+    ```mlir
+    "stablehlo.broadcast_in_dim"(%operand) {
+      broadcast_dimensions = dense<[0, 1]>: tensor<2xi64>
+    } : (tensor<2x1xi32>) -> tensor<2x3x2xi32>
+    ```
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
@@ -1838,18 +1839,12 @@ def StableHLO_ConcatenateOp : StableHLO_ShapedInterfaceOp<"concatenate",
 
   let arguments = (ins
     Variadic<HLO_Tensor>:$inputs,
-    I64Attr: $dimension
+    I64Attr:$dimension
   );
 
   let results = (outs HLO_Tensor);
 
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return succeeded(mlir::verifyCompatibleShapes(l, r));
-    }
-  }];
 
   let assemblyFormat = [{
      custom<VariadicOperandWithAttribute>($inputs) `dim` `=` $dimension attr-dict `:` functional-type(operands, results)
@@ -2111,7 +2106,7 @@ def StableHLO_FftOp: StableHLO_Op<"fft", [InferTensorType, Pure]> {
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
-    StableHLO_FftTypeAttr: $fft_type,
+    StableHLO_FftTypeAttr:$fft_type,
     I64ElementsAttr:$fft_length
   );
 
@@ -2360,14 +2355,28 @@ def StableHLO_SetDimensionSizeOp: StableHLO_Op<"set_dimension_size", [Pure,
   }];
 }
 
-def StableHLO_SortOp : StableHLO_Op<"sort", 
+def StableHLO_SortOp : StableHLO_Op<"sort",
       [RecursiveMemoryEffects, SameOperandsAndResultShape, InferTensorType]> {
   let summary = "Sort operator";
   let description = [{
-    Sorts the given `operands` at the given `dimension` with the given
-    `comparator`.
+    Sorts a variadic number of tensors in `inputs` together, according to a
+    custom `comparator`, along the given `dimension` and produces a variadic
+    number of tensors as `results`.
 
-    See https://www.tensorflow.org/xla/operation_semantics#sort.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreverse
+
+    Example:
+    %result0, %result1 = "stablehlo.sort"(%input0, %input1) ({
+      ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>, %arg2: tensor<i32>, %arg3: tensor<i32>):
+        %predicate = "stablehlo.compare"(%arg0, %arg1) {
+          comparison_direction = #stablehlo<comparison_direction GT>
+          } : (tensor<i32>, tensor<i32>) -> tensor<i1>
+        "stablehlo.return"(%predicate) : (tensor<i1>) -> ()
+    }) {
+      dimension = 0 : i64,
+      is_stable = true
+    } : (tensor<2x3xi32>, tensor<2x3xi32>) -> (tensor<2x3xi32>, tensor<2x3xi32>)
   }];
   let arguments = (ins
     Variadic<HLO_Tensor>:$inputs,
@@ -2409,34 +2418,25 @@ def StableHLO_PadOp: StableHLO_ShapedInterfaceOp<"pad",
       [Pure, SameOperandsAndResultElementType, InferTensorType]> {
   let summary = "Pad operator";
   let description = [{
-    Pads edges and between the elements of `operand` with the `padding_value`
-    according to the configuration parameters described below.
+    Expands `operand` by padding around the tensor as well as between the
+    elements of the tensor with the given `padding_value`.
 
-    `edge_padding_low` and `edge_padding_high` specify the amount of padding
-    added at the low-end (next to index 0) and the high-end (next to the
-    highest index) of each dimension respectively. The amount of edge
-    padding can be negative -- the absolute value of negative padding indicates
-    the number of elements to remove from the specified dimension.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlopad
 
-    `interior_padding` specifies the amount of padding (non-negative) added
-    between any two elements in each dimension. Interior padding occurs
-    logically before edge padding, so in the case of negative edge padding,
-    elements are removed from the interior-padded operand.
-
-    This operation is a no-op if, for all dimensions, the edge padding pairs are
-    all (0, 0) and the interior padding values are all 0. The figure below shows
-    examples of different `edge_padding` and `interior_padding` values for a
-    two-dimensional array.
-
-    ![Examples](https://www.tensorflow.org/xla/images/ops_pad.png)
-
+    Example:
+    %0 = "stablehlo.pad"(%arg0, %arg1) {
+      edge_padding_low = dense<[0, 1]> : tensor<2xi64>,
+      edge_padding_high = dense<[2, 1]> : tensor<2xi64>,
+      interior_padding = dense<[1, 2]> : tensor<2xi64>
+    } : (tensor<2x3xi32>, tensor<i32>) -> tensor<5x9xi32>
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
     HLO_Tensor:$padding_value,
-    I64ElementsAttr: $edge_padding_low,
-    I64ElementsAttr: $edge_padding_high,
-    I64ElementsAttr: $interior_padding
+    I64ElementsAttr:$edge_padding_low,
+    I64ElementsAttr:$edge_padding_high,
+    I64ElementsAttr:$interior_padding
   );
 
   let results = (outs HLO_Tensor);
@@ -2686,13 +2686,6 @@ def StableHLO_RngOp : StableHLO_Op<"rng", [InferTensorTypeWithReify, AllElementT
   let results = (outs HLO_PredIntOrFpTensor:$result);
 
   let hasVerifier = 1;
-
-  let extraClassDeclaration = [{
-    // Returns whether the return types are compatible.
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return succeeded(::mlir::verifyCompatibleShapes(l, r));
-    }
-  }];
 
   let assemblyFormat = [{
     $a `,` $b `,` $shape `,` `distribution` `=` $rng_distribution

@@ -108,9 +108,9 @@ bool isCompatibleForHloTypeInference(Type tp1, Type tp2) {
   return etp1 == etp2;
 }
 
-bool isCompatibleForHloTypeInference(TypeRange l, TypeRange r) {
-  if (l.size() != r.size()) return false;
-  for (auto [lt, rt] : llvm::zip(l, r))
+bool isCompatibleForHloTypeInference(TypeRange tp1, TypeRange tp2) {
+  if (tp1.size() != tp2.size()) return false;
+  for (auto [lt, rt] : llvm::zip(tp1, tp2))
     if (!isCompatibleForHloTypeInference(lt, rt)) return false;
   return true;
 }
@@ -137,6 +137,17 @@ TensorType getSameShapeTensorType(TensorType tensorType, Type elementType) {
     return UnrankedTensorType::get(elementType);
   }
   llvm_unreachable("unhandled type");
+}
+
+// createRealType takes a tensor type that may have complex elements and
+// returns a type that maintains the shape, but with real numeric data types.
+//   Ex: tensor<4xcomplex<f32>>  -->  tensor<4xf32>
+Type createRealType(TensorType type) {
+  auto elementTy = type.getElementType();
+  if (auto complexTy = elementTy.dyn_cast<ComplexType>()) {
+    elementTy = complexTy.getElementType();
+  }
+  return hlo::getSameShapeTensorType(type, elementTy);
 }
 
 // TODO(hinsu): Add verification for bounds that it has the same size as rank

@@ -18,9 +18,9 @@ limitations under the License.
 #include <complex>
 
 #include "llvm/ADT/APFloat.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "mlir/Support/DebugStringHelper.h"
+#include "stablehlo/reference/Errors.h"
 #include "stablehlo/reference/Index.h"
 #include "stablehlo/reference/Types.h"
 
@@ -28,11 +28,6 @@ namespace mlir {
 namespace stablehlo {
 
 namespace {
-
-template <typename... Ts>
-inline llvm::Error invalidArgument(char const *Fmt, const Ts &...Vals) {
-  return createStringError(llvm::errc::invalid_argument, Fmt, Vals...);
-}
 
 int64_t getSizeInBytes(Type type) {
   if (auto shapedType = type.dyn_cast<ShapedType>())
@@ -54,8 +49,7 @@ int64_t getSizeInBytes(Type type) {
 int64_t flattenIndex(ArrayRef<int64_t> shape, ArrayRef<int64_t> index) {
   if (failed(verifyIndex(shape, index)))
     llvm::report_fatal_error(
-        llvm::StringRef("Incompatible index and shape found in: ") +
-        LLVM_PRETTY_FUNCTION);
+        "Incompatible index and shape found while flattening index");
 
   int64_t idx = 0;
   if (shape.empty()) return idx;
@@ -177,6 +171,15 @@ Element Tensor::get(ArrayRef<int64_t> index) const {
     }
   }
 
+  // Handle boolean type.
+  if (isSupportedBooleanType(elementType)) {
+    auto elementData = reinterpret_cast<const uint8_t *>(elementPtr);
+    if (*elementData == 0) return Element(elementType, false);
+    if (*elementData == 1) return Element(elementType, true);
+
+    llvm::report_fatal_error("Unsupported boolean value");
+  }
+
   // Handle complex types.
   if (elementType.isa<ComplexType>()) {
     auto complexElemTy = elementType.cast<ComplexType>().getElementType();
@@ -289,6 +292,14 @@ void Tensor::set(ArrayRef<int64_t> index, const Element &element) {
     auto elementData = reinterpret_cast<uint64_t *>(elementPtr);
     auto value = element.getIntegerValue();
     *elementData = (uint64_t)value.getZExtValue();
+    return;
+  }
+
+  // Handle boolean type.
+  if (isSupportedBooleanType(elementType)) {
+    auto elementData = reinterpret_cast<uint8_t *>(elementPtr);
+    auto value = element.getBooleanValue();
+    *elementData = value ? 1 : 0;
     return;
   }
 
@@ -443,6 +454,15 @@ Tensor makeTensor(DenseElementsAttr attr) {
                   HeapAsmResourceBlob::allocateAndCopy<uint64_t>(intValues));
   }
 
+  // Handle boolean type.
+  if (isSupportedBooleanType(elemType)) {
+    auto boolValues = llvm::to_vector(
+        llvm::map_range(attr.getValues<bool>(),
+                        [&](bool value) -> uint8_t { return value ? 1 : 0; }));
+    return Tensor(type,
+                  HeapAsmResourceBlob::allocateAndCopy<uint8_t>(boolValues));
+  }
+
   // Handle complex types.
   if (elemType.isa<ComplexType>()) {
     auto complexElemTy = elemType.cast<ComplexType>().getElementType();
@@ -470,7 +490,8 @@ Tensor makeTensor(DenseElementsAttr attr) {
     }
   }
 
-  llvm::report_fatal_error(StringRef("Unsupported type: ") + debugString(type));
+  report_fatal_error(
+      invalidArgument("Unsupported type: ", debugString(type).c_str()));
 }
 
 }  // namespace stablehlo

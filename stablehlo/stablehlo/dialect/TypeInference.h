@@ -104,9 +104,8 @@ LogicalResult inferBatchNormTrainingOp(
     Value operand, uint64_t featureIndex,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
-LogicalResult inferCaseOp(
-    Optional<Location> location, RegionRange branches,
-    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+LogicalResult inferCaseOp(Optional<Location> location, RegionRange branches,
+                          SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferDotGeneralOp(
     Optional<Location> location, Value lhs, Value rhs,
@@ -116,9 +115,8 @@ LogicalResult inferDotGeneralOp(
     ArrayRef<int64_t> rhsContractingDimensions,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
-LogicalResult inferIfOp(
-    Optional<Location> location, RegionRange branches,
-    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+LogicalResult inferIfOp(Optional<Location> location, RegionRange branches,
+                        SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferMapOp(
     Optional<Location> location, ValueRange inputs,
@@ -139,19 +137,29 @@ LogicalResult inferReduceWindowOp(
     Optional<DenseIntElementsAttr> padding, Region& body,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
+LogicalResult inferSliceOp(Optional<Location> location, Value operand,
+                           DenseIntElementsAttr startIndices,
+                           DenseIntElementsAttr limitIndices,
+                           DenseIntElementsAttr strides,
+                           SmallVectorImpl<Type>& inferredReturnTypes);
+
 LogicalResult inferSortOp(
     Optional<Location> location, ValueRange inputs, uint64_t dimension,
     Region& comparator,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
+LogicalResult inferTransposeOp(Optional<Location> loc, Value operand,
+                               DenseIntElementsAttr permutation,
+                               SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferTriangularSolveOp(
     Optional<Location> location, Value a, Value b, bool leftSide,
     bool isTransposeAInvalid,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
-LogicalResult inferWhileOp(
-    Optional<Location> location, ValueRange operand, Region& cond, Region& body,
-    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+LogicalResult inferWhileOp(Optional<Location> location, ValueRange operand,
+                           Region& cond, Region& body,
+                           SmallVectorImpl<Type>& inferredReturnTypes);
 
 }  // end namespace hlo
 }  // end namespace mlir

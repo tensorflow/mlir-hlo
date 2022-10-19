@@ -275,11 +275,23 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":reference_errors",
         ":reference_types",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ComplexDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
+    name = "reference_errors",
+    hdrs = [
+        "stablehlo/reference/Errors.h",
+    ],
+    includes = ["."],
+    deps = [
+        "@llvm-project//llvm:Support",
     ],
 )
 
@@ -293,9 +305,9 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":reference_errors",
         ":reference_ops",
         ":reference_tensor",
-        ":reference_types",
         ":stablehlo_ops",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
@@ -315,6 +327,7 @@ cc_library(
     includes = ["."],
     deps = [
         ":reference_element",
+        ":reference_errors",
         ":reference_tensor",
         ":reference_types",
         ":stablehlo_ops",
@@ -337,9 +350,9 @@ cc_library(
     includes = ["."],
     deps = [
         ":reference_element",
+        ":reference_errors",
         ":reference_types",
         "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:AsmParser",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
     ],
@@ -371,6 +384,22 @@ cc_library(
         ":chlo_ops",
         ":stablehlo_ops",
         "@llvm-project//mlir:IR",
+    ],
+)
+
+cc_library(
+    name = "stablehlo_assembly_format",
+    srcs = [
+        "stablehlo/dialect/AssemblyFormat.cpp",
+    ],
+    hdrs = [
+        "stablehlo/dialect/AssemblyFormat.h",
+    ],
+    deps = [
+        ":base",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
     ],
 )
 
@@ -561,6 +590,7 @@ cc_library(
     includes = ["."],
     deps = [
         ":base",
+        ":stablehlo_assembly_format",
         ":stablehlo_attrs_inc_gen",
         ":stablehlo_enums_inc_gen",
         ":stablehlo_ops_inc_gen",

@@ -69,6 +69,11 @@ LogicalResult deriveShapeFromOperand(
 // Type derivation function that returns a tensor type with a new element type.
 TensorType getSameShapeTensorType(TensorType tensorType, Type elementType);
 
+// Takes a tensor type that may have complex elements and returns a type that
+// maintains the shape, but with real numeric data types.
+//   Ex: tensor<4xcomplex<f32>>  -->  tensor<4xf32>
+Type createRealType(TensorType type);
+
 // Verify bounds expressed by HLO_BoundedInterface against the provided type.
 // See documentation for HLO_BoundedInterface for the list of checks.
 LogicalResult verifyBounds(ArrayRef<int64_t> bounds, ShapedType type,
@@ -232,11 +237,11 @@ class CompatibleOperandsAndResultType
     SmallVector<int64_t> inferredDimSizes(rank, ShapedType::kDynamicSize);
     SmallVector<int64_t> inferredBounds(rank, ShapedType::kDynamicSize);
     for (auto rankedType : rankedTypes) {
-      SmallVector<int64_t> bounds;
+      ArrayRef<int64_t> bounds;
       if (auto boundedAttr = rankedType.getEncoding()
                                  .dyn_cast_or_null<BoundedAttrInterface>()) {
         dialect = cast<BoundedDialectInterface>(&boundedAttr.getDialect());
-        bounds = llvm::to_vector<4>(boundedAttr.getBounds());
+        bounds = boundedAttr.getBounds();
       } else if (rankedType.getEncoding()) {
         // TODO(zhouxin) infer sparsity encoding after b/238903065 is fixed.
         inferredReturnTypes.push_back(inputTypes[0]);
