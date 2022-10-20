@@ -13,7 +13,7 @@
 // RUN: --shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
-func.func @scatter(%indices: tensor<5x2xi32>, %updates: tensor<5x2x1xf32>,
+func.func @scatter(%indices: tensor<5x2xi64>, %updates: tensor<5x2x1xf32>,
                    %init: tensor<3x3xf32>) -> tensor<3x3xf32> {
   %0 = "mhlo.scatter"(%init, %indices, %updates) ({
     ^bb0(%out: tensor<f32>,  %in: tensor<f32>):
@@ -28,7 +28,7 @@ func.func @scatter(%indices: tensor<5x2xi32>, %updates: tensor<5x2x1xf32>,
       >,
       unique_indices = false,
       indices_are_sorted = false
-    } : (tensor<3x3xf32>, tensor<5x2xi32>, tensor<5x2x1xf32>) -> tensor<3x3xf32>
+    } : (tensor<3x3xf32>, tensor<5x2xi64>, tensor<5x2x1xf32>) -> tensor<3x3xf32>
   func.return %0 : tensor<3x3xf32>
 }
 
@@ -47,12 +47,12 @@ func.func @main() {
     [1, 1],
     [2, 2],
     [3, 3]
-  ]> : tensor<5x2xi32>
+  ]> : tensor<5x2xi64>
 
   %init = arith.constant dense<0.0> : tensor<3x3xf32>
 
   %result = func.call @scatter(%indices, %updates, %init)
-      : (tensor<5x2xi32>, tensor<5x2x1xf32>, tensor<3x3xf32>) -> tensor<3x3xf32>
+      : (tensor<5x2xi64>, tensor<5x2x1xf32>, tensor<3x3xf32>) -> tensor<3x3xf32>
 
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]
   // CHECK-NEXT: [1, 0, 0]
