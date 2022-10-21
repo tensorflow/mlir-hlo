@@ -1,11 +1,12 @@
-// RUN: mlir-hlo-opt %s
-// TODO(b/249781306): Re-enable the test.
-// not_r_u_n:   --gml-st-pipeline="tile-sizes=1,1,1 lower-to-loops"
-// not_r_u_n: mlir-cpu-runner -e main -entry-point-result=void \
-// not_r_u_n:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
-// not_r_u_n: FileCheck %s
+// RUN: mlir-hlo-opt %s --legalize-mhlo-to-thlo \
+// RUN: --gml-tiling="tile-sizes=1,1,1" --scalarize \
+// RUN: --empty-tensor-to-alloc-tensor --hlo-one-shot-bufferize \
+// RUN: --gml-st-to-scf --convert-scf-to-cf --generic-host-to-llvm | \
 
-// TODO(frgossen): Add test for tiled broadcast when it works.
+// RUN: mlir-cpu-runner \
+// RUN: -e main -entry-point-result=void \
+// RUN: --shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext
+
 
 func.func @dynamic_bcast(%arg : tensor<1x2x?xf32>, %shape : tensor<3xindex>)
     -> tensor<?x?x?xf32> {
