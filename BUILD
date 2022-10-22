@@ -435,6 +435,7 @@ cc_library(
         "//stablehlo:base",
         "//stablehlo:broadcast_utils",
         "//stablehlo:chlo_ops",
+        "//stablehlo:stablehlo_type_inference",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Analysis",
         "@llvm-project//mlir:ArithDialect",
