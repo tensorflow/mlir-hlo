@@ -53,7 +53,7 @@ func.func @bcast_cwise(%arg0: tensor<1x4096xf32>, %arg1: tensor<f32>)
   // CHECK:      %[[C4096:.*]] = arith.constant 4096
   // CHECK:      %[[EMPTY:.*]] = tensor.empty() : tensor<4096xf32>
   // CHECK:      %[[GENERIC:.*]] = linalg.generic
-  // CHECK-SAME:     indexing_maps = [#map0, #map1]
+  // CHECK-SAME:     indexing_maps = [#map, #map1]
   // CHECK-SAME:     iterator_types = ["parallel"]
   // CHECK-SAME:     ins(%[[ARG1]] : tensor<f32>)
   // CHECK-SAME:     outs(%[[EMPTY]] : tensor<4096xf32>)
