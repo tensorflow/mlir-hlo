@@ -1279,6 +1279,7 @@ cc_library(
         "include/mlir-hlo/Dialect/gml_st/transforms/passes.h",
         "include/mlir-hlo/Dialect/gml_st/transforms/rewriters.h",
         "include/mlir-hlo/Dialect/gml_st/transforms/tiling.h",
+        "include/mlir-hlo/Dialect/gml_st/transforms/vector_utils.h",
     ],
     deps = [
         ":gml_st",
