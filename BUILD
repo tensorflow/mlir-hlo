@@ -1271,6 +1271,7 @@ cc_library(
         "lib/Dialect/gml_st/transforms/transform_map_for_cpu.cc",
         "lib/Dialect/gml_st/transforms/transform_matmul_for_cpu.cc",
         "lib/Dialect/gml_st/transforms/transform_scatter_for_cpu.cc",
+        "lib/Dialect/gml_st/transforms/transform_transpose_for_cpu.cc",
         "lib/Dialect/gml_st/transforms/vectorization.cc",
     ],
     hdrs = [
