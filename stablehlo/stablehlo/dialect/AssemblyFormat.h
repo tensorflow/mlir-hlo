@@ -127,12 +127,29 @@ ParseResult parseVariadicOperandWithAttribute(
 // Operation Printers and Parsers
 //===----------------------------------------------------------------------===//
 
+// ComplexOpType - only print result type if the inferred complex type
+// matches all operand types.
+//
+// Inferring operand types for complex ops:
+//  %0 = stablehlo.complex %1, %2 : tensor<4xcomplex<f32>>
+//    %0 : tensor<4xcomplex<f32>>
+//    %1 : tensor<4xf32>
+//    %2 : tensor<4xf32>
 void printComplexOpType(OpAsmPrinter& p, Operation* op, Type lhs, Type rhs,
                         Type result);
 
 ParseResult parseComplexOpType(OpAsmParser& parser, Type& lhs, Type& rhs,
                                Type& result);
 
+// SelectOpType - only print the condition and result type when branch types
+// match the result type.
+//
+// Inferring operand types for select ops:
+//  %3 = stablehlo.select %0, %1, %2 : tensor<2xi1>, tensor<2xi32>
+//    %0 : tensor<2xi1>
+//    %1 : tensor<2xi32>
+//    %2 : tensor<2xi32>
+//    %3 : tensor<2xi32>
 void printSelectOpType(OpAsmPrinter& p, Operation* op, Type pred, Type onTrue,
                        Type onFalse, Type result);
 
@@ -143,6 +160,24 @@ ParseResult parseSelectOpType(OpAsmParser& parser, Type& pred, Type& onTrue,
 // Attribute Printers and Parsers
 //===----------------------------------------------------------------------===//
 
+// DenseI64Array - Used to print DenseIntElementsAttrs that are verified to have
+// rank 1 as an i64 array without needing the dense specifier or type specifier.
+//
+//   Generic:
+//     { dense<[1, 2]> : tensor<2xi64> }
+//   Custom:
+//     [1, 2]
+void printDenseI64Array(OpAsmPrinter& p, Operation* op,
+                        DenseIntElementsAttr attr);
+
+ParseResult parseDenseI64Array(OpAsmParser& parser, DenseIntElementsAttr& attr);
+
+// ExponentMantissa - Abbreviated printing of exponent and mantissa as e#m#.
+//
+//   Generic:
+//     {exponent = 5 : i32, mantissa = 10 : i32}
+//   Custom:
+//     e5m10
 void printExponentMantissa(AsmPrinter& p, Operation*, IntegerAttr exponent,
                            IntegerAttr mantissa);
 

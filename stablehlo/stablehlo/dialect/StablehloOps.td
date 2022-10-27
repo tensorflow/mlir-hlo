@@ -78,7 +78,9 @@ def StableHLO_ConstantOp : StableHLO_Op<"constant",
     https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloconstant
 
     Example:
-    %0 = stablehlo.constant dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>
+    ```mlir
+    %result = stablehlo.constant dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>
+    ```
   }];
   let arguments = (ins
     ElementsAttr:$value
@@ -110,7 +112,7 @@ def StableHLO_IotaOp : StableHLO_Op<"iota", [Pure]> {
 
     Example:
     ```mlir
-    %0 = stablehlo.iota dim = 1 : tensor<1x10xf32>
+    %result = stablehlo.iota dim = 0 : tensor<4x5xi32>
     ```
   }];
   let arguments = (ins I64Attr:$iota_dimension);
@@ -209,7 +211,7 @@ def StableHLO_AbsOp: StableHLO_UnaryElementwiseOp<"abs",
 
     Example:
     ```mlir
-    %0 = stablehlo.abs %arg0 : tensor<3xi32>
+    %result = stablehlo.abs %operand : tensor<3xi32>
     ```
   }];
 }
@@ -242,7 +244,7 @@ def StableHLO_CeilOp: StableHLO_UnaryElementwiseOp<"ceil",
 
     Example:
     ```mlir
-    %0 = stablehlo.ceil %arg0 : tensor<2xf32>
+    %result = stablehlo.ceil %operand : tensor<2xf32>
     ```
   }];
 }
@@ -296,7 +298,7 @@ def StableHLO_CosineOp: StableHLO_UnaryElementwiseOp<"cosine",
 
     Example:
     ```mlir
-    %0 = stablehlo.cosine %arg0 : tensor<2xf32>
+    %result = stablehlo.cosine %operand : tensor<2xf32>
     ```
   }];
 }
@@ -313,7 +315,7 @@ def StableHLO_ExpOp: StableHLO_UnaryElementwiseOp<"exponential",
 
     Example:
     ```mlir
-    %0 = stablehlo.exponential %arg0 : tensor<2xf32>
+    %result = stablehlo.exponential %operand : tensor<2xf32>
     ```
   }];
 }
@@ -347,7 +349,7 @@ def StableHLO_FloorOp: StableHLO_UnaryElementwiseOp<"floor",
 
     Example:
     ```mlir
-    %0 = stablehlo.floor %arg0 : tensor<2xf32>
+    %result = stablehlo.floor %operand : tensor<2xf32>
     ```
   }];
 }
@@ -405,7 +407,7 @@ def StableHLO_LogOp: StableHLO_UnaryElementwiseOp<"log",
 
     Example:
     ```mlir
-    %0 = stablehlo.log %arg0 : tensor<2xf32>
+    %result = stablehlo.log %operand : tensor<2xf32>
     ```
   }];
 }
@@ -439,7 +441,7 @@ def StableHLO_LogisticOp: StableHLO_UnaryElementwiseOp<"logistic",
 
     Example:
     ```mlir
-    %0 = stablehlo.logistic %arg0 : tensor<2x2xf32>
+    %result = stablehlo.logistic %operand : tensor<2x2xf32>
     ```
   }];
 }
@@ -456,7 +458,7 @@ def StableHLO_NotOp: StableHLO_UnaryElementwiseOp<"not",
 
     Example:
     ```mlir
-    %0 = stablehlo.not %arg0 : tensor<5x3x1xi1>
+    %result = stablehlo.not %operand : tensor<5x3x1xi1>
     ```
   }];
 }
@@ -473,7 +475,7 @@ def StableHLO_NegOp: StableHLO_UnaryElementwiseOp<"negate",
 
     Example:
     ```mlir
-    %0 = stablehlo.negate %arg0 : tensor<2x3xi32>
+    %result = stablehlo.negate %operand : tensor<2x3xi32>
     ```
   }];
 }
@@ -559,7 +561,7 @@ def StableHLO_RsqrtOp: StableHLO_UnaryElementwiseOp<"rsqrt",
 
     Example:
     ```mlir
-    %0 = stablehlo.rsqrt %arg0 : tensor<2xf32>
+    %result = stablehlo.rsqrt %operand : tensor<2xf32>
     ```
   }];
 }
@@ -603,7 +605,7 @@ def StableHLO_SineOp: StableHLO_UnaryElementwiseOp<"sine",
 
     Example:
     ```mlir
-    %0 = stablehlo.sine %arg0 : tensor<2xf32>
+    %result = stablehlo.sine %operand : tensor<2xf32>
     ```
   }];
 }
@@ -621,7 +623,7 @@ def StableHLO_SqrtOp: StableHLO_UnaryElementwiseOp<"sqrt",
 
     Example:
     ```mlir
-    %0 = stablehlo.sqrt %arg0 : tensor<2xf32>
+    %result = stablehlo.sqrt %operand : tensor<2xf32>
     ```
   }];
 }
@@ -640,7 +642,7 @@ def StableHLO_TanhOp: StableHLO_UnaryElementwiseOp<"tanh",
 
     Example:
     ```mlir
-    %0 = stablehlo.tanh %arg0 : tensor<2xf32>
+    %result = stablehlo.tanh %operand : tensor<2xf32>
     ```
   }];
 }
@@ -691,7 +693,7 @@ def StableHLO_AddOp : StableHLO_BinaryElementwiseOp<"add",
 
     Example:
     ```mlir
-    %0 = stablehlo.add %arg0, %arg1 : tensor<4xf32>
+    %result = stablehlo.add %lhs, %rhs : tensor<4xf32>
     ```
   }];
 }
@@ -747,7 +749,7 @@ def StableHLO_DivOp : StableHLO_BinaryElementwiseOp<"divide",
 
     Example:
     ```mlir
-    %0 = stablehlo.divide %arg0, %arg0 : tensor<2xi32>
+    %result = stablehlo.divide %lhs, %rhs : tensor<2xi32>
     ```
   }];
 }
@@ -764,7 +766,7 @@ def StableHLO_MaxOp : StableHLO_BinaryElementwiseOp<"maximum",
 
     Example:
     ```mlir
-    %0 = stablehlo.maximum %arg0, %arg1 : tensor<4xf32>
+    %result = stablehlo.maximum %lhs, %rhs : tensor<4xf32>
     ```
   }];
 }
@@ -781,7 +783,7 @@ def StableHLO_MinOp : StableHLO_BinaryElementwiseOp<"minimum",
 
     Example:
     ```mlir
-    %0 = stablehlo.minimum %arg0, %arg1 : tensor<4xf32>
+    %result = stablehlo.minimum %lhs, %rhs : tensor<4xf32>
     ```
   }];
 }
@@ -793,13 +795,12 @@ def StableHLO_MulOp : StableHLO_BinaryElementwiseOp<"multiply",
     Performs element-wise product of two tensors `lhs` and `rhs` and produces a
     `result` tensor.
 
-    See
+    See:
     https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlomultiply
 
     Example:
-
     ```mlir
-    %0 = stablehlo.multiply %arg0, %arg0 : tensor<2xi32>
+    %result = stablehlo.multiply %lhs, %rhs : tensor<2xi32>
     ```
   }];
 }
@@ -833,7 +834,7 @@ def StableHLO_RemOp : StableHLO_BinaryElementwiseOp<"remainder",
 
     Example:
     ```mlir
-    %0 = stablehlo.remainder %arg0, %arg1 : (ensor<4xi64>
+    %result = stablehlo.remainder %lhs, %rhs : (ensor<4xi64>
     ```
   }];
 }
@@ -901,7 +902,7 @@ def StableHLO_SubtractOp : StableHLO_BinaryElementwiseOp<"subtract",
 
     Example:
     ```mlir
-    %0 = stablehlo.subtract %arg0, %arg0 : tensor<2xi32>
+    %result = stablehlo.subtract %lhs, %rhs : tensor<2xi32>
     ```
   }];
 }
@@ -931,7 +932,7 @@ def StableHLO_AndOp: StableHLO_BinaryBiwiseOrLogicalElementwiseOp<"and"> {
 
     Example:
     ```mlir
-    %0 = stablehlo.and %arg0, %arg1 : tensor<i1>
+    %result = stablehlo.and %lhs, %rhs : tensor<i1>
     ```
   }];
 }
@@ -947,7 +948,7 @@ def StableHLO_OrOp: StableHLO_BinaryBiwiseOrLogicalElementwiseOp<"or"> {
 
     Example:
     ```mlir
-    %0 = stablehlo.or %arg0, %arg1 : tensor<2xi1>
+    %result = stablehlo.or %lhs, %rhs : tensor<2xi1>
     ```
   }];
 }
@@ -963,7 +964,7 @@ def StableHLO_XorOp : StableHLO_BinaryBiwiseOrLogicalElementwiseOp<"xor"> {
 
     Example:
     ```mlir
-    %0 = stablehlo.xor %arg0, %arg1 : tensor<2xi32>
+    %result = stablehlo.xor %lhs, %rhs : tensor<2xi32>
     ```
   }];
 }
@@ -1462,7 +1463,7 @@ def StableHLO_SliceOp: StableHLO_Op<
 
     Example:
     ```mlir
-    %0 = "stablehlo.slice" (%arg0) {
+    %result = "stablehlo.slice" (%operand) {
       start_indices = dense<2> : tensor<1xi64>,
       limit_indices = dense<4> : tensor<1xi64>,
       strides = dense<1> : tensor<1xi64>
@@ -1488,6 +1489,13 @@ def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
     Extracts a sub-array from the input array at dynamic start_indices.
 
     See https://www.tensorflow.org/xla/operation_semantics#dynamicslice.
+
+    Example:
+
+    ```mlir
+    %0 = stablehlo.dynamic_slice %arg2, %arg3, %arg3, sizes = [1, 4] 
+      : (tensor<3x4xi32>, tensor<i64>, tensor<i64>) -> tensor<1x4xi32> 
+    ```
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
@@ -1497,6 +1505,12 @@ def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
 
   let results = (outs HLO_Tensor:$result);
   let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $operand `,` custom<VariadicOperandWithAttribute>($start_indices) 
+      `sizes` `=` custom<DenseI64Array>($slice_sizes)
+      attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 def StableHLO_DynamicUpdateSliceOp: StableHLO_Op<"dynamic_update_slice",
@@ -1560,8 +1574,6 @@ def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [Pure,
       RankedTensorOf<[HLO_Float]>:$grad_operand,
       1DTensorOf<[HLO_Float]>:$grad_scale,
       1DTensorOf<[HLO_Float]>:$grad_offset);
-
-  let hasVerifier = 1;
 }
 
 def StableHLO_BatchNormInferenceOp : StableHLO_Op<"batch_norm_inference",
@@ -1586,8 +1598,6 @@ def StableHLO_BatchNormInferenceOp : StableHLO_Op<"batch_norm_inference",
   );
 
   let results = (outs RankedTensorOf<[HLO_Float]>:$result);
-
-  let hasVerifier = 1;
 }
 
 def StableHLO_BatchNormTrainingOp : StableHLO_Op<"batch_norm_training",
@@ -1614,8 +1624,6 @@ def StableHLO_BatchNormTrainingOp : StableHLO_Op<"batch_norm_training",
       RankedTensorOf<[HLO_Float]>:$output,
       1DTensorOf<[HLO_Float]>:$batch_mean,
       1DTensorOf<[HLO_Float]>:$batch_var);
-
-  let hasVerifier = 1;
 }
 
 def StableHLO_BitcastConvertOp : StableHLO_ShapedInterfaceOp<"bitcast_convert",
@@ -1657,6 +1665,12 @@ def StableHLO_BroadcastOp : StableHLO_ShapedInterfaceOp<"broadcast",
     BroadcastInDimOp.
 
     See https://www.tensorflow.org/xla/operation_semantics#broadcast.
+
+    Example:
+
+    ```mlir
+    %0 = stablehlo.broadcast %arg1, sizes = [1, 2] : (tensor<3xi32>) -> tensor<1x2x3xi32>
+    ```
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
@@ -1666,6 +1680,11 @@ def StableHLO_BroadcastOp : StableHLO_ShapedInterfaceOp<"broadcast",
   let results = (outs HLO_Tensor);
 
   let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $operand `,` `sizes` `=` custom<DenseI64Array>($broadcast_sizes)
+      attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 def StableHLO_BroadcastInDimOp : StableHLO_Op<"broadcast_in_dim",
@@ -1679,10 +1698,9 @@ def StableHLO_BroadcastInDimOp : StableHLO_Op<"broadcast_in_dim",
     https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobroadcast_in_dim
 
     Example:
+
     ```mlir
-    "stablehlo.broadcast_in_dim"(%operand) {
-      broadcast_dimensions = dense<[0, 1]>: tensor<2xi64>
-    } : (tensor<2x1xi32>) -> tensor<2x3x2xi32>
+    %0 = stablehlo.broadcast_in_dim %arg0, dims = [1, 2] : (tensor<1x2xi32>) -> tensor<1x2x2xi32>
     ```
   }];
   let arguments = (ins
@@ -1693,6 +1711,11 @@ def StableHLO_BroadcastInDimOp : StableHLO_Op<"broadcast_in_dim",
   let results = (outs HLO_StaticShapeTensor);
 
   let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $operand `,` `dims` `=` custom<DenseI64Array>($broadcast_dimensions) 
+      attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 def StableHLO_DynamicBroadcastInDimOp : StableHLO_ShapedInterfaceOp<
@@ -1731,6 +1754,11 @@ def StableHLO_DynamicBroadcastInDimOp : StableHLO_ShapedInterfaceOp<
   ];
 
   let hasVerifier = 1;
+
+  let assemblyFormat = [{
+    $operand `,` $output_dimensions `,` `dims` `=` custom<DenseI64Array>($broadcast_dimensions)
+      attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 // Note: There is no HLO_CallOp because the standard call operation mlir::func::CallOp
@@ -1829,7 +1857,7 @@ def StableHLO_ConcatenateOp : StableHLO_ShapedInterfaceOp<"concatenate",
 
     Example:
     ```mlir
-     %0 = stablehlo.concatenate %arg0, %arg1, dim = 1 : (tensor<4x1xf32>, tensor<4x2xf32>) -> tensor<4x3xf32>
+     %result = stablehlo.concatenate %input0, %input1, dim = 1 : (tensor<4x1xf32>, tensor<4x2xf32>) -> tensor<4x3xf32>
     ```
    }];
 
@@ -2097,6 +2125,12 @@ def StableHLO_FftOp: StableHLO_Op<"fft", [InferTensorType, Pure]> {
 
     See
     https://www.tensorflow.org/xla/operation_semantics#fft.
+
+    Example:
+
+    ```mlir
+    %0 = stablehlo.fft %arg0, type = RFFT, length = [9] : (tensor<3x9xf32>) -> tensor<3x5xcomplex<f32>>
+    ```
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
@@ -2105,6 +2139,11 @@ def StableHLO_FftOp: StableHLO_Op<"fft", [InferTensorType, Pure]> {
   );
 
   let results = (outs HLO_Tensor);
+
+  let assemblyFormat = [{
+    $operand `,` `type` `=` $fft_type `,` `length` `=` custom<DenseI64Array>($fft_length)
+      attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify, Pure]> {
@@ -2192,7 +2231,7 @@ def StableHLO_ReshapeOp: StableHLO_Op<"reshape",
 
     Example:
     ```mlir
-    %0 = stablehlo.reshape %arg0 : (tensor<2xf32>) -> tensor<1x2xf32>
+    %result = stablehlo.reshape %operand : (tensor<2xf32>) -> tensor<1x2xf32>
     ```
   }];
 
@@ -2398,18 +2437,26 @@ def StableHLO_ReverseOp: StableHLO_Op<"reverse",
     https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreverse
 
     Example:
-    %0 = "stablehlo.reverse"(%arg0) {dimensions = dense<1> : tensor<i64>} : (tensor<3x2xi32>) -> tensor<3x2xi32>
+    ```mlir
+    %0 = stablehlo.reverse %arg0, dims = [1] : tensor<3x2xi32>
+    ```
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
     I64ElementsAttr:$dimensions
   );
 
-  let results = (outs HLO_Tensor);
+  let results = (outs HLO_Tensor:$result);
+
+  let assemblyFormat = [{
+    $operand `,` `dims` `=` custom<DenseI64Array>($dimensions)
+      attr-dict `:` custom<SameOperandsAndResultType>(type($operand), type($result))
+  }];
 }
 
 def StableHLO_PadOp: StableHLO_ShapedInterfaceOp<"pad",
-      [Pure, SameOperandsAndResultElementType, InferTensorType]> {
+      [Pure, SameOperandsAndResultElementType,
+      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Pad operator";
   let description = [{
     Expands `operand` by padding around the tensor as well as between the
@@ -2419,11 +2466,10 @@ def StableHLO_PadOp: StableHLO_ShapedInterfaceOp<"pad",
     https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlopad
 
     Example:
-    %0 = "stablehlo.pad"(%arg0, %arg1) {
-      edge_padding_low = dense<[0, 1]> : tensor<2xi64>,
-      edge_padding_high = dense<[2, 1]> : tensor<2xi64>,
-      interior_padding = dense<[1, 2]> : tensor<2xi64>
-    } : (tensor<2x3xi32>, tensor<i32>) -> tensor<5x9xi32>
+    ```mlir
+    %0 = stablehlo.pad %arg0, %arg1, low = [0, 1], high = [2, 1], interior = [1, 2]
+      : (tensor<2x3xi32>, tensor<i32>) -> tensor<5x9xi32>
+    ```
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
@@ -2434,6 +2480,14 @@ def StableHLO_PadOp: StableHLO_ShapedInterfaceOp<"pad",
   );
 
   let results = (outs HLO_Tensor);
+
+  let assemblyFormat = [{
+    $operand `,` $padding_value `,` 
+      `low` `=` custom<DenseI64Array>($edge_padding_low) `,`
+      `high` `=` custom<DenseI64Array>($edge_padding_high) `,`
+      `interior` `=` custom<DenseI64Array>($interior_padding)
+      attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 def StableHLO_TraceOp: StableHLO_Op<"trace", []> {
@@ -2467,7 +2521,7 @@ def StableHLO_TransposeOp: StableHLO_ShapedInterfaceOp<"transpose",
 
     Example:
     ```mlir
-    %0 = "stablehlo.transpose"(%arg0) {permutation = dense<[2, 1, 0]> : tensor<3xi64>} : (tensor<2x3x2xi32>) -> tensor<2x3x2xi32>
+    %0 = stablehlo.transpose %arg0, dims = [2, 1, 0] : (tensor<1x2x3xi32>) -> tensor<3x2x1xi32>
     ```
   }];
   let arguments = (ins
@@ -2475,6 +2529,11 @@ def StableHLO_TransposeOp: StableHLO_ShapedInterfaceOp<"transpose",
     I64ElementsAttr:$permutation
   );
   let results = (outs HLO_Tensor);
+
+  let assemblyFormat = [{
+    $operand `,` `dims` `=` custom<DenseI64Array>($permutation)
+      attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 def StableHLO_TriangularSolveOp: StableHLO_Op<"triangular_solve",

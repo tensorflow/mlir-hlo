@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "stablehlo/dialect/AssemblyFormat.h"
 
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "stablehlo/dialect/Base.h"
 
@@ -188,14 +189,6 @@ ParseResult parseVariadicOperandWithAttribute(
 // Operation Printers and Parsers
 //===----------------------------------------------------------------------===//
 
-// ComplexOpType - only print result type if the inferred complex type
-// matches all operand types.
-//
-// Inferring operand types for complex ops:
-//  %0 = stablehlo.complex %1, %2 : tensor<4xcomplex<f32>>
-//    %0 : tensor<4xcomplex<f32>>
-//    %1 : tensor<4xf32>
-//    %2 : tensor<4xf32>
 void printComplexOpType(OpAsmPrinter& p, Operation* op, Type lhs, Type rhs,
                         Type result) {
   Type realType = createRealType(result.cast<TensorType>());
@@ -279,6 +272,32 @@ ParseResult parseSelectOpType(OpAsmParser& parser, Type& pred, Type& onTrue,
 //===----------------------------------------------------------------------===//
 // Attribute Printers and Parsers
 //===----------------------------------------------------------------------===//
+
+void printDenseI64Array(OpAsmPrinter& p, Operation* op,
+                        DenseIntElementsAttr attr) {
+  if (attr.getType().getRank() != 1) {
+    llvm::report_fatal_error("printDenseI64Array only supports rank-1 arrays");
+  }
+  auto values = llvm::to_vector(attr.getValues<int64_t>());
+  DenseI64ArrayAttr arrayAttr =
+      DenseI64ArrayAttr::get(op->getContext(), values);
+  arrayAttr.print(p);
+}
+
+ParseResult parseDenseI64Array(OpAsmParser& parser,
+                               DenseIntElementsAttr& attr) {
+  DenseI64ArrayAttr arrayAttr =
+      DenseI64ArrayAttr::parse(parser, Type{}).dyn_cast<DenseI64ArrayAttr>();
+  if (!arrayAttr) {
+    return failure();
+  }
+
+  ArrayRef<int64_t> data = arrayAttr.asArrayRef();
+  RankedTensorType type =
+      RankedTensorType::get(data.size(), parser.getBuilder().getI64Type());
+  attr = DenseIntElementsAttr::get(type, data);
+  return success();
+}
 
 // Print attributes as e#m#
 void printExponentMantissa(AsmPrinter& p, Operation*, IntegerAttr exponent,
