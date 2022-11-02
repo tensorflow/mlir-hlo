@@ -204,55 +204,52 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "lhlo_gpu_ops_enums_inc_gen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-enum-decls"],
-            "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops_enums.h.inc",
+            "lhlo_gpu/IR/lhlo_gpu_ops_enums.h.inc",
         ),
         (
             ["-gen-enum-defs"],
-            "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops_enums.cc.inc",
+            "lhlo_gpu/IR/lhlo_gpu_ops_enums.cc.inc",
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops_enums.td",
+    td_file = "lhlo_gpu/IR/lhlo_gpu_ops_enums.td",
     deps = [":lhlo_gpu_ops_td_files"],
 )
 
 gentbl_cc_library(
     name = "lhlo_gpu_ops_dialect_inc_gen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-dialect-decls"],
-            "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops_dialect.h.inc",
+            "lhlo_gpu/IR/lhlo_gpu_ops_dialect.h.inc",
         ),
         (
             ["-gen-dialect-defs"],
-            "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops_dialect.cc.inc",
+            "lhlo_gpu/IR/lhlo_gpu_ops_dialect.cc.inc",
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops_enums.td",
+    td_file = "lhlo_gpu/IR/lhlo_gpu_ops_enums.td",
     deps = [":lhlo_gpu_ops_td_files"],
 )
 
 gentbl_cc_library(
     name = "lhlo_gpu_ops_attrdefs_inc_gen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-attrdef-decls"],
-            "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops_attrdefs.h.inc",
+            "lhlo_gpu/IR/lhlo_gpu_ops_attrdefs.h.inc",
         ),
         (
             ["-gen-attrdef-defs"],
-            "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops_attrdefs.cc.inc",
+            "lhlo_gpu/IR/lhlo_gpu_ops_attrdefs.cc.inc",
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops_enums.td",
+    td_file = "lhlo_gpu/IR/lhlo_gpu_ops_enums.td",
     deps = [":lhlo_gpu_ops_td_files"],
 )
 
@@ -301,8 +298,11 @@ cc_library(
 
 td_library(
     name = "lhlo_gpu_ops_td_files",
-    srcs = glob(["include/mlir-hlo/Dialect/lhlo_gpu/IR/*.td"]),
-    includes = ["include"],
+    srcs = glob(["lhlo_gpu/IR/*.td"]),
+    includes = [
+        ".",
+        "include",
+    ],
     deps = [
         ":hlo_ops_td_files",
         ":lhlo_ops_td_files",
@@ -312,19 +312,18 @@ td_library(
 
 gentbl_cc_library(
     name = "lhlo_gpu_ops_inc_gen",
-    strip_include_prefix = "include",
     tbl_outs = [
         (
             ["-gen-op-decls"],
-            "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops.h.inc",
+            "lhlo_gpu/IR/lhlo_gpu_ops.h.inc",
         ),
         (
             ["-gen-op-defs"],
-            "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops.cc.inc",
+            "lhlo_gpu/IR/lhlo_gpu_ops.cc.inc",
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops.td",
+    td_file = "lhlo_gpu/IR/lhlo_gpu_ops.td",
     deps = [":lhlo_gpu_ops_td_files"],
 )
 
@@ -490,9 +489,12 @@ cc_library(
 
 cc_library(
     name = "lhlo_gpu",
-    srcs = ["lib/Dialect/lhlo_gpu/IR/lhlo_gpu_ops.cc"],
-    hdrs = ["include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops.h"],
-    includes = ["include"],
+    srcs = ["lhlo_gpu/IR/lhlo_gpu_ops.cc"],
+    hdrs = ["lhlo_gpu/IR/lhlo_gpu_ops.h"],
+    includes = [
+        ".",
+        "include",
+    ],
     deps = [
         ":hlo_ops_common",
         ":lhlo",
@@ -510,9 +512,12 @@ cc_library(
 
 cc_library(
     name = "lhlo_gpu_ops_ops",
-    srcs = ["include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops.cc.inc"],
-    hdrs = ["include/mlir-hlo/Dialect/lhlo_gpu/IR/lhlo_gpu_ops.h.inc"],
-    includes = ["include"],
+    srcs = ["lhlo_gpu/IR/lhlo_gpu_ops.cc.inc"],
+    hdrs = ["lhlo_gpu/IR/lhlo_gpu_ops.h.inc"],
+    includes = [
+        ".",
+        "include",
+    ],
     deps = [
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Analysis",
