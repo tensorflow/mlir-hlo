@@ -1507,8 +1507,8 @@ def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
     Example:
 
     ```mlir
-    %0 = stablehlo.dynamic_slice %arg2, %arg3, %arg3, sizes = [1, 4] 
-      : (tensor<3x4xi32>, tensor<i64>, tensor<i64>) -> tensor<1x4xi32> 
+    %0 = stablehlo.dynamic_slice %arg2, %arg3, %arg3, sizes = [1, 4]
+      : (tensor<3x4xi32>, tensor<i64>, tensor<i64>) -> tensor<1x4xi32>
     ```
   }];
   let arguments = (ins
@@ -1521,7 +1521,7 @@ def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
   let hasVerifier = 1;
 
   let assemblyFormat = [{
-    $operand `,` custom<VariadicOperandWithAttribute>($start_indices) 
+    $operand `,` custom<VariadicOperandWithAttribute>($start_indices)
       `sizes` `=` custom<DenseI64Array>($slice_sizes)
       attr-dict `:` functional-type(operands, results)
   }];
@@ -1727,7 +1727,7 @@ def StableHLO_BroadcastInDimOp : StableHLO_Op<"broadcast_in_dim",
   let hasVerifier = 1;
 
   let assemblyFormat = [{
-    $operand `,` `dims` `=` custom<DenseI64Array>($broadcast_dimensions) 
+    $operand `,` `dims` `=` custom<DenseI64Array>($broadcast_dimensions)
       attr-dict `:` functional-type(operands, results)
   }];
 }
@@ -1783,30 +1783,14 @@ def StableHLO_CholeskyOp : StableHLO_Op<"cholesky",
       [Pure, SameOperandsAndResultElementType, InferTensorType]> {
   let summary = "Cholesky operator";
   let description = [{
-    Computes the Cholesky decomposition of a batch of symmetric (Hermitian)
-    positive definite matrices.
+    Computes the Cholesky decomposition of a batch of matrices.
 
-    If lower is true, computes lower-triangular matrices l such that
-    `a=l.Transpose(l)`. If lower is false, computes upper-triangular matrices u such
-    that `a=Transpose(u).u`.
-
-    Input data is read only from the lower/upper triangle of a, depending on the
-    value of lower. Values from the other triangle are ignored. Output data is
-    returned in the same triangle; the values in the other triangle are
-    implementation-defined and may be anything.
-
-    If the rank of a is greater than 2, a is treated as a batch of matrices, where
-    all except the minor 2 dimensions are batch dimensions.
-
-    If a is not symmetric (Hermitian) positive definite, the result is
-    implementation-defined.
-
-    See https://www.tensorflow.org/xla/operation_semantics#cholesky.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocholesky
 
     Example:
-
     ```mlir
-    %0 = stablehlo.cholesky %arg0, lower = true : tensor<2x2xf32>
+    %result = stablehlo.cholesky %a, lower = true : tensor<3x3xf32>
     ```
   }];
   let arguments = (ins
@@ -1918,7 +1902,7 @@ def StableHLO_CollectivePermuteOp: StableHLO_Op<"collective_permute",
       "::mlir::DenseIntElementsAttr":$source_target_pairs)>];
 }
 
-def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure]> {
+def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure, InferTensorType]> {
   let summary = "Convolution operator";
   let description = [{
     Computes a convolution of the kind used in neural networks.
@@ -1932,17 +1916,19 @@ def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure]> {
     StableHLO_ConvolutionAttributes.attributes);
 
   let results = (outs HLO_Tensor);
-  let hasVerifier = 1;
 
-  code extraClassDeclaration = [{
+  let extraClassDeclaration = [{
     bool hasWindowReversal() {
       auto reversal = getWindowReversalAttr();
       return reversal && llvm::any_of(reversal.getValues<bool>(),
                                       [](bool v) { return v; });
     }
+    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+      return succeeded(mlir::verifyCompatibleShapes(l, r));
+    }
   }];
 
- let assemblyFormat = [{
+  let assemblyFormat = [{
     `(`operands`)`
        `dim_numbers` `=` custom<ConvolutionDimensions>($dimension_numbers) `,`
        `window` `=` `{` custom<WindowAttributes>($window_strides, $padding,
@@ -2170,10 +2156,24 @@ def StableHLO_FftOp: StableHLO_Op<"fft", [InferTensorType, Pure]> {
 def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify, Pure]> {
   let summary = "Gather operator";
   let description = [{
-    Stitches together several slices of `operand` from offsets specified in
-    `start_indices` (each slice at a potentially different runtime offset).
+    Gathers slices from `operand` tensor from offsets specified in
+    `start_indices` and produces a `result` tensor.
 
-    See https://www.tensorflow.org/xla/operation_semantics#gather.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlogather
+
+    Example:
+    ```mlir
+    %result = "stablehlo.gather"(%operand, %start_indices) {
+      dimension_numbers = #stablehlo.gather<
+        offset_dims = [2, 3],
+        collapsed_slice_dims = [0],
+        start_index_map = [0, 2],
+        index_vector_dim = 2>,
+      slice_sizes = dense<[0, 2, 2]> : tensor<3xi64>,
+      indices_are_sorted = false
+    } : (tensor<3x4x2xi32>, tensor<2x3x2xi64>) -> tensor<2x3x2x2xi32>
+    ```
   }];
 
   let arguments = (ins
@@ -2503,7 +2503,7 @@ def StableHLO_PadOp: StableHLO_ShapedInterfaceOp<"pad",
   let results = (outs HLO_Tensor);
 
   let assemblyFormat = [{
-    $operand `,` $padding_value `,` 
+    $operand `,` $padding_value `,`
       `low` `=` custom<DenseI64Array>($edge_padding_low) `,`
       `high` `=` custom<DenseI64Array>($edge_padding_high) `,`
       `interior` `=` custom<DenseI64Array>($interior_padding)

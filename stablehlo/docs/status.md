@@ -49,7 +49,7 @@ one of the following tracking labels.
 | case                     | yes           | revisit      | yes            | no              | no          |
 | cbrt                     | no            | yes*         | yes*           | yes             | no          |
 | ceil                     | yes           | yes          | yes            | yes             | yes         |
-| cholesky                 | no            | yes*         | yes*           | yes             | no          |
+| cholesky                 | yes           | yes          | yes            | yes             | no          |
 | clamp                    | no            | yes*         | yes*           | yes             | no          |
 | collective_permute       | no            | revisit      | revisit        | no              | no          |
 | compare                  | no            | yes*         | yes*           | yes             | no          |
@@ -58,7 +58,7 @@ one of the following tracking labels.
 | concatenate              | yes           | yes          | yes            | yes             | no          |
 | constant                 | yes           | yes          | yes            | yes             | yes         |
 | convert                  | no            | yes*         | infeasible     | yes             | no          |
-| convolution              | no            | revisit      | no             | revisit         | no          |
+| convolution              | no            | yes*         | yes*           | revisit         | no          |
 | cosine                   | yes           | yes          | yes            | yes             | yes         |
 | count_leading_zeros      | no            | yes*         | yes*           | yes             | no          |
 | create_token             | no            | revisit      | no             | yes             | no          |
@@ -81,7 +81,7 @@ one of the following tracking labels.
 | exponential_minus_one    | no            | yes*         | yes*           | yes             | no          |
 | fft                      | no            | yes*         | yes*           | yes             | no          |
 | floor                    | yes           | yes          | yes            | yes             | yes         |
-| gather                   | no            | yes*         | yes*           | no              | no          |
+| gather                   | yes           | yes          | yes            | no              | no          |
 | get_dimension_size       | no            | revisit      | no             | yes             | no          |
 | get_tuple_element        | no            | revisit      | revisit        | yes             | no          |
 | if                       | yes           | revisit      | yes            | no              | no          |
