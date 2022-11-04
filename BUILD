@@ -1375,7 +1375,10 @@ cc_library(
 cc_library(
     name = "CAPIHeaders",
     hdrs = CAPI_HEADERS,
-    includes = ["include"],
+    includes = [
+        ".",
+        "include",
+    ],
     deps = ["@llvm-project//mlir:CAPIIRHeaders"],
 )
 
