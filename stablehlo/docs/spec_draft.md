@@ -163,6 +163,7 @@ described below)
    * [abs](#stablehloabs)
    * [add](#stablehloadd)
    * [and](#stablehloand)
+   * [batch_norm_inference](#stablehlobatch_norm_inference)
    * [broadcast_in_dim](#stablehlobroadcast_in_dim)
    * [case](#stablehlocase)
    * [ceil](#stablehloceil)
@@ -170,8 +171,10 @@ described below)
    * [concatenate](#stablehloconcatenate)
    * [constant](#stablehloconstant)
    * [cosine](#stablehlocosine)
+   * [count_leading_zeros](#stablehlocount_leading_zeros)
    * [divide](#stablehlodivide)
    * [exponential](#stablehloexponential)
+   * [fft](#stablehlofft)
    * [floor](#stablehlofloor)
    * [gather](#stablehlogather)
    * [if](#stablehloif)
@@ -185,10 +188,13 @@ described below)
    * [not](#stablehlonot)
    * [or](#stablehloor)
    * [pad](#stablehlopad)
+   * [popcnt](#stablehlopopcnt)
+   * [reduce](#stablehloreduce)
    * [remainder](#stablehloremainder)
    * [reshape](#stablehloreshape)
    * [reverse](#stablehloreverse)
    * [rsqrt](#stablehlorsqrt)
+   * [select](#stablehloselect)
    * [sine](#stablehlosine)
    * [slice](#stablehloslice)
    * [sort](#stablehlosort)
@@ -236,20 +242,9 @@ defined and one of the following:
 ### Examples
 
 ```mlir
-// integers
 // %operand: [-2, 0, 2]
 %result = "stablehlo.abs"(%operand) : (tensor<3xi32>) -> tensor<3xi32>
 // %result: [2, 0, 2]
-
-// floats
-// %operand: [-2.2, 0.0, 2.2]
-%result = "stablehlo.abs"(%operand) : (tensor<3xf32>) -> tensor<3xf32>
-// %result = [2.2, 0.0, 2.2]
-
-// complex
-// %operand: [(0.0, 1.0), (4.0, -3.0)]
-%result = "stablehlo.abs"(%operand) : (tensor<2xcomplex<f64>>) -> tensor<2xf64>
-// %result = [1, 5.0]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -295,7 +290,7 @@ the IEEE-754 specification. For boolean element type, the behavior is same as
 ```mlir
 // %lhs: [[1, 2], [3, 4]]
 // %rhs: [[5, 6], [7, 8]]
-%result = "stablehlo.add"(%lhs, %rhs) : (tensor<2x2xf32>, tensor<2x2xf32>) -> tensor<2x2xf32>
+%result = "stablehlo.add"(%lhs, %rhs) : (tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
 // %result: [[6, 8], [10, 12]]
 ```
 
@@ -307,9 +302,9 @@ the IEEE-754 specification. For boolean element type, the behavior is same as
 
 ### Semantics
 
-Performs element-wise bitwise AND of two tensors `lhs` and `rhs` of integer
-types and produces a `result` tensor. For boolean tensors, it computes the
-logical operation.
+Performs element-wise bitwise or logical AND of two tensors `lhs` and `rhs` and
+produces a `result` tensor. For integer tensors, computes the bitwise operation.
+For boolean tensors, computes the logical operation.
 
 ### Inputs
 
@@ -331,17 +326,90 @@ logical operation.
 ### Examples
 
 ```mlir
-// Bitwise operation with with integer tensors
 // %lhs: [[1, 2], [3, 4]]
 // %rhs: [[5, 6], [7, 8]]
 %result = "stablehlo.and"(%lhs, %rhs) : (tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
 // %result: [[1, 2], [3, 0]]
+```
 
-// Logical operation with with boolean tensors
-// %lhs: [[false, false], [true, true]]
-// %rhs: [[false, true], [false, true]]
-%result = "stablehlo.and"(%lhs, %rhs) : (tensor<2x2xi1>, tensor<2x2xi1>) -> tensor<2x2xi1>
-// %result: [[false, false], [false, true]]
+[Back to Ops](#index-of-ops)
+
+## stablehlo.batch_norm_inference
+
+### Semantics
+
+Normalizes the `operand` tensor across all dimensions except for the
+`feature_index` dimension and produces a `result` tensor. More formally, this
+operation can be expressed as a decomposition to existing StableHLO operations
+using Python-like syntax as follows:
+
+```python
+def batch_norm_inference(operand, scale, offset, mean, variance, epsilon, feature_index):
+  # Broadcast inputs to shape(operand)
+  scale_bcast = broadcast_in_dim(scale, [feature_index], shape(operand))
+  offset_bcast = broadcast_in_dim(offset, [feature_index], shape(operand))
+  mean_bcast = broadcast_in_dim(mean, [feature_index], shape(operand))
+  variance_bcast = broadcast_in_dim(variance, [feature_index], shape(operand))
+  epsilon_bcast = broadcast_in_dim(constant(epsilon), [], shape(operand))
+
+  # Perform normalization using the provided `mean` and `variance` instead of
+  # computing them like `batch_norm_training` does.
+  centered_operand = subtract(operand, mean_bcast)
+  stddev = sqrt(add(variance_bcast, epsilon_bcast))
+  normalized_operand = divide(centered_operand, stddev)
+  return add(multiply(scale_bcast, normalized_operand), offset_bcast)
+```
+
+Numeric precision is implementation-defined.
+
+### Inputs
+
+| Name            | Type                                        |
+|-----------------|---------------------------------------------|
+| `operand`       | tensor of floating-point type               |
+| `scale`         | 1-dimensional tensor of floating-point type |
+| `offset`        | 1-dimensional tensor of floating-point type |
+| `mean`          | 1-dimensional tensor of floating-point type |
+| `variance`      | 1-dimensional tensor of floating-point type |
+| `epsilon`       | constant of type `f32`                      |
+| `feature_index` | constant of type `si64`                     |
+
+### Outputs
+
+| Name     | Type                          |
+|----------|-------------------------------|
+| `result` | tensor of floating-point type |
+
+### Constraints
+
+  * (C1) 0 $\le$ `feature_index` $\lt$ rank(`operand`).
+  * (C2) `operand`, `scale`, `offset`, `mean`, `variance` and `result` have the
+    same element type.
+  * (C3) size(`scale`) $=$ `dim(operand, feature_index)`.
+  * (C4) size(`offset`) $=$ `dim(operand, feature_index)`.
+  * (C5) size(`mean`) $=$ `dim(operand, feature_index)`.
+  * (C6) size(`variance`) $=$ `dim(operand, feature_index)`.
+  * (C7) `operand` and `result` have the same type.
+
+### Examples
+
+```mlir
+// %operand: [
+//            [[1.0, 2.0], [3.0, 4.0]],
+//            [[3.0, 4.0], [1.0, 2.0]]
+//           ]
+// %scale: [1.0, 1.0]
+// %offset: [1.0, 1.0]
+// %mean: [2.0, 3.0]
+// %variance: [1.0, 1.0]
+%result = "stablehlo.batch_norm_inference"(%operand, %scale, %offset, %mean, %variance) {
+  epsilon = 0.0 : f32,
+  feature_index = 2 : i64
+} : (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>, tensor<2xf32>, tensor<2xf32>) -> tensor<2x2x2xf32>
+// %result: [
+//           [[0.0, 0.0], [2.0, 2.0]],
+//           [[2.0, 2.0], [0.0, 0.0]]
+//          ]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -581,23 +649,11 @@ tensor. More formally,
 ### Examples
 
 ```mlir
-// 1-dimensional concatenate
-
-// %input0 = [1, 2]
-// %input1 = [3, 4]
-// %input2 = [5, 6]
-%result = "stablehlo.concatenate"(%input0, %input1, %input2) {
-  dimension = 0 : i64
-} : (tensor<2xi32>, tensor<2xi32>, tensor<2xi32>) -> tensor<6xi32>
-// %result: [1, 2, 3, 4, 5, 6]
-
-// 2-dimensional concatenate
-
 // %input0: [[1, 2], [3, 4], [5, 6]]
 // %input1: [[7, 8]]
 %result = "stablehlo.concatenate"(%input0, %input1) {
   dimension = 0 : i64
-} : (tensor<3x2xi32>, tensor<1x2xi32>, i64) -> tensor<4x2xi32>
+} : (tensor<3x2xi32>, tensor<1x2xi32>) -> tensor<4x2xi32>
 // %result: [[1, 2], [3, 4], [5, 6], [7, 8]]
 ```
 
@@ -607,7 +663,7 @@ tensor. More formally,
 
 ### Semantics
 
-Produces a `result` tensor from a constant `value`.
+Produces an `output` tensor from a constant `value`.
 
 ### Inputs
 
@@ -619,19 +675,19 @@ Produces a `result` tensor from a constant `value`.
 
 | Name     | Type                         |
 |----------|------------------------------|
-| `result` | tensor of any supported type |
+| `output` | tensor of any supported type |
 
 ### Constraints
 
-  * (C1) `value` and `result` have the same type.
+  * (C1) `value` and `output` have the same type.
 
 ### Examples
 
 ```mlir
-%result = "stablehlo.constant"() {
+%output = "stablehlo.constant"() {
   value = dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>
 } : () -> tensor<2x2xf32>
-// %result: [[0.0, 1.0], [2.0, 3.0]]
+// %output: [[0.0, 1.0], [2.0, 3.0]]
 ```
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_constant.mlir)
@@ -674,6 +730,39 @@ specification. Numeric precision is implementation-defined.
 ```
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_cosine.mlir)
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.count_leading_zeros
+
+### Semantics
+
+Performs element-wise count of the number of leading zero bits in the `operand`
+tensor and produces a `result` tensor.
+
+### Inputs
+
+| Name      | Type                   |
+|-----------|------------------------|
+| `operand` | tensor of integer type |
+
+### Outputs
+
+| Name     | Type                   |
+|----------|------------------------|
+| `result` | tensor of integer type |
+
+### Constraints
+
+  * (C1) `operand` and `result` have the same type.
+
+### Examples
+
+```mlir
+// %operand: [[0, 1], [127, -1]]
+%result = "stablehlo.count_leading_zeros"(%operand) : (tensor<2x2xi8>) -> tensor<2x2xi8>
+// %result: [[8, 7], [1, 0]]
+```
 
 [Back to Ops](#index-of-ops)
 
@@ -757,6 +846,119 @@ implementation-defined.
 // %operand: (1.0, 2.0)
 %result = "stablehlo.exponential"(%operand) : (tensor<complex<f32>>) -> tensor<complex<f32>>
 // %result: (-1.13120438, 2.47172667)
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.fft
+
+### Semantics
+
+Performs the forward and inverse Fourier transforms for real and complex
+inputs/outputs.
+
+`fft_type` is one of the following:
+  * `FFT`: Forward complex-to-complex FFT.
+  * `IFFT`: Inverse complex-to-complex FFT.
+  * `RFFT`: Forward real-to-complex FFT.
+  * `IRFFT`: Inverse real-to-complex FFT (i.e. takes complex, returns real).
+
+More formally, given the function `fft` which takes 1-dimensional tensors of
+complex types as input, produces 1-dimensional tensors of same types as
+output and computes the discrete Fourier transform:
+
+For `fft_type = FFT`, `result` is defined as the final result of a series of L
+computations where `L = size(fft_length)`. For example, for `L = 3`:
+  * `result1[i0, ..., :]` = `fft(operand[i0, ..., :])` for all `i`.
+  * `result2[i0, ..., :, iR-1]` = `fft(result1[i0, ..., :, iR-1])` for all `i`.
+  * `result[i0, ..., :, iR-2, iR-1]` = `fft(result2[i0, ..., :, iR-2, iR-1])`
+    for all `i`.
+
+Furthermore, given the function `ifft` which has the same type signature and
+computes the inverse of `fft`:
+
+For `fft_type = IFFT`, `result` is defined as the inverse of the computations
+for `fft_type = FFT`. For example, for `L = 3`:
+  * `result1[i0, ..., :, iR-2, iR-1]` = `ifft(operand[i0, ..., :, iR-2, iR-1])`
+    for all `i`.
+  * `result2[i0, ..., :, iR-1]` = `ifft(result1[i0, ..., :, iR-1])` for all `i`.
+  * `result[i0, ..., :]` = `ifft(result2[i0, ..., :])` for all `i`.
+
+Furthermore, given the function `rfft` which takes 1-dimensional tensors of
+floating-point types, produces 1-dimensional tensors of complex types of the
+same floating-point semantics and works as follows:
+  * `rfft(real_operand) = truncated_result` where
+  * `complex_operand[i] = (real_operand, 0)` for all `i`.
+  * `complex_result = fft(complex_operand)`.
+  * `truncated_result = complex_result[:(rank(complex_result) / 2 + 1)]`.
+
+(When the discrete Fourier transform is computed for real operands, the first
+`N/2 + 1` elements of the result unambiguously define the rest of the result,
+so the result of `rfft` is truncated to avoid computing redundant elements).
+
+For `fft_type = RFFT`, `result` is defined as the final result of a series of L
+computations where `L = size(fft_length)`. For example, for `L = 3`:
+  * `result1[i0, ..., :]` = `rfft(operand[i0, ..., :])` for all `i`.
+  * `result2[i0, ..., :, iR-1]` = `fft(result1[i0, ..., :, iR-1])` for all `i`.
+  * `result[i0, ..., :, iR-2, iR-1]` = `fft(result2[i0, ..., :, iR-2, iR-1])`
+    for all `i`.
+
+Finally, given the function `irfft` which has the same type signature and
+computes the inverse of `rfft`:
+
+For `fft_type = IRFFT`, `result` is defined as the inverse of the computations
+for `fft_type = RFFT`. For example, for `L = 3`:
+  * `result1[i0, ..., :, iR-2, iR-1]` = `ifft(operand[i0, ..., :, iR-2, iR-1])`
+    for all `i`.
+  * `result2[i0, ..., :, iR-1]` = `ifft(result1[i0, ..., :, iR-1])` for all `i`.
+  * `result[i0, ..., :]` = `irfft(result2[i0, ..., :])` for all `i`.
+
+### Inputs
+
+| Name         | Type                                         |
+|--------------|----------------------------------------------|
+| `operand`    | tensor of floating-point or complex type     |
+| `fft_type`   | enum of `FFT`, `IFFT`, `RFFT`, and `IRFFT`   |
+| `fft_length` | 1-dimensional tensor constant of type `si64` |
+
+### Outputs
+
+| Name     | Type                                     |
+|----------|------------------------------------------|
+| `result` | tensor of floating-point or complex type |
+
+### Constraints
+
+  * (C1) `rank(operand)` $\ge$ `size(fft_length)`.
+  * (C2) The relationship between `operand` and `result` element types varies:
+    * If `fft_type = FFT`, `element_type(operand)` and `element_type(result)`
+      have the same complex type.
+    * If `fft_type = IFFT`, `element_type(operand)` and `element_type(result)`
+      have the same complex type.
+    * If `fft_type = RFFT`, `element_type(operand)` is a floating-point type and
+      `element_type(result)` is a complex type of the same floating-point
+      semantics.
+    * If `fft_type = IRFFT`, `element_type(operand)` is a complex type and
+      `element_type(result)` is a floating-point type of the same floating-point
+      semantics.
+  * (C3) 1 $\le$ `size(fft_length)` $\le$ 3.
+  * (C4) If among `operand` and `result`, there is a tensor `real` of a
+  floating-type type, then `dims(real)[-size(fft_length):] = fft_length`.
+  * (C5) `dim(result, d) = dim(operand, d)` for all `d`, except for:
+    * If `fft_type = RFFT`,
+      `dim(result, -1) = dim(operand, -1) == 0 ? 0 : dim(operand, -1) / 2 + 1`.
+    * If `fft_type = IRFFT`,
+      `dim(operand, -1) = dim(result, -1) == 0 ? 0 : dim(result, -1) / 2 + 1`.
+
+### Examples
+
+```mlir
+// %operand: [(1.0, 0.0), (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)]
+%result = "stablehlo.fft"(%operand) {
+  fft_type = #stablehlo<fft_type FFT>,
+  fft_length = dense<4> : tensor<1xi64>
+} : (tensor<4xcomplex<f32>>) -> tensor<4xcomplex<f32>>
+// %result: [(1.0, 0.0), (1.0, 0.0), (1.0, 0.0), (1.0, 0.0)]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -986,9 +1188,9 @@ output of `true_branch` is returned, else if pred is `false`, output of
 ## stablehlo.iota
 
 ### Semantics
-Fills a `result` tensor with values in increasing order starting from zero along
-the `iota_dimension` dimension. More formally,
-`result[i0, ..., id, ..., iR-1] = id`, where `d` is equal to `iota_dimension`.
+Fills an `output` tensor with values in increasing order starting from zero
+along the `iota_dimension` dimension. More formally,
+`output[i0, ..., id, ..., iR-1] = id`, where `d` is equal to `iota_dimension`.
 
 For integers, if the dimension size is larger than what the element type's
 maximum value can hold, an overflow occurs and the behavior is implementation-
@@ -1010,30 +1212,30 @@ defined and one of the following:
 
 | Name     | Type                                              |
 |----------|---------------------------------------------------|
-| `result` | tensor of integer, floating-point or complex type |
+| `output` | tensor of integer, floating-point or complex type |
 
 ### Constraints
 
   * (C1) 0 $\le$ `iota_dimension` $\lt$ `R`, where `R` is the rank of the
-  `result`.
+  `output`.
 
 ### Examples
 
 ```mlir
-%result = "stablehlo.iota"() {
+%output = "stablehlo.iota"() {
   iota_dimension = 0 : i64
 } : () -> tensor<4x5xi32>
-// %result: [
+// %output: [
 //           [0, 0, 0, 0, 0],
 //           [1, 1, 1, 1, 1],
 //           [2, 2, 2, 2, 2],
 //           [3, 3, 3, 3, 3]
 //          ]
 
-%result = "stablehlo.iota"() {
+%output = "stablehlo.iota"() {
   iota_dimension = 1 : i64
 } : () -> tensor<4x5xi32>
-// %result: [
+// %output: [
 //           [0, 1, 2, 3, 4],
 //           [0, 1, 2, 3, 4],
 //           [0, 1, 2, 3, 4],
@@ -1466,6 +1668,117 @@ More formally, `result[i0, ..., iR-1]` is equal to:
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.popcnt
+
+### Semantics
+
+Performs element-wise count of the number of bits set in the `operand` tensor
+and produces a `result` tensor.
+
+### Inputs
+
+| Name      | Type                   |
+|-----------|------------------------|
+| `operand` | tensor of integer type |
+
+### Outputs
+
+| Name     | Type                   |
+|----------|------------------------|
+| `result` | tensor of integer type |
+
+### Constraints
+
+  * (C1) `operand` and `result` have the same type.
+
+### Examples
+
+```mlir
+// %operand: [0, 1, 2, 127]
+%result = "stablehlo.popcnt"(%operand) : (tensor<4xi8>) -> tensor<4xi8>
+// %result: [0, 1, 1, 7]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.reduce
+
+### Semantics
+
+Applies a function `body` to `inputs` and `init_values` along the `dimensions`
+and produces a `result` tensor.
+
+The order of reductions is implementation-defined, which means that `body` and
+`init_values` must form a monoid to guarantee that the operation produces the
+same results for all inputs on all implementations.
+
+However, this condition doesn't hold for many popular reductions. E.g.
+floating-point addition for `body` and zero for `init_values` don't actually
+form a monoid because floating-point addition is not associative. What this
+means for numeric precision is implementation-defined.
+
+More formally, `results[:][result_index] = reduce(input_slices)` where:
+  * `input_slices` = `inputs[:][ri0, ..., :, ..., riR-1]`, where `ri` are
+    individual elements in `result_index` and `:` are inserted at `dimensions`.
+  * `reduce(input_slices)` = `eval(schedule)` for some binary tree `schedule`
+    where:
+    * `eval(node)` = `body(eval(node.left), eval(node.right))`.
+    * `eval(leaf)` = `leaf.value`.
+  * `schedule` is an implementation-defined full binary tree whose in-order
+    traversal consists of:
+    * `input_slices[:][index]` values, for all `index` in the index space
+      of `input_slices`, in the ascending lexicographic order of `index`.
+    * Interspersed with an implementation-defined amount of `init_values`
+      at implementation-defined positions.
+
+### Inputs
+
+| Name          | Type                                                           |
+|---------------|----------------------------------------------------------------|
+| `inputs`      | variadic number of tensors of any supported type               |
+| `init_values` | variadic number of 0-dimensional tensors of any supported type |
+| `dimensions`  | 1-dimensional tensor constant of type `si64`                   |
+| `body`        | `function`                                                     |
+
+### Outputs
+
+| Name      | Type                                             |
+|-----------|--------------------------------------------------|
+| `results` | variadic number of tensors of any supported type |
+
+### Constraints
+
+  * (C1) All `inputs` have the same shape.
+  * (C2) element_type(`inputs[k]`) $=$ element_type(`init_values[k]`) $=$
+  element_type(`results[k]`) for all `k` $\in$ [0, N).
+  * (C3) size(`inputs`) $=$ size(`init_values`) $=$ size(`results`) $=$ N where
+  N >= 1.
+  * (C4) 0 $\le$ `dimensions[d]` $\lt$ rank(`inputs[0][d]`) for all dimension
+  `d`.
+  * (C5) All dimensions in `dimensions` are unique.
+  * (C6) `body` has type `(tensor<E0>, ..., tensor<EN-1>, tensor<E0>, ...,`
+  `tensor<EN-1>) -> (tensor<E0>, ..., tensor<EN-1>)` where
+  `Ek = element_type(inputs[k])`.
+  * (C7) shape(`results[k]`) $=$ shape(`inputs[k]`) except that the dimension
+  sizes of `inputs[k]` corresponding to `dimensions` are not included.
+
+### Examples
+
+```mlir
+// %input = [[0, 1, 2, 3, 4, 5]]
+// %init_value = 0
+%result = "stablehlo.reduce"(%input, %init_value) ({
+  ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+    %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
+    "stablehlo.return"(%0) : (tensor<i32>) -> ()
+}) {
+  dimensions = dense<1> : tensor<1xi64>
+} : (tensor<1x6xi32>, tensor<i32>) -> tensor<1xi32>
+// %result = [15]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.remainder
 
 ### Semantics
@@ -1638,6 +1951,47 @@ specification. Numeric precision is implementation-defined.
 // %operand: [(1.0, 2.0)]
 %result = "stablehlo.rsqrt"(%operand) : (tensor<complex<f32>>) -> tensor<complex<f32>>
 // %result: [(0.56886448, -0.35157758)]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.select
+
+### Semantics
+
+Produces a `result` tensor where each element is selected from `on_true` or
+`on_false` tensor based on the value of the corresponding element of `pred`.
+More formally,
+`result[i0, ..., iR-1] = predicate ? on_true[i0, ..., iR-1] : on_false[i0, ..., iR-1]`,
+where `predicate = rank(pred) == 0 ? pred : pred[i0, ..., iR-1]`.
+
+### Inputs
+
+| Name       | Type                         |
+|------------|------------------------------|
+| `pred`     | tensor of type `i1`          |
+| `on_true`  | tensor of any supported type |
+| `on_false` | tensor of any supported type |
+
+### Outputs
+
+| Name     | Type                         |
+|----------|------------------------------|
+| `result` | tensor of any supported type |
+
+### Constraints
+
+  * (C1) Either `rank(pred)` $=$ `0` or `shape(pred)` $=$ `shape(on_true)`.
+  * (C2) `on_true`, `on_false` and `result` have same type.
+
+### Examples
+
+```mlir
+// %pred: [[false, true], [true, false]]
+// %on_true: [[1, 2], [3, 4]]
+// %on_false: [[5, 6], [7, 8]]
+%result = "stablehlo.select"(%pred, %on_true, %on_false) : (tensor<2x2xi1>, tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
+// %result: [[5, 2], [3, 8]]
 ```
 
 [Back to Ops](#index-of-ops)
