@@ -1644,9 +1644,20 @@ def StableHLO_BatchNormTrainingOp : StableHLO_Op<"batch_norm_training",
     InferTensorType]> {
   let summary = "Batch Normalization for Training";
   let description = [{
-    Normalizes an array across batch and spatial dimensions.
+    Computes mean and variance across batch and spatial dimensions and
+    normalizes the `operand` tensor, for each feature in the `feature_index`
+    dimension and produces `output`, `batch_mean` and `batch_var` tensors.
 
-    See https://www.tensorflow.org/xla/operation_semantics#batchnormtraining
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobatch_norm_training
+
+    Example:
+    ```mlir
+    %output, %batch_mean, %batch_var = "stablehlo.batch_norm_training"(%operand, %scale, %offset) {
+      epsilon = 0.0 : f32,
+      feature_index = 2 : i64
+    } : (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>) -> (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>)
+    ```
   }];
 
   let arguments = (ins
@@ -2042,7 +2053,12 @@ def StableHLO_CustomCallOp: StableHLO_Op<"custom_call",
         $api_version,
     DefaultValuedOptionalAttr<StableHLO_FlatSymbolRefArrayAttr, "{}">:$called_computations,
     OptionalAttr<StableHLO_ArrayOfLayoutAttr>:$operand_layouts,
-    OptionalAttr<StableHLO_ArrayOfLayoutAttr>:$result_layouts
+    OptionalAttr<StableHLO_ArrayOfLayoutAttr>:$result_layouts,
+    DefaultValuedOptionalAttr<
+        TypedArrayAttrBase<
+            OutputOperandAlias,
+            "Aliasing attribute for outputs and operands of CustomCall">,
+        "{}">:$output_operand_aliases
   );
   let results = (outs Variadic<HLO_TensorOrTokenOrTuple>);
   let hasVerifier = 1;
@@ -2747,27 +2763,17 @@ def StableHLO_OptimizationBarrierOp : StableHLO_Op<"optimization_barrier",
 //===----------------------------------------------------------------------===//
 
 def StableHLO_RngOp : StableHLO_Op<"rng", [InferTensorTypeWithReify, AllElementTypesMatch<["a", "b", "result"]>]> {
-  let summary = "RNG with uniform distribution.";
+  let summary = "RNG operator with uniform or normal distribution.";
   let description = [{
-    Constructs an output of a given shape with random numbers generated
-    following the given `rng_distribution` with two parameters:
-      `UNIFORM`: the uniform distribution over the interval `[a,b)`. The parameters
-                 and output element type have to be a boolean type, an integral type or a
-                 floating point types, and the types have to be consistent.
+    Generates random numbers using the `rng_distribution` algorithm and produces
+    a `result` tensor of a given shape `shape`.
 
-                 See https://www.tensorflow.org/xla/operation_semantics#rnguniform.
-
-      `NORMAL`: the normal distribution with parameters `mu` (=`a`) and
-                `sigma` (=`b`). The parameters and output shape have to have a
-                floating point elemental type. The parameters furthermore have
-                to be scalar valued.
-
-                See https://www.tensorflow.org/xla/operation_semantics#rngnormal.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlorng
 
     Example:
-
     ```mlir
-    %1 = stablehlo.rng %arg0, %arg1, %0, distribution = NORMAL : (tensor<f32>, tensor<f32>, tensor<3xi64>) -> tensor<2x3x5xf32>
+    %result = stablehlo.rng %a, %b, %shape, distribution = NORMAL : (tensor<i32>, tensor<i32>, tensor<2xi64>) -> tensor<3x3xi32>
     ```
   }];
   let arguments = (ins

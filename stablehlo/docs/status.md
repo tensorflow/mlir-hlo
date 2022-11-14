@@ -52,7 +52,7 @@ one of the following tracking labels.
 | atan2                    | no            | yes*         | yes*           | yes             | no          |
 | batch_norm_grad          | no            | yes*         | yes*           | no              | no          |
 | batch_norm_inference     | yes           | revisit      | yes            | no              | no          |
-| batch_norm_training      | no            | yes*         | yes*           | no              | no          |
+| batch_norm_training      | no            | revisit      | yes            | no              | no          |
 | bitcast_convert          | no            | yes*         | infeasible     | yes             | no          |
 | broadcast                | no            | yes*         | yes*           | yes             | no          |
 | broadcast_in_dim         | yes           | yes          | infeasible     | yes             | no          |
@@ -126,7 +126,7 @@ one of the following tracking labels.
 | reshape                  | yes           | yes          | infeasible     | yes             | yes         |
 | return                   | no            | revisit      | no             | yes             | no          |
 | reverse                  | yes           | revisit      | yes            | yes             | no          |
-| rng                      | no            | yes*         | yes*           | yes             | no          |
+| rng                      | yes           | yes          | yes            | yes             | no          |
 | rng_bit_generator        | no            | yes*         | infeasible     | yes             | no          |
 | round_nearest_afz        | no            | yes*         | yes*           | yes             | no          |
 | round_nearest_even       | no            | revisit      | revisit        | yes             | no          |
