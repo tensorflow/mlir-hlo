@@ -358,12 +358,15 @@ def StableHLO_ImagOp: StableHLO_UnaryElementwiseOp<"imag",
     HLO_FpOrComplexTensor, HLO_FpTensor> {
   let summary = "Imag operator";
   let description = [{
-    Returns `Imag(operand)` element-wise.
+    Extracts the imaginary part, element-wise, from the `operand` and produces a
+    `result` tensor.
+
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloimag
 
     Example:
-
     ```mlir
-    %0 = stablehlo.imag %arg0 : (tensor<complex<f64>>) -> tensor<f64>
+    %result = stablehlo.imag %operand : (tensor<2xcomplex<f32>>) -> tensor<2xf32>
     ```
   }];
 }
@@ -501,12 +504,15 @@ def StableHLO_RealOp: StableHLO_UnaryElementwiseOp<"real",
     HLO_FpOrComplexTensor, HLO_FpTensor> {
   let summary = "Real operator";
   let description = [{
-    Returns `Real(operand)` element-wise.
+    Extracts the real part, element-wise, from the `operand` and produces a
+    `result` tensor.
+
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreal
 
     Example:
-
     ```mlir
-    %1 = stablehlo.real %arg2 : (tensor<complex<f32>>) -> tensor<f32>
+    %result = stablehlo.real %operand : (tensor<2xcomplex<f32>>) -> tensor<2xf32>
     ```
   }];
 }
@@ -718,13 +724,15 @@ def StableHLO_ComplexOp: StableHLO_BinaryElementwiseOp<"complex", [Pure,
     SameOperandsElementType, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Complex operator";
   let description = [{
-    Performs element-wise conversion of a pair of real and imaginary values to
-    a complex value.
+    Performs element-wise conversion to a complex value from a pair of real and
+    imaginary values, `lhs` and `rhs`, and produces a `result` tensor.
+
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocomplex
 
     Example:
-
     ```mlir
-    %0 = stablehlo.complex %arg0, %arg0 : tensor<4xcomplex<f32>>
+    %result = stablehlo.complex %lhs, %rhs : tensor<2xcomplex<f32>>
     ```
   }];
   let arguments = (ins HLO_Fp32Or64Tensor:$lhs, HLO_Fp32Or64Tensor:$rhs);
@@ -1344,7 +1352,7 @@ def StableHLO_ReduceOp: StableHLO_ShapedInterfaceOp<"reduce", [
     ]> {
   let summary = "Reduce operator";
   let description = [{
-    Applies a function `body` to `inputs` and `init_values` along the
+    Applies a reduction function `body` to `inputs` and `init_values` along the
     `dimensions` and produces a `result` tensor.
 
     See:
@@ -2261,16 +2269,22 @@ def StableHLO_MapOp: StableHLO_ShapedInterfaceOp<"map",
        SingleBlockImplicitTerminator<"ReturnOp">, InferTensorTypeWithReify]> {
   let summary = "Map operator";
   let description = [{
-  Applies a scalar function over the given operands arrays, producing an array
-  of the same dimensions where each element is the result of the mapped function
-  applied to the corresponding elements in the input arrays.
+    Applies a map function `computation` to `inputs` along the `dimensions` and
+    produces a `result` tensor.
 
-  The mapped function is an arbitrary computation with the restriction that it
-  has N inputs of scalar type T and a single output with type S. The output has
-  the same dimensions as the operands except that the element type T is replaced
-  with S.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlomap
 
-  See https://www.tensorflow.org/xla/operation_semantics#map.
+    Example:
+    ```mlir
+    %result = "stablehlo.map"(%input0, %input1) ({
+      ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+        %0 = stablehlo.multiply %arg0, %arg1 : tensor<i32>
+        stablehlo.return %0 : tensor<i32>
+    }) {
+      dimensions = dense<[0, 1]> : tensor<2xi64>
+    } : (tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
+  ```
   }];
   let arguments = (ins
     Variadic<HLO_Tensor>:$inputs,

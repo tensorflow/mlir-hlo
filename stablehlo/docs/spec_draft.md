@@ -169,6 +169,7 @@ described below)
    * [case](#stablehlocase)
    * [ceil](#stablehloceil)
    * [cholesky](#stablehlocholesky)
+   * [complex](#stablehlocomplex)
    * [concatenate](#stablehloconcatenate)
    * [constant](#stablehloconstant)
    * [cosine](#stablehlocosine)
@@ -179,9 +180,11 @@ described below)
    * [floor](#stablehlofloor)
    * [gather](#stablehlogather)
    * [if](#stablehloif)
+   * [imag](#stablehloimag)
    * [iota](#stablehloiota)
    * [log](#stablehlolog)
    * [logistic](#stablehlologistic)
+   * [map](#stablehlomap)
    * [maximum](#stablehlomaximum)
    * [minimum](#stablehlominimum)
    * [multiply](#stablehlomultiply)
@@ -190,6 +193,7 @@ described below)
    * [or](#stablehloor)
    * [pad](#stablehlopad)
    * [popcnt](#stablehlopopcnt)
+   * [real](#stablehloreal)
    * [reduce](#stablehloreduce)
    * [remainder](#stablehloremainder)
    * [reshape](#stablehloreshape)
@@ -699,6 +703,43 @@ matrix, then the behavior is undefined.
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.complex
+
+### Semantics
+
+Performs element-wise conversion to a complex value from a pair of real and
+imaginary values, `lhs` and `rhs`, and produces a `result` tensor.
+
+### Inputs
+
+| Name  | Type                          |
+|-------|-------------------------------|
+| `lhs` | tensor of type `f32` or `f64` |
+| `rhs` | tensor of type `f32` or `f64` |
+
+### Outputs
+
+| Name     | Type                   |
+|----------|------------------------|
+| `result` | tensor of complex type |
+
+### Constraints
+
+  * (C1) `lhs` and `rhs` have the same type.
+  * (C2) shape(`result`) $=$ shape(`lhs`).
+  * (C3) element_type(`result`) = complex_type(element_type(`lhs`)).
+
+### Examples
+
+```mlir
+// %lhs: [1.0, 3.0]
+// %rhs: [2.0, 4.0]
+%result = "stablehlo.complex"(%lhs, %rhs) : (tensor<2xf32>, tensor<2xf32>) -> tensor<2xcomplex<f32>>
+// %result: [(1.0, 2.0), (3.0, 4.0)]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.concatenate
 
 ### Semantics
@@ -1131,12 +1172,12 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
 | Name                   | Type                                         | Constraints                      |
 |------------------------|----------------------------------------------|----------------------------------|
 | `operand`              | tensor of any supported type                 | (C1), (C10), (C11), (C12), (C15) |
-| `start_indices`        | tensor of any supported integer type         | (C2), (C3), (C13), (C14)         |
-| `offset_dims`          | 1-dimensional tensor constant of type `si64` | (C1), (C4), (C5), (C13)          |
-| `collapsed_slice_dims` | 1-dimensional tensor constant of type `si64` | (C1), (C6), (C7), (C8), (C14)    |
+| `start_indices`        | tensor of any supported integer type         | (C2), (C3), (C13)                |
+| `offset_dims`          | 1-dimensional tensor constant of type `si64` | (C1), (C4), (C5),                |
+| `collapsed_slice_dims` | 1-dimensional tensor constant of type `si64` | (C1), (C6), (C7), (C8), (C13)    |
 | `start_index_map`      | 1-dimensional tensor constant of type `si64` | (C3), (C9), (C10)                |
-| `index_vector_dim`     | constant of type `si64`                      | (C2), (C3), (C13), (C14)         |
-| `slice_sizes`          | 1-dimensional tensor constant of type `si64` | (C7), (C8), (C11), (C12), (C14)  |
+| `index_vector_dim`     | constant of type `si64`                      | (C2), (C3), (C13)                |
+| `slice_sizes`          | 1-dimensional tensor constant of type `si64` | (C7), (C8), (C11), (C12), (C13)  |
 | `indices_are_sorted`   | constant of type `i1`                        |                                  |
 
 ### Outputs
@@ -1179,17 +1220,17 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
 
   * (C12) $0 \le$ `slice_sizes`[i] $\le$ dim(`operand`, i) $\forall i$
           such that $0 \le$ i $\lt$ size(`slice_sizes`).
-  * (C13) rank(`result`) $=$ `effective_start_indices_rank` - 1 $+$
-          size(`offset_dims`), where
-          `effective_start_indices_rank` $=$
-          `index_vector_dim` $\lt$ rank(`start_indices`) ?
-          rank(`start_indices`) : rank(`start_indices`) + 1.
-  * (C14) `shape(result)` $=$ `concatenate(shape(start_indices), slice_sizes)`
-          except that:
-    * The dimension size of `start_indices` corresponding to
-      `index_vector_dim` is not included.
-    * The dimension sizes in `slice_sizes` corresponding to
-      `collapsed_slice_dims` are not included.
+
+  * (C13) `shape(result)` $=$ `combine(batch_dim_sizes, offset_dim_sizes)`
+          where:
+    * `batch_dim_sizes` = `shape(start_indices)` except that the dimension size
+      of `start_indices` corresponding to `index_vector_dim` is not included.
+
+    * `offset_dim_sizes` = `shape(slice_sizes)` except that the dimension sizes
+      in `slice_sizes` corresponding to `collapsed_slice_dims` are not included.
+
+    * `combine` puts `batch_dim_sizes` at axes corresponding to `batch_dims` and
+     `offset_dim_sizes` at axes corresponding to `offset_dims`.
 
   * (C15) `operand` and `result` have the same element type.
 
@@ -1271,6 +1312,44 @@ output of `true_branch` is returned, else if pred is `false`, output of
   "stablehlo.return"(%result_false_branch) : (tensor<i32>) -> ()
 }) : (tensor<i1>) -> tensor<i32>
 // %result: 10
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.imag
+
+### Semantics
+
+Extracts the imaginary part, element-wise, from the `operand` and produces a
+`result` tensor.
+
+More formally, for each element `x`: `imag(x) = is_complex(x) ? x.imag : 0.0`.
+
+### Inputs
+
+| Name      | Type                                     |
+|-----------|------------------------------------------|
+| `operand` | tensor of floating-point or complex type |
+
+### Outputs
+
+| Name     | Type                          |
+|----------|-------------------------------|
+| `result` | tensor of floating-point type |
+
+### Constraints
+
+  * (C1) shape(`result`) = shape(`operand`).
+  * (C2) element_type(`result`) $=$
+    * element_type(`operand`) if it's a floating-point type.
+    * real_type(element_type(`operand`)) otherwise.
+
+### Examples
+
+```mlir
+// %operand: [(1.0, 2.0), (3.0, 4.0)]
+%result = "stablehlo.imag"(%operand) : (tensor<2xcomplex<f32>>) -> tensor<2xf32>
+// %result: [2.0, 4.0]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -1455,6 +1534,56 @@ For boolean element type, the behavior is same as [stablehlo.or](#stablehloor).
 ```
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_maximum.mlir)
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.map
+
+### Semantics
+
+Applies a map function `computation` to `inputs` along the `dimensions` and
+produces a `result` tensor.
+
+More formally, `result[i0, ..., iR-1] = computation(inputs[0][i0, ..., iR-1], `
+`..., inputs[N-1][i0, ..., iR-1])`.
+
+### Inputs
+
+| Name          | Type                                             |
+|---------------|--------------------------------------------------|
+| `inputs`      | variadic number of tensors of any supported type |
+| `dimensions`  | 1-dimensional tensor constant of type `si64`     |
+| `computation` | `function`                                       |
+
+### Outputs
+
+| Name     | Type                         |
+|----------|------------------------------|
+| `result` | tensor of any supported type |
+
+### Constraints
+
+  * (C1) All `inputs` and `result` have the same shape.
+  * (C2) size(`inputs`) $=$ N $\ge$ 1.
+  * (C3) `dimensions = [0, ..., R-1]`, where `R` $=$ rank(`inputs[0]`).
+  * (C4) `computation` has type `(tensor<E0>, ..., tensor<EN-1>) -> tensor<E'>`
+    where `Ek` $=$ element_type(`inputs[k]`) and `E'` $=$
+    element_type(`result`).
+
+### Examples
+
+```mlir
+// %input0: [[0, 1], [2, 3]]
+// %input1: [[4, 5], [6, 7]]
+%result = "stablehlo.map"(%input0, %input1) ({
+  ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+    %0 = stablehlo.multiply %arg0, %arg1 : tensor<i32>
+    stablehlo.return %0 : tensor<i32>
+}) {
+  dimensions = dense<[0, 1]> : tensor<2xi64>
+} : (tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
+// %result: [[0, 5], [12, 21]]
+```
 
 [Back to Ops](#index-of-ops)
 
@@ -1791,12 +1920,50 @@ and produces a `result` tensor.
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.real
+
+### Semantics
+
+Extracts the real part, element-wise, from the `operand` and produces a `result`
+tensor.
+
+More formally, for each element `x`: `real(x) = is_complex(x) ? x.real : x`.
+
+### Inputs
+
+| Name      | Type                                     |
+|-----------|------------------------------------------|
+| `operand` | tensor of floating-point or complex type |
+
+### Outputs
+
+| Name     | Type                          |
+|----------|-------------------------------|
+| `result` | tensor of floating-point type |
+
+### Constraints
+
+  * (C1) shape(`result`) = shape(`operand`).
+  * (C2) element_type(`result`) $=$
+    * element_type(`operand`) if it's a floating-point type.
+    * real_type(element_type(`operand`)) otherwise.
+
+### Examples
+
+```mlir
+// %operand: [(1.0, 2.0), (3.0, 4.0)]
+%result = "stablehlo.real"(%operand) : (tensor<2xcomplex<f32>>) -> tensor<2xf32>
+// %result: [1.0, 3.0]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.reduce
 
 ### Semantics
 
-Applies a function `body` to `inputs` and `init_values` along the `dimensions`
-and produces a `result` tensor.
+Applies a reduction function `body` to `inputs` and `init_values` along the
+`dimensions` and produces a `result` tensor.
 
 The order of reductions is implementation-defined, which means that `body` and
 `init_values` must form a monoid to guarantee that the operation produces the
