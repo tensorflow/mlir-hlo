@@ -323,15 +323,15 @@ def StableHLO_Expm1Op: StableHLO_UnaryElementwiseOp<"exponential_minus_one",
     [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
   let summary = "Exponential minus one operator";
   let description = [{
-    Returns `e^(operand) - 1` element-wise.
+    Performs element-wise exponential minus one operation on `operand` tensor
+    and produces a `result` tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_unary_functions.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloexponential_minus_one
 
     Example:
-
     ```mlir
-    %0 = stablehlo.exponential_minus_one %arg0 : tensor<2x2xf32>
+    %result = stablehlo.exponential_minus_one %operand : tensor<2xf32>
     ```
   }];
 }
@@ -1117,17 +1117,16 @@ def StableHLO_AfterAllOp : StableHLO_Op<"after_all", [Pure]> {
   let summary = "AfterAll operator";
 
   let description = [{
-    AfterAll takes a variadic number of tokens and produces a single token.
-    Tokens are primitive types which can be threaded between side-effecting
-    operations to enforce ordering. AfterAll can be used as a join of tokens
-    for ordering a operation after a set operations.
+    Ensures that the operations producing the `inputs` are executed before any
+    operations that depend on `result`.
 
-    See https://www.tensorflow.org/xla/operation_semantics#afterall.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloafter_all
 
     Example:
 
     ```mlir
-    %0 = stablehlo.after_all %arg0, %arg1 : !stablehlo.token
+    %result = stablehlo.after_all %input0, %input1 : !stablehlo.token
     ```
   }];
 
@@ -2346,11 +2345,31 @@ def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape", [
 def StableHLO_ScatterOp: StableHLO_Op<"scatter", [SameVariadicOperandSize, RecursiveMemoryEffects]> {
   let summary = "Scatter operator";
   let description = [{
-    Generates a result which is the value of the input array `operand`,
-    with several slices (at indices specified by `scatter_indices`)
-    updated with the values in `updates` using `update_computation`.
+    Generate `results` which is the values of the `inputs` operand, with several
+    slices at indices specified by `scatter_indices`, updated with the values in
+    `updates` using `update_computation`.
 
-    See https://www.tensorflow.org/xla/operation_semantics#scatter.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloscatter
+
+   Example:
+
+   ```mlir
+   %result = "stablehlo.scatter"(%input, %scatter_indices, %update) ({
+     ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+       %0 = stablehlo.add %arg0, %arg1 : tensor<i32>
+       stablehlo.return %0 : tensor<i32>
+   }) {
+     scatter_dimension_numbers = #stablehlo.scatter<
+       update_window_dims = [2,3],
+       inserted_window_dims = [0],
+       scatter_dims_to_operand_dims = [1, 0],
+       index_vector_dim = 2>,
+     indices_are_sorted = false,
+     unique_indices = false
+   } : (tensor<3x4x2xi32>, tensor<2x3x2xi64>, tensor<2x3x2x2xi32>) -> tensor<3x4x2xi32>
+   ```
+
   }];
   let arguments = (ins
     Variadic<HLO_Tensor>:$inputs,
@@ -2611,23 +2630,21 @@ def StableHLO_TriangularSolveOp: StableHLO_Op<"triangular_solve",
     [Pure, SameOperandsAndResultElementType, InferTensorType]> {
   let summary = "TriangularSolve operator";
   let description = [{
-    Solves systems of linear equations with lower or upper triangular
-    coefficient matrices by forward- or back-substitution. Broadcasting along
-    leading dimensions, this routine solves one of the matrix systems
-    op(a) * x = b, or x * op(a) = b, for the variable x, given a and b, where
-    op(a) is either op(a) = a, or op(a) = Transpose(a), or
-    op(a) = Conj(Transpose(a)).
+    Solves batches of systems of linear equations with lower or upper triangular
+    coefficient matrices.
 
-    Input data is read only from the lower/upper triangle of a, depending on the
-    value of lower. Values from the other triangle are ignored. Output data is
-    returned in the same triangle; the values in the other triangle are
-    implementation-defined and may be anything.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlotriangular_solve
 
-    If the rank of a and b are greater than 2, they are treated as batches of
-    matrices, where all except the minor 2 dimensions are batch dimensions. a
-    and b must have equal batch dimensions.
-
-    See https://www.tensorflow.org/xla/operation_semantics#triangularsolve.
+    Example:
+    ```mlir
+    %result = "stablehlo.triangular_solve"(%a, %b) {
+      left_side = true,
+      lower = true,
+      unit_diagonal = false,
+      transpose_a = #stablehlo<transpose NO_TRANSPOSE>
+    } : (tensor<3x3xf32>, tensor<3x3xf32>) -> tensor<3x3xf32>
+    ```
   }];
   let arguments = (ins
     HLO_FpOrComplexTensor:$a,

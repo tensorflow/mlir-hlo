@@ -76,6 +76,10 @@ limitations under the License.
 #include "stablehlo/dialect/TypeInference.h"
 
 // Include order matters
+using mlir::hlo::parseDimensionSizes;
+using mlir::hlo::parseIntArray;
+using mlir::hlo::printDimensionSizes;
+using mlir::hlo::printIntArray;
 #include "stablehlo/dialect/StablehloEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "stablehlo/dialect/StablehloAttrs.cpp.inc"
@@ -182,57 +186,6 @@ LogicalResult TypeExtensionsAttr::verifyEncoding(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
   return hlo::verifyBounds(
       getBounds(), RankedTensorType::get(bounds, elementType), emitError);
-}
-
-namespace {
-
-void printCommaSeparatedDynamicShapes(AsmPrinter& printer,
-                                      llvm::ArrayRef<int64_t> shape) {
-  printer << '[';
-  auto printIntOrQuestion = [&](int64_t value) {
-    if (ShapedType::isDynamic(value))
-      printer << '?';
-    else
-      printer << value;
-  };
-  llvm::interleaveComma(shape, printer, printIntOrQuestion);
-  printer << ']';
-}
-
-ParseResult parseCommaSeparatedDynamicShapes(AsmParser& parser,
-                                             SmallVectorImpl<int64_t>& shape) {
-  auto parseElt = [&]() -> ParseResult {
-    if (!parser.parseOptionalQuestion()) {
-      shape.push_back(ShapedType::kDynamicSize);
-      return success();
-    }
-    return parser.parseInteger(shape.emplace_back());
-  };
-  return parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, parseElt);
-}
-
-}  // namespace
-
-void TypeExtensionsAttr::print(AsmPrinter& printer) const {
-  printer << "<bounds = ";
-  printCommaSeparatedDynamicShapes(printer, getBounds());
-  printer << ">";
-}
-
-Attribute TypeExtensionsAttr::parse(AsmParser& parser, mlir::Type) {
-  if (parser.parseLess() || parser.parseKeyword("bounds") ||
-      parser.parseEqual())
-    return {};
-
-  SmallVector<int64_t> resultBounds;
-  if (parseCommaSeparatedDynamicShapes(parser, resultBounds)) {
-    parser.emitError(parser.getCurrentLocation(),
-                     "failed to parse TypeExtensions parameter 'bounds' which "
-                     "is to be a `::llvm::ArrayRef<int64_t>`");
-    return {};
-  }
-  if (parser.parseGreater()) return {};
-  return TypeExtensionsAttr::get(parser.getContext(), resultBounds);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4544,9 +4497,7 @@ void StablehloDialect::printAttribute(Attribute attr,
 
 static ParseResult parseDims(AsmParser& parser, SmallVector<int64_t>& dims) {
   dims.clear();
-  return parser.parseCommaSeparatedList(AsmParser::Delimiter::Square, [&]() {
-    return parser.parseInteger(dims.emplace_back());
-  });
+  return parseIntArray(parser, dims);
 }
 
 static ParseResult parseDimsWithMinimumElements(AsmParser& parser,
@@ -4558,21 +4509,6 @@ static ParseResult parseDimsWithMinimumElements(AsmParser& parser,
            << "expected at least " << minElements << " element(s), found "
            << dims.size();
   return success();
-}
-
-FailureOr<SmallVector<int64_t>> parseIntArray(AsmParser& parser) {
-  SmallVector<int64_t> ints;
-  auto parse =
-      parser.parseCommaSeparatedList({}, [&] {
-        ints.emplace_back();
-        return parser.parseInteger(ints.back());
-      });
-  if (!failed(parse)) return ints;
-  return {{}};
-}
-
-void printIntArray(AsmPrinter& printer, ArrayRef<int64_t> ints) {
-  llvm::interleaveComma(ints, printer);
 }
 
 /// Parse a custom attribute that resembles a struct of the form
