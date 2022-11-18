@@ -19,7 +19,7 @@ func.func @broadcast_add(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) -> tensor<1
 // CHECK-LABEL: @complex_ranked_components
 func.func @complex_ranked_components(%arg0: tensor<?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xcomplex<f32>> {
   %0 = chlo.broadcast_complex %arg0, %arg1 : (tensor<?xf32>, tensor<?x?xf32>) -> tensor<?x?xcomplex<f32>>
-  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-1, -1], element_type0 = complex<f32>}
+  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-9223372036854775808, -9223372036854775808], element_type0 = complex<f32>}
   %1 = "hlo_test_infer.get_return_type_components"(%0) : (tensor<?x?xcomplex<f32>>) -> tensor<?x?xcomplex<f32>>
   func.return %1 : tensor<?x?xcomplex<f32>>
 }
@@ -28,7 +28,7 @@ func.func @complex_ranked_components(%arg0: tensor<?xf32>, %arg1: tensor<?x?xf32
 // CHECK-LABEL: @compare_ranked_components
 func.func @compare_ranked_components(%arg0: tensor<?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xi1> {
   %0 = chlo.broadcast_compare %arg0, %arg1 {comparison_direction = #chlo<comparison_direction EQ>} : (tensor<?xf32>, tensor<?x?xf32>) -> tensor<?x?xi1>
-  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-1, -1], element_type0 = i1}
+  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-9223372036854775808, -9223372036854775808], element_type0 = i1}
   %1 = "hlo_test_infer.get_return_type_components"(%0) : (tensor<?x?xi1>) -> tensor<?x?xi1>
   func.return %0 : tensor<?x?xi1>
 }
@@ -37,7 +37,7 @@ func.func @compare_ranked_components(%arg0: tensor<?xf32>, %arg1: tensor<?x?xf32
 // CHECK-LABEL: @broadcast_add_ranked_components_r1
 func.func @broadcast_add_ranked_components_r1(%arg0: tensor<?xf32>, %arg1: tensor<?xf32>) -> tensor<?xf32> {
   %0 = chlo.broadcast_add %arg0, %arg1 : (tensor<?xf32>, tensor<?xf32>) -> tensor<?xf32>
-  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-1], element_type0 = f32}
+  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-9223372036854775808], element_type0 = f32}
   %1 = "hlo_test_infer.get_return_type_components"(%0) : (tensor<?xf32>) -> tensor<?xf32>
   func.return %1 : tensor<?xf32>
 }
@@ -46,7 +46,7 @@ func.func @broadcast_add_ranked_components_r1(%arg0: tensor<?xf32>, %arg1: tenso
 // CHECK-LABEL: @broadcast_add_ranked_components_r1x2
 func.func @broadcast_add_ranked_components_r1x2(%arg0: tensor<?xf32>, %arg1: tensor<?x3xf32>) -> tensor<?x3xf32> {
   %0 = chlo.broadcast_add %arg0, %arg1 : (tensor<?xf32>, tensor<?x3xf32>) -> tensor<?x3xf32>
-  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-1, 3], element_type0 = f32}
+  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-9223372036854775808, 3], element_type0 = f32}
   %1 = "hlo_test_infer.get_return_type_components"(%0) : (tensor<?x3xf32>) -> tensor<?x3xf32>
   func.return %1 : tensor<?x3xf32>
 }
@@ -55,7 +55,7 @@ func.func @broadcast_add_ranked_components_r1x2(%arg0: tensor<?xf32>, %arg1: ten
 // CHECK-LABEL: @broadcast_add_ranked_components_with_zero_r1x2
 func.func @broadcast_add_ranked_components_with_zero_r1x2(%arg0: tensor<0xf32>, %arg1: tensor<?x1xf32>) -> tensor<?x0xf32> {
   %0 = chlo.broadcast_add %arg0, %arg1 : (tensor<0xf32>, tensor<?x1xf32>) -> tensor<?x0xf32>
-  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-1, 0], element_type0 = f32}
+  // CHECK: "hlo_test_infer.return_type_components"(%0) {dims0 = [-9223372036854775808, 0], element_type0 = f32}
   %1 = "hlo_test_infer.get_return_type_components"(%0) : (tensor<?x0xf32>) -> tensor<?x0xf32>
   func.return %1 : tensor<?x0xf32>
 }
