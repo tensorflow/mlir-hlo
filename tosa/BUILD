@@ -1,7 +1,7 @@
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library")
 
 package(
-    default_applicable_licenses = ["//third_party/tensorflow:license"],  # copybara:comment
+    # copybara:uncomment default_applicable_licenses = ["//third_party/tensorflow:license"],
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
