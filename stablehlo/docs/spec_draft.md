@@ -167,6 +167,7 @@ described below)
    * [add](#stablehloadd)
    * [after_all](#stablehloafter_all)
    * [and](#stablehloand)
+   * [atan2](#stablehloatan2)
    * [batch_norm_inference](#stablehlobatch_norm_inference)
    * [batch_norm_training](#stablehlobatch_norm_training)
    * [broadcast_in_dim](#stablehlobroadcast_in_dim)
@@ -187,7 +188,9 @@ described below)
    * [if](#stablehloif)
    * [imag](#stablehloimag)
    * [iota](#stablehloiota)
+   * [is_finite](#stablehlois_finite)
    * [log](#stablehlolog)
+   * [log_plus_one](#stablehlolog_plus_one)
    * [logistic](#stablehlologistic)
    * [map](#stablehlomap)
    * [maximum](#stablehlomaximum)
@@ -204,6 +207,7 @@ described below)
    * [reshape](#stablehloreshape)
    * [reverse](#stablehloreverse)
    * [rng](#stablehlorng)
+   * [round_nearest_even](#stablehloround_nearest_even)
    * [rsqrt](#stablehlorsqrt)
    * [scatter](#stablehloscatter)
    * [select](#stablehloselect)
@@ -371,6 +375,43 @@ For boolean tensors, computes the logical operation.
 // %rhs: [[5, 6], [7, 8]]
 %result = "stablehlo.and"(%lhs, %rhs) : (tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
 // %result: [[1, 2], [3, 0]]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.atan2
+
+### Semantics
+
+Performs element-wise atan2 operation on `lhs` and `rhs` tensor and produces a
+`result` tensor, implementing the `atan2` operation from the IEEE-754
+specification. For complex element types, it computes a complex atan2 function
+with corner cases TBD. Numeric precision is implementation-defined.
+
+### Inputs
+
+| Name  | Type                                     |
+|-------|------------------------------------------|
+| `lhs` | tensor of floating-point or complex type |
+| `rhs` | tensor of floating-point or complex type |
+
+### Outputs
+
+| Name     | Type                                     |
+|----------|------------------------------------------|
+| `result` | tensor of floating-point or complex type |
+
+### Constraints
+
+  * (C1) `lhs`, `rhs`, and `result` have the same type.
+
+### Examples
+
+```mlir
+// %lhs: [0.0, 1.0, -1.0]
+// %rhs: [0.0, 0.0, 0.0]
+%result = "stablehlo.atan2"(%lhs, %rhs) : (tensor<3xf32>, tensor<3xf32>) -> tensor<3xf32>
+// %result: [0.0, 1.57079637, -1.57079637] // [0.0, pi/2, -pi/2]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -1472,6 +1513,41 @@ defined and one of the following:
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.is_finite
+
+### Semantics
+
+Performs element-wise check whether the value in `x` is finite (i.e. is neither
++Inf, -Inf, nor NaN) and produces a `y` tensor. Implements the `isFinite`
+operation from the IEEE-754 specification.
+
+### Inputs
+
+| Name | Type                          |
+|------|-------------------------------|
+| `x`  | tensor of floating-point type |
+
+### Outputs
+
+| Name | Type                   |
+|------|------------------------|
+| `y`  | tensor of boolean type |
+
+### Constraints
+
+  * (C1) `x` and `y` have the same shape.
+
+### Examples
+
+```mlir
+// Logical values: -Inf, +Inf, NaN, ...
+// %x: [0xFF800000, 0x7F800000, 0x7FFFFFFF, -10.0, -0.0, 0.0, 10.0]
+%y = "stablehlo.is_finite"(%x) : (tensor<7xf32>) -> tensor<7xi1>
+// %y: [false, false, false, true, true, true, true]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.log
 
 ### Semantics
@@ -1508,6 +1584,42 @@ implementation-defined.
 // %operand: (1.0, 2.0)
 %result = "stablehlo.log"(%operand) : (tensor<complex<f32>>) -> tensor<complex<f32>>
 // %result: (0.80471896, 1.10714871)
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.log_plus_one
+
+### Semantics
+
+Performs element-wise log plus one operation on `operand` tensor and produces a
+`result` tensor. For floating-point element types, it implements the `logp1`
+operation from the IEEE-754 specification. For complex element types, it
+computes a complex log plus one, with corner cases TBD. Numeric precision is
+implementation-defined.
+
+### Inputs
+
+| Name      | Type                                     |
+|-----------|------------------------------------------|
+| `operand` | tensor of floating-point or complex type |
+
+### Outputs
+
+| Name     | Type                                     |
+|----------|------------------------------------------|
+| `result` | tensor of floating-point or complex type |
+
+### Constraints
+
+  * (C1) `operand` and `result` have the same type.
+
+### Examples
+
+```mlir
+// %operand: [-2.0, -0.0, -0.999, 7.0, 6.38905621, 15.0]
+%result = "stablehlo.log_plus_one"(%operand) : (tensor<6xf32>) -> tensor<6xf32>
+// %result: [-nan, 0.0, -6.90776825, 2.07944155, 2.0, 2.77258873]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -2286,6 +2398,40 @@ hidden state.
 //           [1, 1, 1],
 //           [0, 0, 0]
 //          ]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.round_nearest_even
+
+### Semantics
+
+Performs element-wise rounding towards the nearest integer, breaking ties
+towards the even integer, on the `operand` tensor and produces a `result`
+tensor. Implements the `roundToIntegralTiesToEven` operation from the IEEE-754 specification.
+
+### Inputs
+
+| Name      | Type                          |
+|-----------|-------------------------------|
+| `operand` | tensor of floating-point type |
+
+### Outputs
+
+| Name     | Type                          |
+|----------|-------------------------------|
+| `result` | tensor of floating-point type |
+
+### Constraints
+
+  * (C1) `operand` and `result` have the same type.
+
+### Examples
+
+```mlir
+// %operand = [-2.5, 0.4, 0.5, 0.6, 2.5]
+%result = "stablehlo.round_nearest_even"(%operand) : (tensor<5xf32>) -> tensor<5xf32>
+// %result: [-2.0, 0.0, 0.0, 1.0, 2.0]
 ```
 
 [Back to Ops](#index-of-ops)

@@ -210,7 +210,7 @@ void printCustomCallTarget(AsmPrinter& p, Operation*, StringAttr target);
 ParseResult parseCustomCallTarget(AsmParser& parser, StringAttr& target);
 
 // IntArray - Print an array of ints with brackets. Unlike DimensionSizes,
-// doesn't have special handling for kDynamic.
+// doesn't have special handling for kDynamicSize.
 //
 //   Generic:
 //     1, 2

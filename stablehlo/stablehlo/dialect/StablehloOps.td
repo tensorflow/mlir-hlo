@@ -375,18 +375,15 @@ def StableHLO_IsFiniteOp: StableHLO_UnaryElementwiseOp<"is_finite", [Pure,
     DeclareOpInterfaceMethods<InferTypeOpInterface>], HLO_Tensor> {
   let summary = "IsFinite operator";
   let description = [{
-    Tests whether each element of operand is finite, i.e., is not positive or
-    negative infinity, and is not NaN. Returns a tensor of 1-bit integers with
-    the same shape as the input, where each element is nonzero (i.e. true) if
-    and only if the corresponding input element is finite.
+    Performs element-wise check whether the value in `x` is finite (i.e. is
+    neither +Inf, -Inf, nor NaN) and produces a `y` tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_unary_functions.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlois_finite
 
     Example:
-
     ```mlir
-    %0 = stablehlo.is_finite %arg0 : (tensor<2xf32>) -> tensor<2xi1>
+    %y = stablehlo.is_finite %x : (tensor<7xf32>) -> tensor<7xi1>
     ```
   }];
   let arguments = (ins HLO_FpTensor:$x);
@@ -418,15 +415,15 @@ def StableHLO_Log1pOp: StableHLO_UnaryElementwiseOp<"log_plus_one",
     [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
   let summary = "Log1p operator";
   let description = [{
-    Returns `log(operand+1)` element-wise.
+    Computes element-wise logarithm of `operand` tensor plus one and produces a
+    `result` tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_unary_functions.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlolog_plus_one
 
     Example:
-
     ```mlir
-    %0 = stablehlo.log_plus_one %arg0 : tensor<2xf32>
+    %result = stablehlo.log_plus_one %operand : tensor<6xf32>
     ```
   }];
 }
@@ -539,16 +536,17 @@ def StableHLO_RoundNearestEvenOp: StableHLO_UnaryElementwiseOp<"round_nearest_ev
     [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpTensor> {
   let summary = "Round operator, ties to even";
   let description = [{
-    Returns `Round(operand)` element-wise, rounding to nearest integer with
-    half-way cases rounding towards even numbers.
+    Performs element-wise rounding towards the nearest integer, breaking ties
+    towards the even integer, on the `operand` tensor and produces a `result`
+    tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_unary_functions.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloround_nearest_even
 
     Example:
 
     ```mlir
-    %0 = stablehlo.round_nearest_even %arg0 : tensor<10x10xbf16>
+    %result = stablehlo.round_nearest_even %operand : tensor<5xf32>
     ```
   }];
 }
@@ -707,15 +705,16 @@ def StableHLO_Atan2Op : StableHLO_BinaryElementwiseOp<"atan2",
       [Pure, HLO_CompatibleOperandsAndResultType]> {
   let summary = "Atan2 operator";
   let description = [{
-    Returns `atan2(lhs/rhs)` element-wise.
+    Performs element-wise atan2 operation on `lhs` and `rhs` tensor and produces
+    a `result` tensor, implementing the `atan2` operation from the IEEE-754
+    specification.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_binary_arithmetic_operations.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloatan2
 
     Example:
-
     ```mlir
-    %0 = stablehlo.atan2 %arg0, %arg1 : tensor<4xi32>
+    %result = stablehlo.atan2 %lhs, %rhs : tensor<3xf32>
     ```
   }];
 }
