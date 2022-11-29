@@ -77,6 +77,18 @@ are aligned, whether they are stored contiguously, etc).
 **Token type** Values of this type are used for imposing order on execution of
 side-effecting operations using data dependencies.
 
+**Tuple types** model heterogeneous lists and are referred to in the document
+using: 1) the full form: `tuple<T0, ... TN-1>`, 2) the short form: `tuple`,
+where:
+  * `N` is the tuple size.
+  * `Ti` are types of tuple elements.
+  * Element types are one of `tensor`, `token` or `tuple`.
+
+Tuple types are inherited from HLO where they are used to model variadic inputs
+and outputs. In StableHLO, variadic inputs and outputs are supported natively,
+so the only use of tuple types in StableHLO is in `custom_call` where tuple
+types are used to model HLO-compatible ABI of custom calls.
+
 **Function types** model functions and are referred to in the document using: 1)
 the full form: `(I1, ..., IN) -> (O1, ..., OM)`, or 2) the short form:
 `function`, where:
@@ -150,18 +162,6 @@ syntax.
   following mapping from indices to elements: `{0, 0} => 1`, `{0, 1} => 2`,
   `{0, 2} => 3`, `{1, 0} => 4`, `{1, 1} => 5`, `{1, 2} => 6`.
 
-## Structure of an Op’s Specification
-
-The specification of an op comprises of the following components (in the order
-described below)
-
-  * **Semantics** Semantics of the operation.
-  * **Inputs** Meaning of input(s) and their type(s).
-  * **Outputs** Meaning of the output(s) and the type(s).
-  * **Constraints** Constraints on the input(s) and the output(s).
-  * **Examples** Examples demonstrating the working of the op using
-    [MLIR generic syntax](https://mlir.llvm.org/docs/LangRef/#operations).
-
 ## Index of Ops
    * [abs](#stablehloabs)
    * [add](#stablehloadd)
@@ -172,8 +172,10 @@ described below)
    * [batch_norm_training](#stablehlobatch_norm_training)
    * [broadcast_in_dim](#stablehlobroadcast_in_dim)
    * [case](#stablehlocase)
+   * [cbrt](#stablehlocbrt)
    * [ceil](#stablehloceil)
    * [cholesky](#stablehlocholesky)
+   * [clamp](#stablehloclamp)
    * [complex](#stablehlocomplex)
    * [concatenate](#stablehloconcatenate)
    * [constant](#stablehloconstant)
@@ -185,6 +187,7 @@ described below)
    * [fft](#stablehlofft)
    * [floor](#stablehlofloor)
    * [gather](#stablehlogather)
+   * [get_tuple_element](#stablehloget_tuple_element)
    * [if](#stablehloif)
    * [imag](#stablehloimag)
    * [iota](#stablehloiota)
@@ -201,16 +204,21 @@ described below)
    * [or](#stablehloor)
    * [pad](#stablehlopad)
    * [popcnt](#stablehlopopcnt)
+   * [power](#stablehlopower)
    * [real](#stablehloreal)
    * [reduce](#stablehloreduce)
    * [remainder](#stablehloremainder)
    * [reshape](#stablehloreshape)
    * [reverse](#stablehloreverse)
    * [rng](#stablehlorng)
+   * [round_nearest_afz](#stablehloround_nearest_afz)
    * [round_nearest_even](#stablehloround_nearest_even)
    * [rsqrt](#stablehlorsqrt)
    * [scatter](#stablehloscatter)
    * [select](#stablehloselect)
+   * [shift_left](#stablehloshift_left)
+   * [shift_right_arithmetic](#stablehloshift_right_arithmetic)
+   * [shift_right_logical](#stablehloshift_right_logical)
    * [sine](#stablehlosine)
    * [slice](#stablehloslice)
    * [sort](#stablehlosort)
@@ -219,6 +227,7 @@ described below)
    * [tanh](#stablehlotanh)
    * [transpose](#stablehlotranspose)
    * [triangular_solve](#stablehlotriangular_solve)
+   * [tuple](#stablehlotuple)
    * [while](#stablehlowhile)
    * [xor](#stablehloxor)
 
@@ -688,13 +697,48 @@ returned.
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.cbrt
+
+### Semantics
+
+Performs element-wise cubic root operation on `operand` tensor and produces a
+`result` tensor, implementing the `rootn(x, 3)` operation from the IEEE-754
+specification. For complex element types, it computes a complex cubic root, with
+corner cases TBD. Numeric precision is implementation-defined.
+
+### Inputs
+
+| Name      | Type                                     |
+|-----------|------------------------------------------|
+| `operand` | tensor of floating-point or complex type |
+
+### Outputs
+
+| Name     | Type                                     |
+|----------|------------------------------------------|
+| `result` | tensor of floating-point or complex type |
+
+### Constraints
+
+  * (C1) `operand` and `result` have the same type.
+
+### Examples
+
+```mlir
+// %operand: [0.0, 1.0, 8.0, 27.0]
+%result = "stablehlo.cbrt"(%operand) : (tensor<4xf32>) -> tensor<4xf32>
+// %result: [0.0, 1.0, 2.0, 3.0]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.ceil
 
 ### Semantics
 
 Performs element-wise ceil of `operand` tensor and produces a `result` tensor.
-Implements the rounding to integral towards positive infinity operation from the
-IEEE-754 specification.
+Implements the `roundToIntegralTowardPositive` operation from the IEEE-754
+specification.
 
 ### Inputs
 
@@ -775,6 +819,51 @@ matrix, then the behavior is undefined.
 //           [2.0, 4.0, 0.0],
 //           [3.0, 5.0, 6.0]
 //          ]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.clamp
+
+### Semantics
+
+Clamps every element of the `operand` tensor between a minimum and maximum
+value and produces a `result` tensor. More formally, `result[i0, ..., iR-1]` =
+`minimum(maximum(operand[i0, ..., iR-1], min_val), max_val)`,
+where `min_val = rank(min) == 0 ? min : min[i0, ..., iR-1]`,
+`max_val = rank(max) == 0 ? max : max[i0, ..., iR-1]`, `minimum` and `maximum`
+operations correspond to [stablehlo.minimum](#stablehlominimum) and
+[stablehlo.maximum](#stablehlomaximum).
+
+### Inputs
+
+| Name      | Type                         |
+|-----------|------------------------------|
+| `min`     | tensor of any supported type |
+| `operand` | tensor of any supported type |
+| `max`     | tensor of any supported type |
+
+### Outputs
+
+| Name     | Type                         |
+|----------|------------------------------|
+| `result` | tensor of any supported type |
+
+### Constraints
+
+  * (C1) Either `rank(min)` $=$ `0` or `shape(min)` $=$ `shape(operand)`.
+  * (C2) Either `rank(max)` $=$ `0` or `shape(max)` $=$ `shape(operand)`.
+  * (C3) `min`, `operand`, and `max` have the same element type.
+  * (C4) `operand` and `result` have the same type.
+
+### Examples
+
+```mlir
+// %min: [5, 10, 15]
+// %operand: [3, 13, 23]
+// %max: [10, 15, 20]
+%result = "stablehlo.clamp"(%min, %operand, %max) : (tensor<3xi32>, tensor<3xi32>, tensor<3xi32>) -> tensor<3xi32>
+// %result: [5, 13, 20]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -1211,8 +1300,8 @@ for `fft_type = RFFT`. For example, for `L = 3`:
 ### Semantics
 
 Performs element-wise floor of `operand` tensor and produces a `result` tensor.
-Implements the rounding to integral towards negative infinity operation from the
-IEEE-754 specification.
+Implements the `roundToIntegralTowardNegative` operation from the IEEE-754
+specification.
 
 ### Inputs
 
@@ -1364,6 +1453,43 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
 //              [[17, 18], [19, 20]]
 //            ]
 //          ]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.get_tuple_element
+
+### Semantics
+
+Extracts element at `index` position of the `operand` tuple and produces a
+`result`.
+
+### Inputs
+
+| Name      | Type                    |
+|-----------|-------------------------|
+| `operand` | `tuple`                 |
+| `index`   | constant of type `si32` |
+
+### Outputs
+
+| Name     | Type               |
+|----------|--------------------|
+| `result` | any supported type |
+
+### Constraints
+
+  * (C1) 0 $\le$ `index` $\lt$ size(`operand`).
+  * (C2) type(`operand[index]`) $=$ type(`result`).
+
+### Examples
+
+```mlir
+// %operand: ([1.0, 2.0], (3))
+%result = "stablehlo.get_tuple_element"(%operand) {
+  index = 0 : i32
+} : (tuple<tensor<2xf32>, tuple<tensor<i32>>>) -> tensor<2xf32>
+// %result: [1.0, 2.0]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -2088,6 +2214,61 @@ and produces a `result` tensor.
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.power
+
+### Semantics
+
+Performs element-wise exponentiation of `lhs` tensor by `rhs` tensor and
+produces a `result` tensor.
+
+For integer element types, if the exponentiation has an unsigned/signed
+overflow, the result is implementation-defined and one of the following:
+
+  * mathematical result modulo $2^n$, where n is the bit width of the result,
+  for unsigned overflow. For signed integer overflow, wraps the result around
+  the representable range $[-2^{n-1},\ 2^{n-1} - 1]$.
+  * saturation to $2^{n-1} - 1$ (or $-2^{n-1}$) for signed overflow and
+  saturation to $2^n - 1$ (or $0$) for unsigned overflow.
+
+For an integer, `x`, raised to a negative power, `y`, the behaviour is as
+follows:
+  * If `abs(x)` $\gt$ 1, then result is 0.
+  * If `abs(x)` $=$ 1, then result is equivalet to `x^abs(y)`.
+  * If `abs(x)` $=$ 0, then behaviour is implementation defined.
+
+For floating-point element types, it implements the `pow` operation from the
+IEEE-754 specification. For complex element types, it computes complex
+exponentiation, with corner cases TBD. Numeric precision is
+implementation-defined.
+
+### Inputs
+
+| Name  | Type                                               |
+|-------|----------------------------------------------------|
+| `lhs` | tensor of integer, floating-point, or complex type |
+| `rhs` | tensor of integer, floating-point, or complex type |
+
+### Outputs
+
+| Name     | Type                                               |
+|----------|----------------------------------------------------|
+| `result` | tensor of integer, floating-point, or complex type |
+
+### Constraints
+
+  * (C1) `lhs`, `rhs`, and `result` have the same type.
+
+### Examples
+
+```mlir
+// %lhs: [-2.0, -0.0, -36.0, 5.0, 3.0, 10000.0]
+// %rhs: [2.0, 2.0, 1.1, 2.0, -1.0, 10.0]
+%result = "stablehlo.power"(%lhs, %rhs) : (tensor<6xf32>, tensor<6xf32>) -> tensor<6xf32>
+// %result: [4.0, 0.0, -nan, 25.0, 0.333333343, inf]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.real
 
 ### Semantics
@@ -2402,13 +2583,48 @@ hidden state.
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.round_nearest_afz
+
+### Semantics
+
+Performs element-wise rounding towards the nearest integer, breaking ties away
+from zero, on the `operand` tensor and produces a `result` tensor. Implements
+the `roundToIntegralTiesToAway` operation from the IEEE-754 specification.
+
+### Inputs
+
+| Name      | Type                          |
+|-----------|-------------------------------|
+| `operand` | tensor of floating-point type |
+
+### Outputs
+
+| Name     | Type                          |
+|----------|-------------------------------|
+| `result` | tensor of floating-point type |
+
+### Constraints
+
+  * (C1) `operand` and `result` have the same type.
+
+### Examples
+
+```mlir
+// %operand = [-2.5, 0.4, 0.5, 0.6, 2.5]
+%result = "stablehlo.round_nearest_afz"(%operand) : (tensor<5xf32>) -> tensor<5xf32>
+// %result: [-3.0, 0.0, 1.0, 1.0, 3.0]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.round_nearest_even
 
 ### Semantics
 
 Performs element-wise rounding towards the nearest integer, breaking ties
 towards the even integer, on the `operand` tensor and produces a `result`
-tensor. Implements the `roundToIntegralTiesToEven` operation from the IEEE-754 specification.
+tensor. Implements the `roundToIntegralTiesToEven` operation from the IEEE-754
+specification.
 
 ### Inputs
 
@@ -2632,8 +2848,8 @@ is undefined.
 Produces a `result` tensor where each element is selected from `on_true` or
 `on_false` tensor based on the value of the corresponding element of `pred`.
 More formally,
-`result[i0, ..., iR-1] = predicate ? on_true[i0, ..., iR-1] : on_false[i0, ..., iR-1]`,
-where `predicate = rank(pred) == 0 ? pred : pred[i0, ..., iR-1]`.
+`result[i0, ..., iR-1] = pred_val ? on_true[i0, ..., iR-1] : on_false[i0, ..., iR-1]`,
+where `pred_val = rank(pred) == 0 ? pred : pred[i0, ..., iR-1]`.
 
 ### Inputs
 
@@ -2662,6 +2878,111 @@ where `predicate = rank(pred) == 0 ? pred : pred[i0, ..., iR-1]`.
 // %on_false: [[5, 6], [7, 8]]
 %result = "stablehlo.select"(%pred, %on_true, %on_false) : (tensor<2x2xi1>, tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
 // %result: [[5, 2], [3, 8]]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.shift_left
+
+### Semantics
+
+Performs element-wise left-shift operation on the `lhs` tensor by `rhs` number
+of bits and produces a `result` tensor.
+
+### Inputs
+
+| Name  | Type                   |
+|-------|------------------------|
+| `lhs` | tensor of integer type |
+| `rhs` | tensor of integer type |
+
+### Outputs
+
+| Name     | Type                   |
+|----------|------------------------|
+| `result` | tensor of integer type |
+
+### Constraints
+
+  * (C1) `lhs`, `rhs`, and `result` have the same type.
+
+### Examples
+
+```mlir
+// %lhs: [-1, -2, 3, 4, 7, 7]
+// %rhs: [1, 2, 3, 6, 7, 8]
+%result = "stablehlo.shift_left"(%lhs, %rhs): (tensor<6xi8>, tensor<6xi8>) -> tensor<6xi8>
+// %result: [-2, -8, 24, 0, -128, 0]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.shift_right_arithmetic
+
+### Semantics
+
+Performs element-wise arithmetic right-shift operation on the `lhs` tensor by
+`rhs` number of bits and produces a `result` tensor.
+
+### Inputs
+
+| Name  | Type                   |
+|-------|------------------------|
+| `lhs` | tensor of integer type |
+| `rhs` | tensor of integer type |
+
+### Outputs
+
+| Name     | Type                   |
+|----------|------------------------|
+| `result` | tensor of integer type |
+
+### Constraints
+
+  * (C1) `lhs`, `rhs`, and `result` have the same type.
+
+### Examples
+
+```mlir
+// %lhs: [-1, -128, -36, 5, 3, 7]
+// %rhs: [1, 2, 3, 2, 1, 3]
+%result = "stablehlo.shift_right_arithmetic"(%lhs, %rhs): (tensor<6xi8>, tensor<6xi8>) -> tensor<6xi8>
+// %result: [-1, -32, -5, 1, 1, 0]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.shift_right_logical
+
+### Semantics
+
+Performs element-wise logical right-shift operation on the `lhs` tensor by `rhs`
+number of bits and produces a `result` tensor.
+
+### Inputs
+
+| Name  | Type                   |
+|-------|------------------------|
+| `lhs` | tensor of integer type |
+| `rhs` | tensor of integer type |
+
+### Outputs
+
+| Name     | Type                   |
+|----------|------------------------|
+| `result` | tensor of integer type |
+
+### Constraints
+
+  * (C1) `lhs`, `rhs`, and `result` have the same type.
+
+### Examples
+
+```mlir
+// %lhs: [-1, -128, -36, 5, 3, 7]
+// %rhs: [1, 2, 3, 2, 1, 3]
+%result = "stablehlo.shift_right_logical"(%lhs, %rhs): (tensor<6xi8>, tensor<6xi8>) -> tensor<6xi8>
+// %result: [127, 32, 27, 1, 1, 0]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -3105,6 +3426,40 @@ elements of `a` are equal to 1, otherwise the behavior is undefined.
 //           [0.0, 2.0, 0.0],
 //           [0.0, 0.0, 2.0]
 //          ]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.tuple
+
+### Semantics
+
+Produces a `result` tuple from values `val`.
+
+### Inputs
+
+| Name  | Type                                            |
+|-------|-------------------------------------------------|
+| `val` | variadic number of values of any supported type |
+
+### Outputs
+
+| Name     | Type    |
+|----------|---------|
+| `result` | `tuple` |
+
+### Constraints
+
+  * (C1) size(`val`) $=$ size(`result`) $=$ N.
+  * (C2) `type(val[i])` $=$ `type(result[i])`, for all `i` $\in$ range [0, N).
+
+### Examples
+
+```mlir
+// %val0: [1.0, 2.0]
+// %val1: (3)
+%result = "stablehlo.tuple"(%val0, %val1) : (tensor<2xf32>, tuple<tensor<i32>>) -> tuple<tensor<2xf32>, tuple<tensor<i32>>>
+// %result: ([1.0, 2.0], (3))
 ```
 
 [Back to Ops](#index-of-ops)

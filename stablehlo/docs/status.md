@@ -57,10 +57,10 @@ one of the following tracking labels.
 | broadcast                | no            | yes*         | yes*           | yes             | no          |
 | broadcast_in_dim         | yes           | yes          | infeasible     | yes             | no          |
 | case                     | yes           | revisit      | yes            | no              | no          |
-| cbrt                     | no            | yes*         | yes*           | yes             | no          |
+| cbrt                     | yes           | revisit      | yes            | yes             | no          |
 | ceil                     | yes           | yes          | yes            | yes             | yes         |
 | cholesky                 | yes           | yes          | yes            | yes             | no          |
-| clamp                    | no            | yes*         | yes*           | yes             | no          |
+| clamp                    | yes           | revisit      | yes            | yes             | no          |
 | collective_permute       | no            | revisit      | revisit        | no              | no          |
 | compare                  | no            | yes*         | yes*           | yes             | no          |
 | complex                  | yes           | yes          | yes            | yes             | no          |
@@ -93,7 +93,7 @@ one of the following tracking labels.
 | floor                    | yes           | yes          | yes            | yes             | yes         |
 | gather                   | yes           | yes          | yes            | no              | no          |
 | get_dimension_size       | no            | revisit      | no             | yes             | no          |
-| get_tuple_element        | no            | revisit      | revisit        | yes             | no          |
+| get_tuple_element        | yes           | yes          | yes            | yes             | no          |
 | if                       | yes           | revisit      | yes            | no              | no          |
 | imag                     | yes           | yes          | yes            | yes             | no          |
 | infeed                   | no            | revisit      | no             | no              | no          |
@@ -113,7 +113,7 @@ one of the following tracking labels.
 | outfeed                  | no            | revisit      | no             | no              | no          |
 | pad                      | yes           | yes          | yes            | yes             | no          |
 | popcnt                   | yes           | yes          | yes            | yes             | no          |
-| power                    | no            | yes*         | yes*           | yes             | no          |
+| power                    | yes           | revisit      | yes            | yes             | no          |
 | real                     | yes           | yes          | yes            | yes             | no          |
 | real_dynamic_slice       | no            | revisit      | no             | yes             | no          |
 | recv                     | no            | revisit      | no             | no              | no          |
@@ -128,7 +128,7 @@ one of the following tracking labels.
 | reverse                  | yes           | revisit      | yes            | yes             | no          |
 | rng                      | yes           | yes          | yes            | yes             | no          |
 | rng_bit_generator        | no            | yes*         | infeasible     | yes             | no          |
-| round_nearest_afz        | no            | yes*         | yes*           | yes             | no          |
+| round_nearest_afz        | yes           | yes          | yes            | yes             | no          |
 | round_nearest_even       | yes           | yes          | yes            | yes             | no          |
 | rsqrt                    | yes           | yes          | yes            | yes             | no          |
 | scatter                  | yes           | revisit      | no             | no              | no          |
@@ -136,9 +136,9 @@ one of the following tracking labels.
 | select_and_scatter       | no            | revisit      | no             | no              | no          |
 | send                     | no            | revisit      | no             | no              | no          |
 | set_dimension_size       | no            | yes*         | yes*           | yes             | no          |
-| shift_left               | no            | yes*         | yes*           | yes             | no          |
-| shift_right_arithmetic   | no            | yes*         | yes*           | yes             | no          |
-| shift_right_logical      | no            | yes*         | yes*           | yes             | no          |
+| shift_left               | yes           | revisit      | yes            | yes             | no          |
+| shift_right_arithmetic   | yes           | revisit      | yes            | yes             | no          |
+| shift_right_logical      | yes           | revisit      | yes            | yes             | no          |
 | sign                     | no            | yes*         | yes*           | yes             | no          |
 | sine                     | yes           | yes          | yes            | yes             | yes         |
 | slice                    | yes           | yes          | yes            | no              | no          |
@@ -150,7 +150,7 @@ one of the following tracking labels.
 | trace                    | no            | revisit      | no             | yes             | no          |
 | transpose                | yes           | yes          | yes            | yes             | yes         |
 | triangular_solve         | yes           | revisit      | yes            | no              | no          |
-| tuple                    | no            | revisit      | revisit        | yes             | no          |
+| tuple                    | yes           | yes          | yes            | yes             | no          |
 | unary_einsum             | no            | revisit      | no             | no              | no          |
 | uniform_dequantize       | no            | yes*         | yes*           | yes             | no          |
 | uniform_quantize         | no            | yes*         | infeasible     | yes             | no          |

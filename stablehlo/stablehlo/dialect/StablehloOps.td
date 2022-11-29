@@ -219,15 +219,16 @@ def StableHLO_CbrtOp: StableHLO_UnaryElementwiseOp<"cbrt",
     [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpTensor> {
   let summary = "Cubic root operator";
   let description = [{
-    Returns element-wise cubic root of the operand.
+    Performs element-wise cubic root operation on `operand` tensor and produces
+    a `result` tensor, implementing the `rootn(x, 3)` operation from the
+    IEEE-754 specification.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_unary_functions.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocbrt
 
     Example:
-
     ```mlir
-    %0 = stablehlo.cbrt %arg0 : tensor<3x4xf32>
+    %result = stablehlo.cbrt %operand : tensor<4xf32>
     ```
   }];
 }
@@ -518,16 +519,15 @@ def StableHLO_RoundOp: StableHLO_UnaryElementwiseOp<"round_nearest_afz",
     [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpTensor> {
   let summary = "Round operator, ties away from zero";
   let description = [{
-    Returns `Round(operand)` element-wise, rounding to nearest integer with
-    half-way cases rounding away from zero.
+    Performs element-wise rounding towards the nearest integer, breaking ties
+    away from zero, on the `operand` tensor and produces a `result` tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_unary_functions.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloround_nearest_afz
 
     Example:
-
     ```mlir
-    %0 = stablehlo.round_nearest_afz %11 : tensor<10x10xbf16>
+    %result = stablehlo.round_nearest_afz %operand : tensor<5xf32>
     ```
   }];
 }
@@ -815,15 +815,15 @@ def StableHLO_PowOp : StableHLO_BinaryElementwiseOp<"power",
       [Pure, HLO_CompatibleOperandsAndResultType]> {
   let summary = "Power operator";
   let description = [{
-    Returns `lhs ^ rhs` element-wise.
+    Performs element-wise exponentiation of `lhs` tensor by `rhs` tensor and
+    produces a `result` tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_binary_arithmetic_operations.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlopower
 
     Example:
-
     ```mlir
-    %0 = stablehlo.power %arg0, %arg0 : tensor<2xf32>
+    %result = stablehlo.power %lhs, %rhs : tensor<6xf32>
     ```
   }];
 }
@@ -840,7 +840,7 @@ def StableHLO_RemOp : StableHLO_BinaryElementwiseOp<"remainder",
 
     Example:
     ```mlir
-    %result = stablehlo.remainder %lhs, %rhs : (ensor<4xi64>
+    %result = stablehlo.remainder %lhs, %rhs : tensor<4xi64>
     ```
   }];
 }
@@ -849,15 +849,15 @@ def StableHLO_ShiftLeftOp : StableHLO_BinaryElementwiseOp<"shift_left",
       [Pure, HLO_CompatibleOperandsAndResultType]> {
   let summary = "Shift Left operator";
   let description = [{
-    Returns `lhs << rhs` element-wise.
+    Performs element-wise left-shift operation on the `lhs` tensor by `rhs`
+    number of bits and produces a `result` tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_binary_arithmetic_operations.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloshift_left
 
     Example:
-
     ```mlir
-    %0 = stablehlo.shift_left %arg0, %arg1 : tensor<4xi32>
+    %result = stablehlo.shift_left %lhs, %rhs : tensor<6xi8>
     ```
   }];
 }
@@ -866,15 +866,15 @@ def StableHLO_ShiftRightArithmeticOp : StableHLO_BinaryElementwiseOp<"shift_righ
       [Pure, HLO_CompatibleOperandsAndResultType]> {
   let summary = "Shift right arithmetic operator";
   let description = [{
-    Returns arithmetic `lhs >> rhs` element-wise.
+    Performs element-wise arithmetic right-shift operation on the `lhs` tensor
+    by `rhs` number of bits and produces a `result` tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_binary_arithmetic_operations.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloshift_right_arithmetic
 
     Example:
-
     ```mlir
-    %0 = stablehlo.shift_right_arithmetic %arg0, %arg1 : tensor<4xi32>
+    %result = stablehlo.shift_right_arithmetic %lhs, %rhs : tensor<6xi8>
     ```
   }];
 }
@@ -883,15 +883,15 @@ def StableHLO_ShiftRightLogicalOp : StableHLO_BinaryElementwiseOp<"shift_right_l
       [Pure, HLO_CompatibleOperandsAndResultType]> {
   let summary = "Shift right logical operator";
   let description = [{
-    Returns logical `lhs >> rhs` element-wise.
+    Performs element-wise logical right-shift operation on the `lhs` tensor by
+    `rhs` number of bits and produces a `result` tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_binary_arithmetic_operations.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloshift_right_logical
 
     Example:
-
     ```mlir
-    %0 = stablehlo.shift_right_logical %arg0, %arg1 : tensor<4xi32>
+    %result = stablehlo.shift_right_logical %lhs, %rhs : tensor<6xi8>
     ```
   }];
 }
@@ -1389,14 +1389,15 @@ def StableHLO_GetTupleElementOp: StableHLO_Op<"get_tuple_element", [Pure,
      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "GetTupleElement operator";
   let description = [{
-    Returns a member of a tuple specified by an index.
+    Extracts element at `index` position of the `operand` tuple and produces a
+    `result`.
 
-    See https://www.tensorflow.org/xla/operation_semantics#gettupleelement.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloget_tuple_element
 
     Example:
-
     ```mlir
-    %0 = stablehlo.get_tuple_element %arg0[0] : (tuple<tensor<f32>, tensor<i32>>) -> tensor<f32>
+    %result = stablehlo.get_tuple_element %operand[0] : (tuple<tensor<2xf32>, tuple<tensor<i32>>>) -> tensor<2xf32>
     ```
   }];
   let arguments = (ins
@@ -1417,14 +1418,14 @@ def StableHLO_TupleOp : StableHLO_Op<"tuple", [Pure,
      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "XLA's tuple op";
   let description = [{
-    Groups a set of tensor inputs into a single tuple object.
+    Produces a `result` tuple from values `val`.
 
-    See https://www.tensorflow.org/xla/operation_semantics#tuple.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlotuple
 
     Example:
-
     ```mlir
-    %0 = stablehlo.tuple %arg0, %arg0 : tuple<tensor<i32>, tensor<i32>>
+    %result = stablehlo.tuple %val0, %val1 : tuple<tensor<2xf32>, tuple<tensor<i32>>>
     ```
    }];
 
@@ -1850,19 +1851,15 @@ def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [Pure,
   InferTensorType]> {
   let summary = "Clamp operator";
   let description = [{
-    Clamps an operand to within the range between a minimum and maximum value.
+    Clamps every element of the `operand` tensor between a minimum and maximum
+    value and produces a `result` tensor.
 
-    Note: All three arrays must be the same shape. Alternatively, as a
-          restricted form of broadcasting, min and/or max can be a scalar (0D
-          tensor) of the element type of the tensor operand.
-
-    See https://www.tensorflow.org/xla/operation_semantics#clamp.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloclamp
 
     Example:
-
     ```mlir
-    %0 = stablehlo.clamp %arg0, %arg1, %arg2 : (tensor<f32>, tensor<4xf32>, tensor<f32>) -> tensor<4xf32>
-    %1 = stablehlo.clamp %arg1, %arg1, %arg1 : tensor<4xf32>
+    %result = stablehlo.clamp %min, %operand, %max : tensor<3xi32>
     ```
   }];
 
