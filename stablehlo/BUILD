@@ -1,16 +1,17 @@
-load("//tools/build_defs/license:license.bzl", "license")
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
 
 package(
-    default_applicable_licenses = ["//stablehlo:license"],
+    # copybara:uncomment default_applicable_licenses = ["//stablehlo:license"],
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
 
-license(
-    name = "license",
-    package_name = "stablehlo",
-)
+# copybara:uncomment_begin
+# license(
+#     name = "license",
+#     package_name = "stablehlo",
+# )
+# copybara:uncomment_end
 
 exports_files([
     "LICENSE",
