@@ -76,10 +76,8 @@ limitations under the License.
 #include "stablehlo/dialect/TypeInference.h"
 
 // Include order matters
-using mlir::hlo::parseDimensionSizes;
-using mlir::hlo::parseIntArray;
-using mlir::hlo::printDimensionSizes;
-using mlir::hlo::printIntArray;
+using mlir::hlo::parseDimSizes;
+using mlir::hlo::printDimSizes;
 #include "stablehlo/dialect/StablehloEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "stablehlo/dialect/StablehloAttrs.cpp.inc"
@@ -255,7 +253,9 @@ LogicalResult verifyReduceScatter(Operation* op, TypeRange operandTypes,
 }
 
 LogicalResult ReduceScatterOp::verify() {
-  if (failed(verifyReplicaGroups(*this, /*is_uniform_sized=*/true)))
+  if (failed(hlo::verifyReplicaGroups(getLoc(), getReplicaGroups(),
+                                      /*allGroupsMustHaveSameSize=*/true,
+                                      /*expectedGroupSize*/ llvm::None)))
     return failure();
   auto operandType = getOperand().getType().cast<TensorType>();
   bool operandTypeRanked = operandType.isa<RankedTensorType>();
@@ -1921,6 +1921,26 @@ LogicalResult AllToAllOp::inferReturnTypeComponents(
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
   AllToAllOp::Adaptor adaptor(operands, attributes, regions);
+
+  int64_t splitCount = adaptor.getSplitCount();
+  if (splitCount <= 0)
+    return emitOptionalError(location, "AllToAll split_count must be > 0");
+
+  if (failed(hlo::verifyReplicaGroups(location, adaptor.getReplicaGroups(),
+                                      /*allGroupsMustHaveSameSize=*/true,
+                                      splitCount)))
+    return failure();
+
+  int64_t splitDimension = static_cast<int64_t>(adaptor.getSplitDimension());
+  if (splitDimension < 0)
+    return emitOptionalError(location,
+                             "AllToAll split_dimension cannot be negative");
+
+  int64_t concatDimension = static_cast<int64_t>(adaptor.getConcatDimension());
+  if (concatDimension < 0)
+    return emitOptionalError(location,
+                             "AllToAll concat_dimension cannot be negative");
+
   Type operandType = adaptor.getOperand().getType();
   RankedTensorType operandRankedType = operandType.dyn_cast<RankedTensorType>();
   if (!operandRankedType) {
@@ -1930,14 +1950,12 @@ LogicalResult AllToAllOp::inferReturnTypeComponents(
   }
 
   int64_t inputRank = operandRankedType.getRank();
-  int64_t splitDimension = static_cast<int64_t>(adaptor.getSplitDimension());
-  int64_t concatDimension = static_cast<int64_t>(adaptor.getConcatDimension());
-  if (splitDimension >= inputRank || splitDimension < 0) {
+  if (splitDimension >= inputRank) {
     return emitOptionalError(location, "AllToAll split_dimension ",
                              splitDimension,
                              " is out-of-bounds for input rank ", inputRank);
   }
-  if (concatDimension >= inputRank || concatDimension < 0) {
+  if (concatDimension >= inputRank) {
     return emitOptionalError(location, "AllToAll concat_dimension ",
                              concatDimension,
                              " is out-of-bounds for input rank ", inputRank);
@@ -1945,7 +1963,6 @@ LogicalResult AllToAllOp::inferReturnTypeComponents(
 
   // If operand is ranked, size of split dimension should be a multiple of split
   // count.
-  int64_t splitCount = adaptor.getSplitCount();
   auto splitDimSize = operandRankedType.getDimSize(splitDimension);
   if (splitDimSize % splitCount != 0) {
     return emitOptionalError(
@@ -1966,25 +1983,54 @@ LogicalResult AllToAllOp::inferReturnTypeComponents(
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllGatherOp::verify() {
-  // If operand and result are both ranked, then the size of the gather
-  // dimension in the result should be a multiple of the size of the gather
-  // dimension in the operand.
+  if (failed(hlo::verifyReplicaGroups(getLoc(), getReplicaGroups(),
+                                      /*allGroupsMustHaveSameSize=*/true,
+                                      /*expectedGroupSize*/ llvm::None)))
+    return failure();
+
   auto operandType = getOperand().getType().dyn_cast<RankedTensorType>();
   auto resultType = getType().dyn_cast<RankedTensorType>();
-  uint64_t allGatherDimIndex = getAllGatherDim();
-  if (!operandType || !resultType ||
-      operandType.isDynamicDim(allGatherDimIndex) ||
-      resultType.isDynamicDim(allGatherDimIndex))
-    return success();
-  if (operandType.getDimSize(allGatherDimIndex) == 0)
-    return emitOpError() << "operand gather dimension cannot be zero.";
-  if ((resultType.getDimSize(allGatherDimIndex) %
-       operandType.getDimSize(allGatherDimIndex)) != 0)
-    return emitOpError()
-           << "result gather dimension has size "
-           << resultType.getDimSize(allGatherDimIndex)
-           << ", expected to be a multiple of operand gather dimension size "
-           << operandType.getDimSize(allGatherDimIndex);
+  int64_t allGatherDimIndex = getAllGatherDim();
+
+  if (allGatherDimIndex < 0)
+    return emitOpError() << "all_gather_dim cannot be negative";
+
+  if (operandType) {
+    if (allGatherDimIndex >= operandType.getRank())
+      return emitOpError() << "all_gather_dim must be a valid index of operand";
+
+    if (operandType.getDimSize(allGatherDimIndex) == 0)
+      return emitOpError()
+             << "dimension size of operand at 'all_gather_dim' cannot be zero";
+  }
+
+  if (operandType && resultType) {
+    if (resultType.getRank() != operandType.getRank())
+      return emitOpError() << "operand and return must have the same rank";
+
+    for (int64_t i = 0; i < operandType.getRank(); i++) {
+      if (i == allGatherDimIndex || operandType.isDynamicDim(i) ||
+          resultType.isDynamicDim(i))
+        continue;
+
+      if (resultType.getDimSize(i) != operandType.getDimSize(i))
+        return emitOpError() << "operand and result should have the same shape "
+                                "except for the "
+                                "dimension size at 'all_gather_dim'";
+    }
+
+    if (operandType.isDynamicDim(allGatherDimIndex) ||
+        resultType.isDynamicDim(allGatherDimIndex))
+      return success();
+
+    if ((resultType.getDimSize(allGatherDimIndex) %
+         operandType.getDimSize(allGatherDimIndex)) != 0)
+      return emitOpError()
+             << "result gather dimension has size "
+             << resultType.getDimSize(allGatherDimIndex)
+             << ", expected to be a multiple of operand gather dimension size "
+             << operandType.getDimSize(allGatherDimIndex);
+  }
 
   return success();
 }
@@ -3243,6 +3289,18 @@ LogicalResult ReduceOp::reifyReturnTypeShapes(
 }
 
 //===----------------------------------------------------------------------===//
+// OptimizationBarrierOp
+//===----------------------------------------------------------------------===//
+LogicalResult OptimizationBarrierOp::inferReturnTypes(
+    MLIRContext*, Optional<Location>, ValueRange operands,
+    DictionaryAttr attributes, RegionRange,
+    SmallVectorImpl<Type>& inferredReturnTypes) {
+  OptimizationBarrierOp::Adaptor adaptor(operands, attributes);
+  return hlo::inferOptimizationBarrierOp(adaptor.getOperand(),
+                                         inferredReturnTypes);
+}
+
+//===----------------------------------------------------------------------===//
 // RngBitGeneratorOp
 //===----------------------------------------------------------------------===//
 
@@ -4494,19 +4552,25 @@ void StablehloDialect::printAttribute(Attribute attr,
 
 /// Helpers for attributes parsing.
 
-static ParseResult parseDims(AsmParser& parser, SmallVector<int64_t>& dims) {
-  dims.clear();
-  return parseIntArray(parser, dims);
+static ParseResult parseDims(AsmParser& parser,
+                             SmallVector<int64_t>& dimSizes) {
+  dimSizes.clear();
+  auto failOrDims = parseDimSizes(parser);
+  if (failed(failOrDims)) {
+    return failure();
+  }
+  dimSizes = std::move(*failOrDims);
+  return success();
 }
 
 static ParseResult parseDimsWithMinimumElements(AsmParser& parser,
-                                                SmallVector<int64_t>& dims,
+                                                SmallVector<int64_t>& dimSizes,
                                                 int minElements) {
-  if (failed(parseDims(parser, dims))) return failure();
-  if (static_cast<int64_t>(dims.size()) < minElements)
+  if (failed(parseDims(parser, dimSizes))) return failure();
+  if (static_cast<int64_t>(dimSizes.size()) < minElements)
     return parser.emitError(parser.getCurrentLocation())
            << "expected at least " << minElements << " element(s), found "
-           << dims.size();
+           << dimSizes.size();
   return success();
 }
 

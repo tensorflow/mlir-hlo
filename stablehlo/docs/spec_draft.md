@@ -102,26 +102,197 @@ never produced as outputs.
 
 ## Programs
 
-StableHLO programs consist of functions. Each function has inputs and outputs
-of supported types and a list of ops in static single-assignment (SSA) form
-which is terminated by a return op which produces the outputs of the function.
-StableHLO ops take inputs and produce outputs.
+**StableHLO programs** consist of **StableHLO functions**. Each function has
+inputs and outputs of supported types and a list of ops in static
+single-assignment (SSA) form which is terminated by a `return` op which produces
+the outputs of the function.
+
+Here is an example of a program that consists of a function `@main` which takes
+three inputs (`%image`, `%weights` and `%bias`) and produces one output (`%4`).
+Below we describe how this program can be executed.
 
 ```mlir
-ml_program.func @example_func(%arg: tensor<2x3xf32>) -> tensor<2x3xf32> {
- %0 = "stablehlo.floor"(%arg) : (tensor<2x3xf32>) -> tensor<2x3xf32>
- %1 = "stablehlo.ceil"(%arg) : (tensor<2x3xf32>) -> tensor<2x3xf32>
- %2 = "stablehlo.add"(%0, %1) : (tensor<2x3xf32>, tensor<2x3xf32>) -> tensor<2x3xf32>
- ml_program.return %2 : tensor<2x3xf32>
+stablehlo.func @main(
+  %image: tensor<28x28xf32>,
+  %weights: tensor<784x10xf32>,
+  %bias: tensor<1x10xf32>
+) -> tensor<1x10xf32> {
+  %0 = "stablehlo.reshape"(%image) : (tensor<28x28xf32>) -> tensor<1x784xf32>
+  %1 = "stablehlo.dot"(%0, %weights) : (tensor<1x784xf32>, tensor<784x10xf32>) -> tensor<1x10xf32>
+  %2 = "stablehlo.add"(%1, %bias) : (tensor<1x10xf32>, tensor<1x10xf32>) -> tensor<1x10xf32>
+  %3 = "stablehlo.constant"() { value = dense<0.0> : tensor<1x10xf32> } : () -> tensor<1x10xf32>
+  %4 = "stablehlo.maximum"(%2, %3) : (tensor<1x10xf32>, tensor<1x10xf32>) -> tensor<1x10xf32>
+  "stablehlo.return"(%4): (tensor<1x10xf32>) -> ()
 }
 ```
 
-A program is executed by passing argument values to a given function and
-computing output values. Output values of a function are computed by evaluating
-the graph of ops rooted in the corresponding return op. The evaluation order is
-implementation-defined, as long as ops are evaluated before their uses. Possible
-execution orders of the above example program are `%0` → `%1` → `%2` → `return`
-or `%1` → `%0` → `%2` → `return`.
+## Execution
+
+### Sequential execution
+
+A StableHLO program is executed by providing input values to the `main` function
+and computing output values. Output values of a function are computed by
+executing the graph of ops rooted in the corresponding `return` op.
+
+The execution order is implementation-defined, as long as ops are executed
+before their uses. Possible execution orders of the example program above are
+`%0` → `%1` → `%2` → `%3` → `%4` → `return` or `%3` → `%0` → `%1` → `%2` → `%4`
+→ `return`.
+
+More formally, a **StableHLO process** is a combination of:
+1) a StableHLO program, 2) operation statuses (not executed yet,
+already executed), and 3) intermediate values that the process is working on.
+The process starts with input values to the `main` function, progresses through
+the graph of ops updating operation statuses and intermediate values and
+finishes with output values. Further formalization is TBD.
+
+### Parallel execution
+
+StableHLO programs can be executed in parallel, organized into a 2D grid of
+`num_replicas` by `num_partitions` which both have type `ui32`.
+
+In the **StableHLO grid**, `num_replicas * num_partitions` of StableHLO
+processes are executing at the same time. Each process has a unique
+`process_id = (replica_id, partition_id)`, where
+`replica_id ∊ replica_ids = [0, ..., num_replicas-1]` and
+`partition_id ∊ partition_ids = [0, ..., num_partitions-1]` which both have
+type `ui32`.
+
+The size of the grid is known statically for every program, and the position
+within the grid is known statically for every process. Each process has access
+to its position within the grid via the `replica_id` and `partition_id` ops.
+
+Within the grid, the programs can all be the same (in the "Single Program,
+Multiple Data" style), can all be different (in the "Multiple Program, Multiple
+Data" style) or something in between.
+
+Within the grid, the processes are mostly independent from each other - they
+have separate operation statuses, separate input/intermediate/output values and
+most of the ops are executed separately between processes, with the exception of
+a small number of collective ops described below.
+
+Given that execution of most of the ops is only using values from the same
+process, it is usually unambiguous to refer to these values by their names.
+However, when describing semantics of collective ops, that is insufficient, and
+we use the notation `name@process_id` to refer to the value `name` within a
+particular process. (From that perspective, unqualified `name` can be viewed as
+a shorthand for `name@(replica_id(), partition_id())`).
+
+The execution order across processes is implementation-defined, except for the
+synchronization introduced by collective ops as described below.
+
+### Collective ops
+
+There are five collective ops in StableHLO: `all_gather`, `all_reduce`,
+`all_to_all`, `collective_permute` and `reduce_scatter`. All these ops split
+the processes in the StableHLO grid into **StableHLO process groups** and
+execute a joint computation within each process group, independently from other
+process groups.
+
+Within each process group, collective ops may introduce a synchronization
+barrier. Further formalization, e.g. elaborating on when exactly this
+synchronization happens, how exactly the processes arrive at this barrier,
+and what happens if they don't, is TBD.
+
+If the process group involves cross-partition communication, i.e. there are
+processes in the process group whose partition ids are different, then execution
+of the collective op needs a **StableHLO channel**, and the collective op must
+provide a positive `channel_id` of type `si64`. Further formalization, e.g.
+where these channel ids are coming from and how they are synchronized between
+programs, is TBD. Cross-replica communication doesn't need channels.
+
+The computations performed by the collective ops are specific to individual ops
+and are described in individual op sections below. However, the strategies by
+which the grid is split into process groups are shared between these ops and are
+described in this section. More formally, StableHLO supports the following
+four strategies.
+
+#### cross_replica
+
+Only cross-replica communications happen within each process group. This
+strategy takes `replica_groups` - a list of lists of replica ids - and computes
+a Cartesian product of `replica_groups` by `partition_ids`. `replica_groups`
+must have unique elements and cover all `replica_ids`. More formally:
+
+```Python
+def cross_replica(replica_groups: List[List[ReplicaId]]) -> List[List[ProcessId]]:
+  for replica_group in replica_groups:
+    for partition_id in partition_ids:
+      process_group = []
+      for replica_id in replica_group:
+        process_group.append((replica_id, partition_id))
+      yield process_group
+```
+
+For example, for `replica_groups = [[0, 1], [2, 3]]` and `num_partitions = 2`,
+`cross_replica` will produce
+`[[(0, 0), (1, 0)], [(0, 1), (1, 1)], [(2, 0), (3, 0)], [(2, 1), (3, 1)]]`.
+
+#### cross_partition
+
+Only cross-partition communications happen within each process group. This
+strategy takes `partition_groups` - a list of lists of partition ids - and
+computes a Cartesian product of `partition_groups` by `replica_ids`.
+`partition_groups` must have unique elements and cover all `partition_ids`.
+More formally:
+
+```Python
+def cross_partition(partition_groups: List[List[PartitionId]]) -> List[List[ProcessId]]:
+  for partition_group in partition_groups:
+    for replica_id in replica_ids:
+      process_group = []
+      for partition_id in partition_group:
+        process_group.append((replica_id, partition_id))
+      yield process_group
+```
+
+For example, for `partition_groups = [[0, 1]]` and `num_replicas = 4`,
+`cross_partition` will produce
+`[[(0, 0), (0, 1)], [(1, 0), (1, 1)], [(2, 0), (2, 1)], [(3, 0), (3, 1)]]`.
+
+#### cross_replica_and_partition
+
+Both cross-replica and cross-partition communications may happen within each
+process group. This strategy takes `replica_groups` - a list of lists of
+replica ids - and computes Cartesian products of each `replica_group` by
+`partition_ids`. `replica_groups` must have unique elements and cover all
+`replica_ids`. More formally:
+
+```Python
+def cross_replica_and_partition(replica_groups: List[List[ReplicaId]]) -> List[List[ProcessId]]:
+  for replica_group in replica_groups:
+    process_group = []
+    for partition_id in partition_ids:
+      for replica_id in replica_group:
+        process_group.append((replica_id, partition_id))
+    yield process_group
+```
+
+For example, for `replica_groups = [[0, 1], [2, 3]]` and `num_partitions = 2`,
+`cross_replica_and_partition` will produce
+`[[(0, 0), (1, 0), (0, 1), (1, 1)], [(2, 0), (3, 0), (2, 1), (3, 1)]]`.
+
+#### flattened_ids
+
+This strategy takes `flattened_id_groups` - a list of lists of "flattened"
+process ids in the form of `replica_id * num_partitions + partition_id` - and
+turns them into process ids. `flattened_id_groups` must have unique elements
+and cover all `process_ids`. More formally:
+
+```Python
+def flattened_ids(flattened_id_groups: List[List[ui32]]) -> List[List[ProcessId]]:
+  for flattened_id_group in flattened_id_groups:
+    process_group = []
+    for flattened_id in flattened_id_group:
+      replica_id = flattened_id // num_partitions
+      partition_id = flattened_id % num_partitions
+      process_group.append((replica_id, partition_id))
+    yield process_group
+```
+
+For example, for `flattened_id_groups = [[0, 1, 2, 3], [4, 5, 6, 7]]`,
+`num_replicas = 4` and `num_partitions = 2`, `flattened_ids` will produce
+`[[(0, 0), (0, 1), (1, 0), (1, 1)], [(2, 0), (2, 1), (3, 0), (3, 1)]]`.
 
 ## Errors
 
@@ -166,22 +337,29 @@ syntax.
    * [abs](#stablehloabs)
    * [add](#stablehloadd)
    * [after_all](#stablehloafter_all)
+   * [all_gather](#stablehloall_gather)
+   * [all_to_all](#stablehloall_to_all)
    * [and](#stablehloand)
    * [atan2](#stablehloatan2)
+   * [batch_norm_grad](#stablehlobatch_norm_grad)
    * [batch_norm_inference](#stablehlobatch_norm_inference)
    * [batch_norm_training](#stablehlobatch_norm_training)
+   * [bitcast_convert](#stablehlobitcast_convert)
    * [broadcast_in_dim](#stablehlobroadcast_in_dim)
    * [case](#stablehlocase)
    * [cbrt](#stablehlocbrt)
    * [ceil](#stablehloceil)
    * [cholesky](#stablehlocholesky)
    * [clamp](#stablehloclamp)
+   * [compare](#stablehlocompare)
    * [complex](#stablehlocomplex)
    * [concatenate](#stablehloconcatenate)
    * [constant](#stablehloconstant)
    * [cosine](#stablehlocosine)
    * [count_leading_zeros](#stablehlocount_leading_zeros)
    * [divide](#stablehlodivide)
+   * [dynamic_slice](#stablehlodynamic_slice)
+   * [dynamic_update_slice](#stablehlodynamic_update_slice)
    * [exponential](#stablehloexponential)
    * [exponential_minus_one](#stablehloexponential_minus_one)
    * [fft](#stablehlofft)
@@ -201,6 +379,7 @@ syntax.
    * [multiply](#stablehlomultiply)
    * [negate](#stablehlonegate)
    * [not](#stablehlonot)
+   * [optimization_barrier](#stablehlooptimization_barrier)
    * [or](#stablehloor)
    * [pad](#stablehlopad)
    * [popcnt](#stablehlopopcnt)
@@ -208,9 +387,11 @@ syntax.
    * [real](#stablehloreal)
    * [reduce](#stablehloreduce)
    * [remainder](#stablehloremainder)
+   * [replica_id](#stablehloreplica_id)
    * [reshape](#stablehloreshape)
    * [reverse](#stablehloreverse)
    * [rng](#stablehlorng)
+   * [rng_bit_generator](#stablehlorng_bit_generator)
    * [round_nearest_afz](#stablehloround_nearest_afz)
    * [round_nearest_even](#stablehloround_nearest_even)
    * [rsqrt](#stablehlorsqrt)
@@ -219,6 +400,7 @@ syntax.
    * [shift_left](#stablehloshift_left)
    * [shift_right_arithmetic](#stablehloshift_right_arithmetic)
    * [shift_right_logical](#stablehloshift_right_logical)
+   * [sign](#stablehlosign)
    * [sine](#stablehlosine)
    * [slice](#stablehloslice)
    * [sort](#stablehlosort)
@@ -329,8 +511,8 @@ the IEEE-754 specification. For boolean element type, the behavior is same as
 ### Semantics
 
 Ensures that the operations producing the `inputs` are executed before any
-operations that depend on `result`. Execution of this operation does nothing, it
-only exists to establish data dependencies from `result` to `inputs`.
+operations that depend on `result`. Execution of this operation does nothing,
+it only exists to establish data dependencies from `result` to `inputs`.
 
 ### Inputs
 
@@ -348,6 +530,177 @@ only exists to establish data dependencies from `result` to `inputs`.
 
 ```mlir
 %result = "stablehlo.after_all"(%input0, %input1) : (!stablehlo.token, !stablehlo.token) -> !stablehlo.token
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.all_gather
+
+### Semantics
+
+Within each process group in the StableHLO grid, concatenates the values of the
+`operand` tensor from each process along `all_gather_dim` and produces a
+`result` tensor.
+
+The operation splits the StableHLO grid into `process_groups` as follows:
+  * `channel_id <= 0` and `use_global_device_ids = false`,
+    `cross_replica(replica_groups)`.
+  * `channel_id > 0` and `use_global_device_ids = false`,
+    `cross_replica_and_partition(replica_groups)`.
+  * `channel_id > 0` and `use_global_device_ids = true`,
+    `flattened_ids(replica_groups)`.
+
+Afterwards, within each `process_group`:
+  * `operands@receiver = [operand@sender for sender in process_group]` for all
+    `receiver` in `process_group`.
+  * `result@process = concatenate(operands@process, all_gather_dim)` for all
+    `process` in `process_group`.
+
+### Inputs
+
+| Name                    | Type                                         |
+|-------------------------|----------------------------------------------|
+| `operand`               | tensor of any supported type                 |
+| `all_gather_dim`        | constant of type `si64`                      |
+| `replica_groups`        | 2-dimensional tensor constant of type `si64` |
+| `channel_id`            | constant of type `si64`                      |
+| `use_global_device_ids` | constant of type `boolean`                   |
+
+### Outputs
+
+| Name     | Type                         |
+|----------|------------------------------|
+| `result` | tensor of any supported type |
+
+### Constraints
+
+  * (C1) `all_gather_dim` $\in$ [0, rank(`operand`)).
+  * (C2) All values in `replica_groups` are unique.
+  * (C3) `size(replica_groups)` depends on the process grouping strategy:
+    * If `cross_replica`, `num_replicas`.
+    * If `cross_replica_and_partition`, `num_replicas`.
+    * If `flattened_ids`, `num_processes`.
+  * (C4) $0 \le$ `replica_groups`[i] $\lt$ size(`replica_groups`) $\forall i$
+         from `indices(replica_groups)`.
+  * (C5) If `use_global_device_ids = true`, then `channel_id > 0`. [todo](https://github.com/openxla/stablehlo/issues/654)
+  * (C6)`type(result) = type(operand)` except that
+    * `dim(result, all_gather_dim)` = `dim(operand, all_gather_dim) * dim(process_groups, 1)`.
+
+### Examples
+
+```mlir
+// num_replicas: 2
+// num_partitions: 1
+// %operand@(0, 0): [[1.0, 2.0], [3.0, 4.0]]
+// %operand@(1, 0): [[5.0, 6.0], [7.0, 8.0]]
+%result = "stablehlo.all_gather"(%operand) {
+  all_gather_dim = 1 : i64,
+  replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
+  // use_global_device_ids = false
+} : (tensor<2x2xf32>) -> tensor<2x4xf32>
+// %result@(0, 0): [[1.0, 2.0, 5.0, 6.0], [3.0, 4.0, 7.0, 8.0]]
+// %result@(1, 0): [[1.0, 2.0, 5.0, 6.0], [3.0, 4.0, 7.0, 8.0]]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.all_to_all
+
+### Semantics
+
+<img align="center" src="spec_draft/all_to_all.svg" />
+
+Within each process group in the StableHLO grid, splits the values of the
+`operand` tensor along `split_dimension` into parts, scatters the split parts
+between the processes, concatenates the scattered parts along `concat_dimension`
+and produces a `result` tensor.
+
+The operation splits the StableHLO grid into process groups using the
+`cross_replica(replica_groups)` strategy.
+
+Afterwards, within each `process_group`:
+  * ```
+    split_parts@sender = [
+        slice(
+          operand=operand@sender,
+          start_indices=[s0, s1, ..., sR-1],
+            # where
+            #  - sj = 0 if j != split_dimension
+            #  - sj = i * dim(operand) // split_count, if j == split_dimension
+            #  - R = rank(operand)
+          limit_indices=[l0, l1, ..., lR-1],
+            # where
+            #   - lj = dim(operand, j) if j != split_dimension
+            #   - lj = (i + 1) * dim(operand, split_dimension) // split_count, if j == split_dimension
+          strides=[1, ..., 1]
+        ) for i in range(split_count)
+     ]
+     ``` for all `sender` in `process_group`.
+  * `scattered_parts@receiver = [split_parts@sender[receiver_index] for sender in process_group]`
+    where `receiver_index = index_of(receiver, process_group)`.
+  * `result@process = concatenate(scattered_parts@process, concat_dimension)`.
+
+### Inputs
+
+| Name               | Type                                         |
+|--------------------|----------------------------------------------|
+| `operand`          | tensor of any supported type                 |
+| `split_dimension`  | constant of type `si64`                      |
+| `concat_dimension` | constant of type `si64`                      |
+| `split_count`      | constant of type `si64`                      |
+| `replica_groups`   | 2-dimensional tensor constant of type `si64` |
+
+### Outputs
+
+| Name     | Type                         |
+|----------|------------------------------|
+| `result` | tensor of any supported type |
+
+### Constraints
+
+  * (C1) `split_dimension` $\in$ [0, rank(`operand`)).
+  * (C2) dim(`operand`, `split_dimension`) % `split_count` $=$ 0.
+  * (C3) `concat_dimension` $\in$ [0, rank(`operand`)).
+  * (C4) `split_count` $\gt$ 0.
+  * (C5) All values in `replica_groups` are unique.
+  * (C6) `size(replica_groups)` = `num_replicas`.
+  * (C7) $0 \le$ `replica_groups`[i] $\lt$ size(`replica_groups`) $\forall i$
+         from `indices(replica_groups)`.
+  * (C8) `type(result) = type(operand)` except that
+    * `dim(result, split_dimension) = dim(operand, split_dimension) / split_count`.
+    * `dim(result, concat_dimension) = dim(operand, concat_dimension) * split_count`.
+
+### Examples
+
+```mlir
+// num_replicas: 2
+// num_partitions: 1
+// %operand@(0, 0): [
+//                   [1.0, 2.0, 3.0, 4.0],
+//                   [5.0, 6.0, 7.0, 8.0]
+//                  ]
+// %operand@(1, 0): [
+//                   [9.0, 10.0, 11.0, 12.0],
+//                   [13.0, 14.0, 15.0, 16.0]
+//                  ]
+%result = "stablehlo.all_to_all"(%operand) {
+  split_dimension = 1 : i64,
+  concat_dimension = 0 : i64,
+  split_count = 2 : i64,
+  replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
+} : (tensor<2x4xf32>) -> tensor<4x2xf32>
+// %result@(0, 0): [
+//                  [1.0, 2.0],
+//                  [5.0, 6.0],
+//                  [9.0, 10.0],
+//                  [13.0, 14.0]
+//                 ]
+// %result@(1, 0): [
+//                  [3.0, 4.0],
+//                  [7.0, 8.0],
+//                  [11.0, 12.0],
+//                  [15.0, 16.0]
+//                 ]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -421,6 +774,128 @@ with corner cases TBD. Numeric precision is implementation-defined.
 // %rhs: [0.0, 0.0, 0.0]
 %result = "stablehlo.atan2"(%lhs, %rhs) : (tensor<3xf32>, tensor<3xf32>) -> tensor<3xf32>
 // %result: [0.0, 1.57079637, -1.57079637] // [0.0, pi/2, -pi/2]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.batch_norm_grad
+
+### Semantics
+
+Computes gradients of several inputs of
+[batch_norm_training](#stablehlobatch_norm_training) backpropagating from
+`grad_output`, and produces `grad_operand`, `grad_scale` and `grad_offset`
+tensors. More formally, this operation can be expressed as a decomposition to
+existing StableHLO operations using Python-like syntax as follows:
+
+```python
+def compute_sum(operand, feature_index):
+  (sum,) = reduce(
+      inputs=[operand],
+      init_values=[0.0],
+      dimensions=[i for i in range(rank(operand)) if i != feature_index],
+      body=lambda x, y: add(x, y))
+  return sum
+
+def compute_mean(operand, feature_index):
+  sum = compute_sum(operand, feature_index)
+  divisor = constant(num_elements(operand) / dim(operand, feature_index))
+  divisor_bcast = broadcast_in_dim(divisor, [], shape(sum))
+  return divide(sum, divisor_bcast)
+
+def batch_norm_grad(operand, scale, mean, variance, grad_output, epsilon, feature_index):
+  # Broadcast inputs to shape(operand)
+  scale_bcast = broadcast_in_dim(scale, [feature_index], shape(operand))
+  mean_bcast = broadcast_in_dim(mean, [feature_index], shape(operand))
+  variance_bcast = broadcast_in_dim(variance, [feature_index], shape(operand))
+  epsilon_bcast = broadcast_in_dim(constant(epsilon), [], shape(operand))
+
+  # Perform normalization using the provided `mean` and `variance`
+  # Intermediate values will be useful for computing gradients
+  centered_operand = subtract(operand, mean_bcast)
+  stddev = sqrt(add(variance_bcast, epsilon_bcast))
+  normalized_operand = divide(centered_operand, stddev)
+
+  # Use the implementation from batchnorm_expander.cc in XLA
+  # Temporary variables have exactly the same names as in the C++ code
+  elements_per_feature = constant(
+    divide(size(operand), dim(operand, feature_index)))
+  i1 = multiply(
+    grad_output,
+    broadcast_in_dim(elements_per_feature, [], shape(operand)))
+  i2 = broadcast_in_dim(
+    compute_sum(grad_output, feature_index),
+    [feature_index], shape(operand))
+  i3 = broadcast_in_dim(
+    compute_sum(multiply(grad_output, centered_operand)),
+    [feature_index], shape(operand))
+  i4 = multiply(i3, centered_operand)
+  i5 = divide(i4, add(variance_bcast, epsilon_bcast))
+  grad_operand = multiply(
+    divide(divide(scale_bcast, stddev), elements_per_feature),
+    subtract(subtract(i1, i2), i5))
+  grad_scale = compute_sum(
+    multiply(grad_output, normalized_operand), feature_index)
+  grad_offset = compute_sum(grad_output, feature_index)
+  return grad_operand, grad_scale, grad_offset
+```
+
+### Inputs
+
+| Name            | Type                                        |
+|-----------------|---------------------------------------------|
+| `operand`       | tensor of floating-point type               |
+| `scale`         | 1-dimensional tensor of floating-point type |
+| `mean`          | 1-dimensional tensor of floating-point type |
+| `variance`      | 1-dimensional tensor of floating-point type |
+| `grad_output`   | tensor of floating-point type               |
+| `epsilon`       | constant of type `f32`                      |
+| `feature_index` | constant of type `si64`                     |
+
+### Outputs
+
+| Name           | Type                                        |
+|----------------|---------------------------------------------|
+| `grad_operand` | tensor of floating-point type               |
+| `grad_scale`   | 1-dimensional tensor of floating-point type |
+| `grad_offset`  | 1-dimensional tensor of floating-point type |
+
+### Constraints
+
+  * (C1) 0 $\le$ `feature_index` $\lt$ rank(`operand`).
+  * (C2) `operand`, `scale`, `mean`, `variance`, `grad_output`, `grad_operand`
+         `grad_scale` and `grad_offset` have the same element type.
+  * (C3) `operand`, `grad_output` and `grad_operand` have the same shape.
+  * (C4) `scale`, `mean`, `variance`, `grad_scale` and `grad_offset` have the
+         same shape.
+  * (C5) size(`scale`) $=$ `dim(operand, feature_index)`.
+
+### Examples
+
+```mlir
+// %operand: [
+//            [[1.0, 2.0], [3.0, 4.0]],
+//            [[3.0, 4.0], [1.0, 2.0]]
+//           ]
+// %scale: [1.0, 1.0]
+// %mean: [2.0, 3.0]
+// %variance: [1.0, 1.0]
+// %grad_output: [
+//                [[0.1, 0.1], [0.1, 0.1]],
+//                [[0.1, 0.1], [0.1, 0.1]]
+//               ]
+%grad_operand, %grad_scale, %grad_offset =
+"stablehlo.batch_norm_grad"(%operand, %scale, %mean, %variance, %grad_output) {
+  epsilon = 0.0 : f32,
+  feature_index = 2 : i64
+} : (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>, tensor<2xf32>,
+     tensor<2x2x2xf32>) -> (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>)
+// %grad_operand: [
+//                 [[0.0, 0.0], [0.0, 0.0]],
+//                 [[0.0, 0.0], [0.0, 0.0]]
+//                ]
+// %grad_scale:  [0.0, 0.0]
+// %grad_offset: [0.4, 0.4]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -589,6 +1064,67 @@ Numeric precision is implementation-defined.
 //          ]
 // %batch_mean: [2.0, 3.0]
 // %batch_var: [1.0, 1.0]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.bitcast_convert
+
+### Semantics
+
+Performs a bitcast operation on `operand` tensor and produces a `result` tensor
+where the bits of the entire `operand` tensor are reinterpreted using the
+type of the `result` tensor.
+
+Let `E` and `E'` be the `operand` and `result` element type respectively, and
+`R = rank(operand)`:
+  * If `num_bits(E')` $=$ `num_bits(E)`,
+    `bits(result[i0, ..., iR-1]) = bits(operand[i0, ..., iR-1])`.
+  * If `num_bits(E')` $\lt$ `num_bits(E)`,
+    `bits(result[i0, ..., iR-1, :]) = bits(operand[i0, ..., iR-1])`.
+  * If `num_bits(E')` $\gt$ `num_bits(E)`,
+    `bits(result[i0, ..., iR-2]) = bits(operand[i0, ..., iR-2, :])`.
+
+The behavior of `bits` is implementation-defined because the exact
+representation of tensors is implementation-defined, and the exact
+representation of element types is implementation-defined as well.
+
+### Inputs
+
+| Name      | Type                         |
+|-----------|------------------------------|
+| `operand` | tensor of any supported type |
+
+### Outputs
+
+| Name     | Type                         |
+|----------|------------------------------|
+| `result` | tensor of any supported type |
+
+### Constraints
+
+  * (C1) Let `E` and `E'` be the `operand` and `result` element type,
+    respectively and `R = rank(operand)`:
+    * If `num_bits(E')` $=$ `num_bits(E)`, shape(`result`) $=$ shape(`operand`).
+    * If `num_bits(E')` $\lt$ `num_bits(E)`:
+      * `rank(result) = R+1`.
+      * dim(`result`, `i`) $=$ dim(`operand`, `i`) for all `i` $\in$ [0, `R`-1].
+      * `dim(result, R) = num_bits(E)/num_bits(E')`.
+    * If `num_bits(E')` $\gt$ `num_bits(E)`:
+      * `rank(result) = R-1`.
+      * dim(`result`, `i`) $=$ dim(`operand`, `i`) for all `i` $\in$ [0, `R`-1).
+      * `dim(operand, R-1) = num_bits(E')/num_bits(E)`.
+  * (C2) Conversion between complex and non-complex types is not permitted.
+
+### Examples
+
+```mlir
+// %operand: [0.0, 1.0]
+%result = "stablehlo.bitcast_convert"(%operand) : (tensor<2xf32>) -> tensor<2x4xi8>
+// %result: [
+//           [0, 0, 0, 0],
+//           [0, 0, -128, 63] // little-endian representation of 1.0
+//          ]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -868,6 +1404,81 @@ operations correspond to [stablehlo.minimum](#stablehlominimum) and
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.compare
+
+### Semantics
+
+Performs element-wise comparison of `lhs` and `rhs` tensors according to
+`comparison_direction` and `compare_type`, and produces a `result` tensor.
+
+The values of `comparison_direction` and `compare_type` have the following
+semantics:
+
+For integer and boolean element types:
+  * `EQ`: `lhs` $=$ `rhs`.
+  * `NE`: `lhs` $\ne$ `rhs`.
+  * `GE`: `lhs` $\ge$ `rhs`.
+  * `GT`: `lhs` $\gt$ `rhs`.
+  * `LE`: `lhs` $\le$ `rhs`.
+  * `LT`: `lhs` $\lt$ `rhs`.
+
+For floating-point element types and `compare_type = FLOAT`, the op implements
+the following IEEE-754 operations:
+  * `EQ`: `compareQuietEqual`.
+  * `NE`: `compareQuietNotEqual`.
+  * `GE`: `compareQuietGreaterEqual`.
+  * `GT`: `compareQuietGreater`.
+  * `LE`: `compareQuietLessEqual`.
+  * `LT`: `compareQuietLess`.
+
+For floating-point element types and `compare_type = TOTALORDER`, the op
+uses the combination of `totalOrder` and `compareQuietEqual` operations from
+IEEE-754.
+
+For complex element types, lexicographic comparison of `(real, imag)` pairs is
+performed using the provided `comparison_direction` and `compare_type`.
+
+### Inputs
+
+| Name                   | Type                                                    |
+|------------------------|---------------------------------------------------------|
+| `lhs`                  | tensor of any supported type                            |
+| `rhs`                  | tensor of any supported type                            |
+| `comparison_direction` | enum of `EQ`, `NE`, `GE`, `GT`, `LE`, and `LT`          |
+| `compare_type`         | enum of `FLOAT`, `TOTALORDER`, `SIGNED`, and `UNSIGNED` |
+
+### Outputs
+
+| Name     | Type                   |
+|----------|------------------------|
+| `result` | tensor of boolean type |
+
+### Constraints
+
+  * (C1) `lhs` and `rhs` have the same element type.
+  * (C2) `lhs`, `rhs`, and `result` have the same shape.
+  * (C3) Given `E` is the `lhs` element type, the following are legal values of
+         `compare_type`:
+    * If `E` is signed integer type, `compare_type` = `SIGNED`.
+    * If `E` is unsigned integer or boolean type, `compare_type` = `UNSIGNED`.
+    * If `E` is floating-point type,
+      `compare_type` $\in$ {`FLOAT`, `TOTALORDER`}.
+    * If `E` is complex type, `compare_type` = `FLOAT`.
+
+### Examples
+
+```mlir
+// %lhs: [1.0, 3.0]
+// %rhs: [1.1, 2.9]
+%result = "stablehlo.compare"(%lhs, %rhs) {
+  comparison_direction = #stablehlo<comparison_direction LT>,
+  compare_type = #stablehlo<comparison_type FLOAT>
+} : (tensor<2xf32>, tensor<2xf32>) -> tensor<2xi1>
+// %result: [true, false]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.complex
 
 ### Semantics
@@ -1102,6 +1713,129 @@ produces an implementation-defined value.
 // %rhs: [3, 3, -3, -3]
 %result = "stablehlo.divide"(%lhs, %rhs) : (tensor<4xi32>, tensor<4xi32>) -> tensor<4xi32>
 // %result: [5, -5, -5, 5]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.dynamic_slice
+
+### Semantics
+
+Extracts a slice from the `operand` using dynamically-computed starting indices
+and produces a `result` tensor. `start_indices` contain the starting indices of
+the slice for each dimension subject to potential adjustment, and `slice_sizes`
+contain the sizes of the slice for each dimension.
+
+More formally, `result[i0, ..., iR-1] = operand[j0, ..., jR-1]` where:
+  * `jd = adjusted_start_indices[d][] + id`.
+  * `adjusted_start_indices = clamp(0, start_indices, shape(operand) - `
+    `slice_sizes)`.
+
+### Inputs
+
+| Name            | Type                                                     |
+|-----------------|----------------------------------------------------------|
+| `operand`       | tensor of any supported type                             |
+| `start_indices` | variadic number of 0-dimensional tensors of integer type |
+| `slice_sizes`   | 1-dimensional tensor constant of type `si64`             |
+
+### Outputs
+
+| Name     | Type                         |
+|----------|------------------------------|
+| `result` | tensor of any supported type |
+
+### Constraints
+
+  * (C1) `operand` and `result` have the same element type.
+  * (C2) size(`start_indices`) $=$ size(`slice_sizes`) $=$ rank(`operand`).
+  * (C3) All `start_indices` have the same type.
+  * (C4) `slice_sizes[k]` $\in$ [0, dim(`operand`, `k`)) for all `k` $\in$ [0,
+    rank(`operand`)).
+  * (C5) shape(`result`) $=$ `slice_sizes`.
+
+### Examples
+
+```mlir
+// %operand: [
+//            [0, 0, 1, 1],
+//            [0, 0, 1, 1],
+//            [0, 0, 0, 0],
+//            [0, 0, 0, 0]
+//           ]
+// %start_indices0: -1
+// %start_indices1: 3
+%result = "stablehlo.dynamic_slice"(%operand, %start_indices0, %start_indices1) {
+  slice_sizes = dense<[2, 2]> : tensor<2xi64>
+} : (tensor<4x4xi32>, tensor<i64>, tensor<i64>) -> tensor<2x2xi32>
+// %result: [
+//           [1, 1],
+//           [1, 1]
+//          ]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.dynamic_update_slice
+
+### Semantics
+
+Produces a `result` tensor which is equal to the `operand` tensor except that
+the slice starting at `start_indices` is updated with the values in `update`.
+
+More formally, `result[i0, ..., iR-1]` is defined as:
+  * `update[j0, ..., jR-1]` if `jd = adjusted_start_indices[d][] + id` where
+    `adjusted_start_indices = clamp(0, start_indices, shape(operand) - update)`.
+  * `operand[i0, ..., iR-1]` otherwise.
+
+### Inputs
+
+| Name            | Type                                                     |
+|-----------------|----------------------------------------------------------|
+| `operand`       | tensor of any supported type                             |
+| `update`        | tensor of any supported type                             |
+| `start_indices` | variadic number of 0-dimensional tensors of integer type |
+
+### Outputs
+
+| Name     | Type                         |
+|----------|------------------------------|
+| `result` | tensor of any supported type |
+
+### Constraints
+
+  * (C1) `operand` and `result` have the same type.
+  * (C2) element_type(`update`) $=$ element_type(`operand`).
+  * (C3) rank(`update`) $=$ rank(`operand`).
+  * (C4) size(`start_indices`) $=$ rank(`operand`).
+  * (C5) All `start_indices` have the same type.
+  * (C6) dim(`update`, `k`) $\in$ [0, dim(`operand`, `k`)) for all `k` $\in$
+    [0, rank(`operand`)).
+
+
+### Examples
+
+```mlir
+// %operand: [
+//            [1, 1, 0, 0],
+//            [1, 1, 0, 0],
+//            [1, 1, 1, 1],
+//            [1, 1, 1, 1]
+//           ]
+// %update: [
+//           [1, 1],
+//           [1, 1]
+//          ]
+// %start_indices0: -1
+// %start_indices1: 3
+%result = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1)
+  : (tensor<4x4xi32>, tensor<2x2xi32>, tensor<i64>, tensor<i64>) -> tensor<4x4xi32>
+// %result: [
+//           [1, 1, 1, 1],
+//           [1, 1, 1, 1],
+//           [1, 1, 1, 1],
+//           [1, 1, 1, 1]
+//          ]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -2066,6 +2800,45 @@ produces a `result` tensor. For boolean tensors, it computes the logical NOT.
 
 [Back to Ops](#index-of-ops)
 
+
+## stablehlo.optimization_barrier
+
+### Semantics
+
+Ensures that the operations that produce the `operand` are executed before any
+operations that depend on the `result` and prevents compiler transformations
+from moving operations across the barrier. Other than that, the operation is
+an identity, i.e. `result` = `operand`.
+
+### Arguments
+
+| Name      | Type                                                       |
+|-----------|------------------------------------------------------------|
+| `operand` | variadic number of tensors of any supported type or tokens |
+
+### Outputs
+
+| Name     | Type                                                       |
+|----------|------------------------------------------------------------|
+| `result` | variadic number of tensors of any supported type or tokens |
+
+### Constraints
+
+  * (C1) size(`operand`) $=$ size(`result`).
+  * (C2) type(`operand[i]`) $=$ type(`result[i]`) for all i.
+
+### Examples
+
+```mlir
+// %operand0: 0.0
+// %operand1: 1.0
+%result0, %result1 = "stablehlo.optimization_barrier"(%operand0, %operand1) : (tensor<f32>, tensor<f32>) -> (tensor<f32>, tensor<f32>)
+// %result0: 0.0
+// %result1: 1.0
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.or
 
 ### Semantics
@@ -2233,8 +3006,8 @@ overflow, the result is implementation-defined and one of the following:
 For an integer, `x`, raised to a negative power, `y`, the behaviour is as
 follows:
   * If `abs(x)` $\gt$ 1, then result is 0.
-  * If `abs(x)` $=$ 1, then result is equivalet to `x^abs(y)`.
-  * If `abs(x)` $=$ 0, then behaviour is implementation defined.
+  * If `abs(x)` $=$ 1, then result is equivalent to `x^abs(y)`.
+  * If `abs(x)` $=$ 0, then behaviour is implementation-defined.
 
 For floating-point element types, it implements the `pow` operation from the
 IEEE-754 specification. For complex element types, it computes complex
@@ -2326,10 +3099,10 @@ means for numeric precision is implementation-defined.
 More formally, `results[:][result_index] = reduce(input_slices)` where:
   * `input_slices` = `inputs[:][ri0, ..., :, ..., riR-1]`, where `ri` are
     individual elements in `result_index` and `:` are inserted at `dimensions`.
-  * `reduce(input_slices)` = `eval(schedule)` for some binary tree `schedule`
+  * `reduce(input_slices)` = `exec(schedule)` for some binary tree `schedule`
     where:
-    * `eval(node)` = `body(eval(node.left), eval(node.right))`.
-    * `eval(leaf)` = `leaf.value`.
+    * `exec(node)` = `body(exec(node.left), exec(node.right))`.
+    * `exec(leaf)` = `leaf.value`.
   * `schedule` is an implementation-defined full binary tree whose in-order
     traversal consists of:
     * `input_slices[:][index]` values, for all `index` in the index space
@@ -2429,6 +3202,26 @@ implementation-defined value.
 // %rhs: [3, 3, -3, -3]
 %result = "stablehlo.remainder"(%lhs, %rhs) : (tensor<4xi32>, tensor<4xi32>) -> tensor<4xi32>
 // %result: [2, -2, 2, -2]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.replica_id
+
+### Semantics
+
+Produces `replica_id` of the current process.
+
+### Outputs
+
+| Name     | Type                                |
+|----------|-------------------------------------|
+| `result` | 0-dimensional tensor of type `ui32` |
+
+### Examples
+
+```mlir
+%result = "stablehlo.replica_id"() : () -> tensor<ui32>
 ```
 
 [Back to Ops](#index-of-ops)
@@ -2583,6 +3376,62 @@ hidden state.
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.rng_bit_generator
+
+### Semantics
+
+Returns an `output` filled with uniform random bits and an updated output state
+`output_state` given an initial state `initial_state` using the pseudorandom
+number generator algorithm `rng_algorithm`. The output is guaranteed to be
+deterministic function of `initial_state`, but it is not guaranteed to be
+deterministic between implementations.
+
+`rng_algorithm` is one of the following:
+  * `DEFAULT`: Implementation-defined algorithm.
+  * `THREE_FRY`: Implementation-defined variant of the Threefry algorithm.*
+  * `PHILOX`: Implementation-defined variant of the Philox algorithm.*
+
+\* See: [Salmon et al. SC 2011. Parallel random numbers: as easy as 1, 2, 3.
+](http://www.thesalmons.org/john/random123/papers/random123sc11.pdf)
+
+### Inputs
+
+| Name            | Type                                         |
+|-----------------|----------------------------------------------|
+| `initial_state` | 1-dimensional tensor of type `ui64`          |
+| `rng_algorithm` | enum of `DEFAULT`, `THREE_FRY`, and `PHILOX` |
+
+### Outputs
+
+| Name           | Type                                     |
+|----------------|------------------------------------------|
+| `output_state` | 1-dimensional tensor of type `ui64`      |
+| `output`       | tensor of integer or floating-point type |
+
+### Constraints
+
+  * (C1) type(`initial_state`) $=$ type(`output_state`).
+  * (C2) size(`initial_state`) depends on `rng_algorithm`:
+    * `DEFAULT`: implementation-defined.
+    * `THREE_FRY`: `2`.
+    * `PHILOX`: `2` or `3`.
+
+### Examples
+
+```mlir
+// %initial_state: [1, 2]
+%output_state, %output = "stablehlo.rng_bit_generator"(%initial_state) {
+  rng_algorithm = #stablehlo<rng_algorithm THREE_FRY>
+} : (tensor<2xui64>) -> (tensor<2xui64>, tensor<2x2xui64>)
+// %output_state: [1, 6]
+// %output: [
+//           [9236835810183407956, 16087790271692313299],
+//           [18212823393184779219, 2658481902456610144]
+//          ]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.round_nearest_afz
 
 ### Semantics
@@ -2694,8 +3543,8 @@ specification. Numeric precision is implementation-defined.
 
 ### Semantics
 
-Generate `results` which is the values of the `inputs` operand, with several
-slices at indices specified by `scatter_indices`, updated with the values in
+Produces `results` tensors which are equal to `inputs` tensors except that
+several slices specified by `scatter_indices` are updated with the values
 `updates` using `update_computation`.
 
 The following diagram shows how elements in `updates[k]` map on elements in
@@ -2727,16 +3576,16 @@ More formally, for all `update_index` from the index space of `updates[0]`,
   * `result_index` = `add(full_start_index, full_window_index)`.
 
 Using this mapping between `update_index` and `result_index`, we define
-`results = eval(schedule, inputs)`, where:
+`results = exec(schedule, inputs)`, where:
   * `schedule` is an implementation-defined permutation of the index space
     of `updates[0]`.
-  * `eval([update_index, ...], results) = eval([...], updated_results)` where:
+  * `exec([update_index, ...], results) = exec([...], updated_results)` where:
     * `updated_values = update_computation(results[:][result_index], updates[:][update_index])`.
     * `updated_results` is a copy of `results` with `results[:][result_index]`
       set to `updated_values[:]`.
     * If `result_index` is out of bounds for `shape(results[:])`, the behavior
       is implementation-defined.
-  * `eval([], results) = results`.
+  * `exec([], results) = results`.
 
 If `indices_are_sorted` is `true` then the implementation can assume that
 `scatter_indices` are sorted with respect to `scatter_dims_to_operand_dims`,
@@ -2987,6 +3836,61 @@ number of bits and produces a `result` tensor.
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.sign
+
+### Semantics
+
+Returns the sign of the `operand` element-wise and produces a `result` tensor.
+More formally, for each element `x`, the semantics can be expressed using
+Python-like syntax as follows:
+```python
+def sign(x):
+  if is_integer(x):
+    if compare(x, 0, LT, SIGNED): return -1
+    if compare(x, 0, EQ, SIGNED): return 0
+    if compare(x, 0, GT, SIGNED): return 1
+  elif is_float(x):
+    if x is NaN:
+      return NaN
+    else:
+      if compare(x, 0.0, LT, FLOAT): return -1.0
+      if compare(x, -0.0, EQ, FLOAT): return -0.0
+      if compare(x, +0.0, EQ, FLOAT): return +0.0
+      if compare(x, 0.0, GT, FLOAT): return 1.0
+  elif is_complex(x):
+    if x.real is NaN or x.imag is NaN:
+      return NaN
+    else:
+      return divide(x, abs(x))
+```
+
+### Inputs
+
+| Name      | Type                                                      |
+|-----------|-----------------------------------------------------------|
+| `operand` | tensor of signed integer, floating-point, or complex type |
+
+### Outputs
+
+| Name     | Type                                                      |
+|----------|-----------------------------------------------------------|
+| `result` | tensor of signed integer, floating-point, or complex type |
+
+### Constraints
+
+  * (C1) `operand` and `result` have the same type.
+
+### Examples
+
+```mlir
+// Logical values: -Inf, +Inf, NaN, ...
+// %operand: [0xFF800000, 0x7F800000, 0x7FFFFFFF, -10.0, -0.0, 0.0, 10.0]
+%result = "stablehlo.sign"(%operand) : (tensor<7xf32>) -> tensor<7xf32>
+// %result: [-1.0, 1.0, 0x7FFFFFFF, -1.0, -0.0, 0.0, 1.0]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.sine
 
 ### Semantics
@@ -3030,10 +3934,11 @@ Numeric precision is implementation-defined.
 
 ### Semantics
 
-Extracts a sub-tensor from the `operand` and produces a `result` tensor.
-`start_indices` contain the starting indices of the slice for each dimension,
-`limit_indices` contain the ending indices (exclusive) for the slice for each
-dimension, and `strides` contain the strides for each dimension.
+Extracts a slice from the `operand` using statically-computed starting indices
+and produces a `result` tensor. `start_indices` contain the starting indices of
+the slice for each dimension, `limit_indices` contain the ending indices
+(exclusive) for the slice for each dimension, and `strides` contain the strides
+for each dimension.
 
 More formally, `result[i0, ..., iR-1] = operand[j0, ..., jR-1]` where
 `jd = start_indices[d] + id * strides[d]`.
@@ -3479,7 +4384,7 @@ while cond(internal_state) == True:
 results = internal_state
 ```
 
-The behaviour of an infinite loop is TBD.
+The behavior of an infinite loop is TBD.
 
 ### Inputs
 

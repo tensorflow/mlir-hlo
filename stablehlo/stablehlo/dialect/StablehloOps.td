@@ -574,23 +574,15 @@ def StableHLO_SignOp: StableHLO_UnaryElementwiseOp<"sign",
     TensorOf<[HLO_SInt, HLO_Float, HLO_Complex]>> {
   let summary = "Sign operator";
   let description = [{
-    Returns `sign(operand)` element-wise, where
+    Returns the sign of the `operand` element-wise and produces a `result`
+    tensor.
 
-    ```
-    sign(x) = -1  : x < 0
-            = -0  : x = -0
-            = NaN : x = NaN
-            = +0  : x = +0
-            = 1   : x > 0
-    ```
-
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_unary_functions.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlosign
 
     Example:
-
     ```mlir
-    %0 = stablehlo.sign %arg0 : tensor<1x2x3x4xf32>
+    %result = stablehlo.sign %operand : tensor<7xf32>
     ```
   }];
 }
@@ -1087,19 +1079,14 @@ def StableHLO_ReplicaIdOp : StableHLO_Op<"replica_id", [Pure,
     DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "ReplicaId operator";
   let description = [{
-    Returns the unique ID (int32 scalar) of the replica.
+    Produces `replica_id` of the current process.
 
-    The unique ID of each replica is an unsigned integer in the interval [0, N),
-    where N is the number of replicas. Since all the replicas are running the
-    same program, a ReplicaId() call in the program will return a different
-    value on each replica.
-
-    See https://www.tensorflow.org/xla/operation_semantics#replicaid.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreplica_id
 
     Example:
-
     ```mlir
-    %0 = stablehlo.replica_id : tensor<ui32>
+    %result = stablehlo.replica_id : tensor<ui32>
     ```
   }];
   let results = (outs TensorOf<[UI32]>);
@@ -1265,9 +1252,21 @@ def StableHLO_AllGatherOp : StableHLO_Op<"all_gather", [SameOperandsAndResultEle
   string summary = "AllGather operator";
 
   string description = [{
-    Performs concatenation across replicas.
+    Within each process group in the StableHLO grid, concatenates the values of the
+    `operand` tensor from each process along `all_gather_dim` and produces a
+    `result` tensor.
 
-    See https://www.tensorflow.org/xla/operation_semantics#allgather
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloall_gather
+
+    Example:
+    ```mlir
+    %result = "stablehlo.all_gather"(%operand) {
+      all_gather_dim = 1 : i64,
+      replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
+      // use_global_device_ids = false
+    } : (tensor<2x2xf32>) -> tensor<2x4xf32>
+    ```
   }];
 
   let arguments = (ins
@@ -1329,8 +1328,27 @@ def StableHLO_ReduceScatterOp : StableHLO_Op<"reduce_scatter",
 }
 
 def StableHLO_AllToAllOp : StableHLO_Op<"all_to_all",
-    [Pure, SameOperandsElementType, SameOperandsShape,
-     InferTensorType]> {
+    [SameOperandsAndResultElementType, InferTensorType]> {
+  let summary = "AllToAll operator";
+  let description = [{
+    Within each process group in the StableHLO grid, splits the values of the
+    `operand` tensor along `split_dimension` into parts, scatters the split parts
+    between the processes, concatenates the scattered parts along `concat_dimension`
+    and produces a `result` tensor.
+
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloall_to_all
+
+    Example:
+    ```mlir
+    %result = "stablehlo.all_to_all"(%operand) {
+      split_dimension = 1 : i64,
+      concat_dimension = 0 : i64,
+      split_count = 2 : i64,
+      replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
+    } : (tensor<2x4xf32>) -> tensor<4x2xf32>
+    ```
+  }];
 
   let arguments = (ins
     HLO_Tensor:$operand,
@@ -1443,19 +1461,15 @@ def StableHLO_CompareOp: StableHLO_Op<"compare", [Pure, SameOperandsElementType,
     SameOperandsAndResultShape, Elementwise, InferTensorTypeWithReify]> {
   let summary = "Comparison operator";
   let description = [{
-    Compares `lhs` and `rhs` elementwise according to `comparison_direction`
-    and `compare_type`. If unspecified, `compare_type` is FLOAT for float element
-    types, SIGNED for signed element types and UNSIGNED for unsigned element
-    types.
+    Performs element-wise comparison of `lhs` and `rhs` tensors according to
+    `comparison_direction` and `compare_type`, and produces a `result` tensor.
 
-    See
-    https://www.tensorflow.org/xla/operation_semantics#element-wise_comparison_operations.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocompare
 
     Example:
-
     ```mlir
-    %0 = stablehlo.compare LT, %arg0, %arg1 : (tensor<2xi32>, tensor<2xi32>) -> tensor<2xi1>
-    %1 = stablehlo.compare LT, %arg0, %arg1, TOTALORDER : (tensor<2xi32>, tensor<2xi32>) -> tensor<2xi1>
+    %result = stablehlo.compare LT, %lhs, %rhs, FLOAT : (tensor<2xf32>, tensor<2xf32>) -> tensor<2xi1>
     ```
   }];
   let arguments = (ins
@@ -1490,7 +1504,8 @@ def StableHLO_SliceOp: StableHLO_Op<
        DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Slice operator";
   let description = [{
-    Extracts a sub-tensor from the `operand` and produces a `result` tensor.
+    Extracts a slice from the `operand` using statically-computed starting
+    indices and produces a `result` tensor.
 
     See:
     https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloslice
@@ -1520,15 +1535,16 @@ def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
        InferTensorType]> {
   let summary = "Dynamic Slice operator";
   let description = [{
-    Extracts a sub-array from the input array at dynamic start_indices.
+    Extracts a slice from the `operand` using dynamically-computed starting
+    indices and produces a `result` tensor.
 
-    See https://www.tensorflow.org/xla/operation_semantics#dynamicslice.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlodynamic_slice
 
     Example:
-
     ```mlir
-    %0 = stablehlo.dynamic_slice %arg2, %arg3, %arg3, sizes = [1, 4]
-      : (tensor<3x4xi32>, tensor<i64>, tensor<i64>) -> tensor<1x4xi32>
+    %result = stablehlo.dynamic_slice %operand, %start_indices0, %start_indices1, sizes = [2, 2]
+      : (tensor<4x4xi32>, tensor<i64>, tensor<i64>) -> tensor<2x2xi32>
     ```
   }];
   let arguments = (ins
@@ -1552,16 +1568,17 @@ def StableHLO_DynamicUpdateSliceOp: StableHLO_Op<"dynamic_update_slice",
        AllShapesMatch<["operand", "result"]>]> {
   let summary = "Dynamic Update Slice operator";
   let description = [{
-    DynamicUpdateSlice generates a result which is the value of the input array
-    operand, with a slice update overwritten at start_indices.
+    Produces a `result` tensor which is equal to the `operand` tensor except
+    that the slice starting at `start_indices` is updated with the values in
+    `update`.
 
-    See https://www.tensorflow.org/xla/operation_semantics#dynamicupdateslice.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloslice
 
     Example:
-
     ```mlir
-    %0 = stablehlo.dynamic_update_slice %arg0, %arg1, %arg2
-           : (tensor<4xf32>, tensor<2xf32>, tensor<i32>) -> tensor<4xf32>
+    %result = stablehlo.dynamic_update_slice %operand, %update, %start_indices0, %start_indices1
+      : (tensor<4x4xi32>, tensor<2x2xi32>, tensor<i64>, tensor<i64>) -> tensor<4x4xi32>
     ```
   }];
   let arguments = (ins
@@ -1589,9 +1606,22 @@ def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [Pure,
     InferTensorType]> {
   let summary = "Batch Normalization Gradient";
   let description = [{
-    Calculates gradients of batch norm.
+    Computes gradients of several inputs of BatchNormTrainingOp backpropagating
+    from `grad_output`, and produces `grad_operand`, `grad_scale` and
+    `grad_offset` tensors.
 
-    See https://www.tensorflow.org/xla/operation_semantics#batchnormgrad
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobatch_norm_grad
+
+    Example:
+    ```mlir
+    %grad_operand, %grad_scale, %grad_offset =
+    "stablehlo.batch_norm_grad"(%operand, %scale, %mean, %variance, %grad_output) {
+      epsilon = 0.0 : f32,
+      feature_index = 2 : i64
+    } : (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>, tensor<2xf32>,
+        tensor<2x2x2xf32>) -> (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>)
+    ```
   }];
 
   let arguments = (ins
@@ -1685,18 +1715,16 @@ def StableHLO_BitcastConvertOp : StableHLO_ShapedInterfaceOp<"bitcast_convert",
     [Pure]> {
   let summary = "BitcastConvert operator";
   let description = [{
-    Similar to a 'tf.bitcast' in TensorFlow, performs an element-wise bitcast
-    operation from a data shape to a target shape. The dimensions must match,
-    and the conversion is an element-wise one. Bitcast is implemented as a
-    low-level cast, so machines with different floating-point representations
-    will give different results.
+    Performs a bitcast operation on `operand` tensor and produces a `result`
+    tensor where the bits of the entire `operand` tensor are reinterpreted using
+    the type of the `result` tensor.
 
-    See https://www.tensorflow.org/xla/operation_semantics#bitcastconverttype.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobitcast_convert
 
     Example:
-
     ```mlir
-    %0 = stablehlo.bitcast_convert %arg0 : (tensor<2xi32>) -> tensor<2xf32>
+    %result = stablehlo.bitcast_convert %operand : (tensor<2xf32>) -> tensor<2x4xi8>
     ```
   }];
 
@@ -2341,8 +2369,8 @@ def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape", [
 def StableHLO_ScatterOp: StableHLO_Op<"scatter", [SameVariadicOperandSize, RecursiveMemoryEffects]> {
   let summary = "Scatter operator";
   let description = [{
-    Generate `results` which is the values of the `inputs` operand, with several
-    slices at indices specified by `scatter_indices`, updated with the values in
+    Produces `results` tensors which are equal to `inputs` tensors except that
+    several slices specified by `scatter_indices` are updated with the values
     `updates` using `update_computation`.
 
     See:
@@ -2748,25 +2776,26 @@ def StableHLO_TorchIndexSelectOp : StableHLO_Op<"torch_index_select", [Pure]> {
 }
 
 def StableHLO_OptimizationBarrierOp : StableHLO_Op<"optimization_barrier",
-      [Pure, HLO_PairwiseSameOperandAndResultType]> {
+      [Pure, HLO_PairwiseSameOperandAndResultType,
+      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = [{
     The `stablehlo.optimization_barrier` op blocks optimizations.
 
-    Example:
-
-    ```mlir
-    %0:2 = stablehlo.optimization_barrier %arg0, %arg1 : tensor<1xf32>, tensor<1xi32>
-    %1 = stablehlo.optimization_barrier %arg0 : tensor<1xf32>
-    stablehlo.optimization_barrier()
-    ```
   }];
 
   let description = [{
-    Blocks any optimization pass from moving computations across the barrier.
+    Ensures that the operations that produce the `operand` are executed before any
+    operations that depend on the `result` and prevents compiler transformations
+    from moving operations across the barrier. Other than that, the operation is
+    an identity, i.e. `result` = `operand`.
 
-    Ensures that all inputs are evaluated before any operators that depend on the barrier's outputs.
     See
-    https://www.tensorflow.org/xla/operation_semantics#optimizationbarrier
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlooptimization_barrier
+
+    Example:
+    ```mlir
+    %result0, %result1 = stablehlo.optimization_barrier %operand0, %operand1 : tensor<f32>, tensor<f32>
+    ```
   }];
 
   let arguments = (ins Variadic<HLO_TensorOrToken>:$operand);
@@ -2821,18 +2850,18 @@ def StableHLO_RngOp : StableHLO_Op<"rng", [InferTensorTypeWithReify, AllElementT
 }
 
 def StableHLO_RngBitGeneratorOp : StableHLO_Op<"rng_bit_generator", [Pure]> {
-  let summary = "Uniform random number generator operator";
+  let summary = "Uniform pseudo random number generator operator";
   let description = [{
-    Returns an output with a given shape filled with uniform random bits using
-    the specified algorithm (or backend default) and returns an updated state
-    (with the same shape as initial state) and the generated random data.
+    Returns an `output` filled with uniform random data and an updated output
+    state `output_state` given an initial state `initial_state` using the
+    pseudorandom number generator algorithm `rng_algorithm`.
 
-    See https://www.tensorflow.org/xla/operation_semantics#rngbitgenerator.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlorng_bit_generator
 
     Example:
-
     ```mlir
-    %0, %1 = stablehlo.rng_bit_generator %arg0, algorithm = PHILOX : (tensor<3xui64>) -> (tensor<3xui64>, tensor<2x2xui32>)
+    %output_state, %output = stablehlo.rng_bit_generator %initial_state, algorithm = THREE_FRY : (tensor<2xui64>) -> (tensor<2xui64>, tensor<2x2xui64>)
     ```
   }];
   let arguments = (ins
@@ -2841,9 +2870,9 @@ def StableHLO_RngBitGeneratorOp : StableHLO_Op<"rng_bit_generator", [Pure]> {
   );
 
   let results = (outs
-      HLO_IntOrFpTensor:$output_state,
-      HLO_IntOrFpTensor:$output
-      );
+    HLO_IntOrFpTensor:$output_state,
+    HLO_IntOrFpTensor:$output
+  );
 
   let hasVerifier = 1;
 

@@ -25,6 +25,7 @@ limitations under the License.
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectInterface.h"
@@ -46,7 +47,7 @@ namespace hlo {
 // Check if the dimension size is dynamic.
 // TODO(zhouxin) add isStaticDimSize() as well.
 inline static bool isDynamicDimSize(int64_t val) {
-  return val == ShapedType::kDynamic;
+  return ShapedType::isDynamic(val);
 }
 
 // Returns true if the given types are the same for the purposes of HLO type
@@ -227,7 +228,7 @@ class CompatibleOperandsAndResultType
 
   // This function is not going to be called automatically.
   // It needs to be paired with INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS
-  // (see examples in StablehloOps.cc).
+  // (see examples in StablehloOps.cpp).
   static LogicalResult inferReturnTypeComponentsFromOperands(
       MLIRContext *context, Optional<Location> location,
       ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,

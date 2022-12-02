@@ -33,6 +33,7 @@ limitations under the License.
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -53,6 +54,7 @@ limitations under the License.
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
+#include "stablehlo/dialect/AssemblyFormat.h"
 #include "stablehlo/dialect/Base.h"
 
 namespace mlir {
@@ -196,7 +198,8 @@ LogicalResult verifyBatchNorm(Optional<Location> location, Value operand,
         location,
         "expects the size of scale factor to be same as the "
         "feature count, but the size of scale factor is ",
-        scaleShape, " and the feature count is ", featureCount, ".");
+        dimSizeToString(scaleShape), " and the feature count is ",
+        dimSizeToString(featureCount), ".");
 
   return success();
 }
@@ -300,6 +303,55 @@ unsigned potentiallyComplexBitwidth(Type type) {
   auto complexTy = type.dyn_cast<ComplexType>();
   return complexTy ? 2 * complexTy.getElementType().getIntOrFloatBitWidth()
                    : type.getIntOrFloatBitWidth();
+}
+
+LogicalResult verifyReplicaGroups(Optional<Location> location,
+                                  DenseIntElementsAttr replicaGroups,
+                                  bool allGroupsMustHaveSameSize,
+                                  Optional<size_t> expectedGroupSize) {
+  auto replicaGroupType = replicaGroups.getType().cast<RankedTensorType>();
+
+  if (replicaGroupType.getRank() != 2)
+    return emitOptionalError(location,
+                             "replica groups should be a rank 2 tensor");
+
+  // Revisit the following check in light of #498.
+  if (replicaGroupType.getShape()[0] * replicaGroupType.getShape()[1] == 0) {
+    return emitOptionalError(location, "replica groups cannot be empty");
+  }
+
+  auto replicaIds = replicaGroups.getValues<int64_t>();
+  llvm::SmallSet<int64_t, 8> replicaIdsSeen;
+  for (int64_t replicaId : replicaIds) {
+    // Replica groups are stored in a 2D tensor. If the op supports non-uniform
+    // groups, null replica IDs are stored as -1.
+    if (replicaId == -1) {
+      if (allGroupsMustHaveSameSize) {
+        return emitOptionalError(location, "Invalid replica id -1");
+      }
+      continue;
+    }
+
+    if (!replicaIdsSeen.insert(replicaId).second) {
+      return emitOptionalError(location, "replica id #", replicaId,
+                               " seen more than once");
+    }
+  }
+
+  for (size_t id = 0; id < replicaIdsSeen.size(); id++) {
+    if (!replicaIdsSeen.contains(id)) {
+      return emitOptionalError(location, "replica id #", id,
+                               " not seen in replica groups");
+    }
+  }
+
+  if (allGroupsMustHaveSameSize && expectedGroupSize &&
+      (replicaIds.size() / replicaGroupType.getShape()[0] !=
+       *expectedGroupSize))
+    return emitOptionalError(location, "group size of replica_groups must be ",
+                             *expectedGroupSize);
+
+  return success();
 }
 
 LogicalResult verifyReducerShape(
@@ -557,8 +609,8 @@ LogicalResult inferConcatenateOp(Optional<Location> location, ValueRange inputs,
     auto firstShape = firstRankedType.getShape();
     auto secondShape = secondType.getShape();
     for (int d = 0; d < firstRankedType.getRank(); ++d) {
-      if (!ShapedType::isDynamic(firstShape[d]) &&
-          !ShapedType::isDynamic(secondShape[d]) &&
+      if (!isDynamicDimSize(firstShape[d]) &&
+          !isDynamicDimSize(secondShape[d]) &&
           firstShape[d] != secondShape[d] && d != dimension) {
         return emitOptionalError(
             location, "shapes of operand (", firstRankedIndex, ") and (", i,
@@ -914,6 +966,15 @@ LogicalResult inferPadOp(Optional<Location> location, Value operand,
   inferredReturnTypes.push_back(RankedTensorType::get(
       resultShape, inputType.getElementType(),
       boundsToEncoding(inputType.getEncoding(), resultBounds)));
+
+  return success();
+}
+
+LogicalResult inferOptimizationBarrierOp(
+    ValueRange operand, SmallVectorImpl<Type>& inferredReturnTypes) {
+  for (auto inputArgType : operand.getTypes()) {
+    inferredReturnTypes.emplace_back(inputArgType);
+  }
 
   return success();
 }
