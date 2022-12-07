@@ -354,11 +354,12 @@ LogicalResult verifyReplicaGroups(Optional<Location> location,
   return success();
 }
 
-LogicalResult verifyReducerShape(
-    Optional<Location> loc, Block& block, ArrayRef<TensorType> inputArgTypes,
-    ArrayRef<TensorType> initValueTypes, int64_t numInputs,
-    ArrayRef<int64_t> allowedDimensions, bool allInputsUnranked,
-    SmallVectorImpl<TensorType>& accumulatorSubShapes) {
+LogicalResult verifyReducerShape(Optional<Location> loc, Block& block,
+                                 ArrayRef<TensorType> inputArgTypes,
+                                 ArrayRef<TensorType> initValueTypes,
+                                 int64_t numInputs,
+                                 ArrayRef<int64_t> allowedDimensions,
+                                 bool allInputsUnranked) {
   // Check that the number of reduction-region arguments matches with that of
   // reduce-op's arguments.
   if (static_cast<int64_t>(block.getArguments().size()) != numInputs * 2)
@@ -380,6 +381,7 @@ LogicalResult verifyReducerShape(
                              block.getTerminator()->getOperands().size(),
                              " instead");
 
+  SmallVector<TensorType> accumulatorSubShapes;
   for (Value retOperand : block.getTerminator()->getOperands()) {
     auto tensorTy = retOperand.getType().dyn_cast<TensorType>();
     if (!tensorTy)
@@ -482,8 +484,9 @@ LogicalResult verifyReducerShape(
          outputShapeIdx < static_cast<int64_t>(allowedDimensions.size()) &&
          argShapeIdx < static_cast<int64_t>(argShape.size());
          outputShapeIdx++)
-      if (allowedDimensions[outputShapeIdx] == argShape[argShapeIdx] ||
-          argShape[argShapeIdx] == ShapedType::kDynamic)
+      if (allowedDimensions[outputShapeIdx] == ShapedType::kDynamic ||
+          argShape[argShapeIdx] == ShapedType::kDynamic ||
+          allowedDimensions[outputShapeIdx] == argShape[argShapeIdx])
         argShapeIdx++;
 
     if (argShapeIdx != static_cast<int64_t>(argShape.size()))
@@ -760,17 +763,24 @@ LogicalResult inferDotGeneralOp(
     auto rhsShape = rhsRankedType.getShape();
 
     for (auto [lhs, rhs] :
-         llvm::zip(lhsBatchingDimensions, rhsBatchingDimensions))
+         llvm::zip(lhsBatchingDimensions, rhsBatchingDimensions)) {
+      if (hlo::isDynamicDimSize(lhsShape[lhs])) continue;
+      if (hlo::isDynamicDimSize(rhsShape[rhs])) continue;
       if (lhsShape[lhs] != rhsShape[rhs])
         return emitOptionalError(location,
                                  "batching dimension sizes must "
                                  "match for lhs/rhs");
+    }
+
     for (auto [lhs, rhs] :
-         llvm::zip(lhsContractingDimensions, rhsContractingDimensions))
+         llvm::zip(lhsContractingDimensions, rhsContractingDimensions)) {
+      if (hlo::isDynamicDimSize(lhsShape[lhs])) continue;
+      if (hlo::isDynamicDimSize(rhsShape[rhs])) continue;
       if (lhsShape[lhs] != rhsShape[rhs])
         return emitOptionalError(location,
                                  "contracting dimension sizes must "
                                  "match for lhs/rhs");
+    }
   }
 
   auto lhsType = lhs.getType().cast<ShapedType>();
@@ -1051,18 +1061,17 @@ LogicalResult inferReduceOp(
   }
 
   Block& block = body.front();
-  SmallVector<TensorType> accumulatorResultTypes;
   if (failed(verifyReducerShape(location, block, inputArgTypes, initValueTypes,
-                                numInputs, newDimensions, allInputsUnranked,
-                                accumulatorResultTypes)))
+                                numInputs, newDimensions, allInputsUnranked)))
     return failure();
 
-  for (auto resultType : accumulatorResultTypes) {
-    if (resultType.isa<RankedTensorType>())
-      inferredReturnShapes.emplace_back(newDimensions,
-                                        resultType.getElementType());
+  for (uint64_t inputIdx = 0; inputIdx < numInputs; ++inputIdx) {
+    TensorType inputType = inputArgTypes[inputIdx];
+    Type elementType = inputType.getElementType();
+    if (inputType.hasRank())
+      inferredReturnShapes.emplace_back(newDimensions, elementType);
     else
-      inferredReturnShapes.emplace_back(resultType.getElementType());
+      inferredReturnShapes.emplace_back(elementType);
   }
 
   return success();
@@ -1148,10 +1157,9 @@ LogicalResult inferReduceWindowOp(
 
   // P5.
   Block& block = body.front();
-  SmallVector<TensorType> accumulatorSubshapes;
   if (failed(verifyReducerShape(location, block, inputArgTypes, initValueTypes,
-                                numInputs, *windowDimsOrErr, allInputsUnranked,
-                                accumulatorSubshapes)))
+                                numInputs, *windowDimsOrErr,
+                                allInputsUnranked)))
     return failure();
 
   for (size_t i = 0; i < inputArgTypes.size(); ++i) {
