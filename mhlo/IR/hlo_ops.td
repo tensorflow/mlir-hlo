@@ -3264,6 +3264,7 @@ def MHLO_DynamicConvOp : MHLO_Op<"dynamic_conv", [Pure]> {
        MHLO_Tensor:$d_padding),
     MHLO_ConvolutionAttributes.attributes);
   let results = (outs MHLO_Tensor);
+  let hasCanonicalizer = 1;
   let hasCustomHLOConverter = 1;
 }
 
