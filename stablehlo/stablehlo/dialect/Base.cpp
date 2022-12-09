@@ -150,10 +150,26 @@ Type createRealType(TensorType type) {
   return hlo::getSameShapeTensorType(type, elementTy);
 }
 
-// TODO(hinsu): Add verification for bounds that it has the same size as rank
-// of the tensor and static dimensions don't have bounds.
-LogicalResult verifyBounds(ArrayRef<int64_t> bounds, ShapedType type,
+LogicalResult verifyBounds(ArrayRef<int64_t> bounds, RankedTensorType type,
                            function_ref<InFlightDiagnostic()> emitError) {
+  int64_t boundsLen = bounds.size();
+  int64_t rank = type.getRank();
+  if (boundsLen != rank) {
+    return emitError() << "Bounds length is " << boundsLen
+                       << ", expected to be equal to rank(" << rank
+                       << ") of the tensor";
+  }
+
+  for (int64_t dim = 0; dim < rank; ++dim) {
+    int64_t bound = bounds[dim];
+    int64_t dimSize = type.getDimSize(dim);
+    if (bound != ShapedType::kDynamic && dimSize != ShapedType::kDynamic) {
+      return emitError() << "Static dimension " << dim
+                         << " cannot have a bound, use ShapedType::kDynamic to "
+                            "indicate a missing bound";
+    }
+  }
+
   return success();
 }
 
@@ -171,8 +187,8 @@ Attribute boundsToEncoding(Attribute prototype, ArrayRef<int64_t> bounds) {
     llvm::report_fatal_error(
         "Expect an prototype attribute to obtain the underlying dialect but "
         "got none");
-  auto dialect = cast<BoundedDialectInterface>(&prototype.getDialect());
-  return dialect->createBoundedAttr(bounds);
+  auto dialect = cast<HloDialectInterface>(&prototype.getDialect());
+  return dialect->createTypeExtensions(bounds);
 }
 
 // Inference rules to concat dimensions with bounds (lhs/rhs are commutative):
@@ -292,6 +308,20 @@ LogicalResult inferMostSpecificType(
           // there are no bounds at all in inputs, thus sparsity attributes will
           // be included in the return type
           anyInputHaveBounds ? inferredBounds : llvm::ArrayRef<int64_t>({}))));
+  return success();
+}
+
+LogicalResult inferMostSpecificTypeComponents(
+    Optional<Location> location, TypeRange inputTypes,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  SmallVector<Type> inferredReturnTypes;
+  if (failed(hlo::inferMostSpecificType(location, inputTypes,
+                                        inferredReturnTypes))) {
+    return failure();
+  }
+  for (auto inferredReturnType : inferredReturnTypes) {
+    inferredReturnShapes.emplace_back(inferredReturnType.cast<ShapedType>());
+  }
   return success();
 }
 

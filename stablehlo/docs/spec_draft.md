@@ -425,6 +425,7 @@ syntax.
    * [real](#stablehloreal)
    * [recv](#stablehlorecv)
    * [reduce](#stablehloreduce)
+   * [reduce_window](#stablehloreduce_window)
    * [remainder](#stablehloremainder)
    * [replica_id](#stablehloreplica_id)
    * [reshape](#stablehloreshape)
@@ -436,6 +437,7 @@ syntax.
    * [rsqrt](#stablehlorsqrt)
    * [scatter](#stablehloscatter)
    * [select](#stablehloselect)
+   * [select_and_scatter](#stablehloselect_and_scatter)
    * [send](#stablehlosend)
    * [shift_left](#stablehloshift_left)
    * [shift_right_arithmetic](#stablehloshift_right_arithmetic)
@@ -3050,7 +3052,7 @@ operation.
 
 ### Semantics
 
-Writes `inputs` to the outfeed and produces `result`.
+Writes `inputs` to the outfeed and produces a `result` token.
 
 Semantics of `outfeed_config` is implementation-defined.
 
@@ -3344,9 +3346,9 @@ floating-point addition for `body` and zero for `init_values` don't actually
 form a monoid because floating-point addition is not associative. What this
 means for numeric precision is implementation-defined.
 
-More formally, `results[:][result_index] = reduce(input_slices)` where:
-  * `input_slices` = `inputs[:][ri0, ..., :, ..., riR-1]`, where `ri` are
-    individual elements in `result_index` and `:` are inserted at `dimensions`.
+More formally, `results[:][j0, ..., jR-1] = reduce(input_slices)` where:
+  * `input_slices` = `inputs[:][j0, ..., :, ..., jR-1]`, where `:` are inserted
+    at `dimensions`.
   * `reduce(input_slices)` = `exec(schedule)` for some binary tree `schedule`
     where:
     * `exec(node)` = `body(exec(node.left), exec(node.right))`.
@@ -3402,6 +3404,89 @@ More formally, `results[:][result_index] = reduce(input_slices)` where:
   dimensions = dense<1> : tensor<1xi64>
 } : (tensor<1x6xi32>, tensor<i32>) -> tensor<1xi32>
 // %result = [15]
+```
+
+[Back to Ops](#index-of-ops)
+
+## stablehlo.reduce_window
+
+### Semantics
+
+Applies a reduction function `body` to windows of `inputs` and `init_values`
+and produces `results`.
+
+The following diagram shows how elements in `results[k]` are computed from
+`inputs[k]` using a concrete example.
+
+<img align="center" src="spec_draft/reduce_window.svg" />
+
+More formally, `results[:][result_index] = reduce(windows, init_values, axes(inputs[:]), body)` where:
+  * `padded_inputs = pad(inputs[:], init_values[:], padding[:, 0], padding[:, 1], base_dilations)`.
+  * `window_start = result_index * window_strides`.
+  * `windows = slice(padded_inputs[:], window_start, window_start + window_dimensions, window_dilations)`.
+
+### Inputs
+
+| Name                | Type                                                           | Constraints                                     |
+|---------------------|----------------------------------------------------------------|-------------------------------------------------|
+| `inputs`            | variadic number of tensors of any supported type               | (C1-C4), (C6), (C8), (C10), (C12), (C13), (C15) |
+| `init_values`       | variadic number of 0-dimensional tensors of any supported type | (C1), (C13), (C16)                              |
+| `window_dimensions` | 1-dimensional tensor constant of type `si64`                   | (C4), (C5), (C15)                               |
+| `window_strides`    | 1-dimensional tensor constant of type `si64`                   | (C6), (C7), (C15)                               |
+| `base_dilations`    | 1-dimensional tensor constant of type `si64`                   | (C8), (C9), (C15)                               |
+| `window_dilations`  | 1-dimensional tensor constant of type `si64`                   | (C10), (C11), (C15)                             |
+| `padding`           | 2-dimensional tensor constant of type `si64`                   | (C12), (C15)                                    |
+| `body`              | `function`                                                     | (C13)                                           |
+
+### Outputs
+
+| Name      | Type                                             | Constraints     |
+|-----------|--------------------------------------------------|-----------------|
+| `results` | variadic number of tensors of any supported type | (C1), (C14-C16) |
+
+### Constraints
+
+  * (C1) size(`inputs`) $=$ size(`init_values`) $=$ size(`results`) $=$ N and
+         N $\ge$ 1.
+  * (C2) All `inputs` have the same shape.
+  * (C3) `element_type(inputs[k]) = element_type(init_values[k])` for any k
+      $\in$ [0, N).
+  * (C4) size(`window_dimensions`) $=$ rank(`inputs[0]`).
+  * (C5) `window_dimensions[i]` $\gt 0$ for all i $\in$ [0, size(`window_dimensions`)).
+  * (C6) size(`window_strides`) $=$ rank(`inputs[0]`).
+  * (C7) `window_strides[i]` $\gt 0$ for all i $\in$ [0, size(`window_strides`)).
+  * (C8) size(`base_dilations`) $=$ rank(`inputs[0]`).
+  * (C9) `base_dilations[i]` $\gt 0$ for all i $\in$ [0, size(`base_dilations`)).
+  * (C10) size(`window_dilations`) $=$ rank(`inputs[0]`).
+  * (C11) `window_dilations[i]` $\gt 0$ for all i $\in$ [0, size(`window_dilations`)).
+  * (C12) dim(`padding`, 0) $=$ rank(`inputs[0]`) and dim(`padding`, 1) = 2.
+  * (C13) `body` has type `(tensor<E0>, ..., tensor<EN-1>, tensor<E0>, ..., tensor<EN-1>) -> (tensor<E0>, ..., tensor<EN-1>)`
+          where `Ek = element_type(inputs[0])`.
+  * (C14) All `results` have the same shape.
+  * (C15) `shape(results[0]) = (padded_input_shape == 0 || window_shape > padded_input_shape) ? 0 : floor((padded_input_shape - window_shape) / window_strides) + 1:`
+    * `dilated_input_shape = shape(inputs[0]) == 0 ? 0 : (shape(inputs[0]) - 1) * base_dilations + 1`.
+    * `padded_input_shape = padding[:, 0] + dilated_input_shape + padding[:, 1]`.
+    * `window_shape = window_dimensions == 0 ? 0 : (window_dimensions - 1) * window_dilations + 1`.
+  * (C16) `element_type(results[k]) = element_type(init_values[k])` for any k
+      $\in$ [0, N).
+
+### Examples
+
+```mlir
+// %input = [[1, 2], [3, 4], [5, 6]]
+// %init_value = 0
+%result = "stablehlo.reduce_window"(%input, %init_value) ({
+  ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+    %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
+    "stablehlo.return"(%0) : (tensor<i32>) -> ()
+}) {
+  window_dimensions = dense<[2, 1]> : tensor<2xi64>,
+  window_strides = dense<[4, 1]> : tensor<2xi64>,
+  base_dilations = dense<[2, 1]> : tensor<2xi64>,
+  window_dilations = dense<[3, 1]> : tensor<2xi64>,
+  padding = dense<[[2, 1], [0, 0]]> : tensor<2x2xi64>
+} : (tensor<3x2xi32>, tensor<i32>) -> tensor<2x2xi32>
+// %result = [[0, 0], [3, 4]]
 ```
 
 [Back to Ops](#index-of-ops)
@@ -3979,11 +4064,110 @@ where `pred_val = rank(pred) == 0 ? pred : pred[i0, ..., iR-1]`.
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.select_and_scatter
+
+### Semantics
+
+Scatters the values from the `source` tensor using `scatter` based on the
+outcome of `reduce_window` of the `input` tensor using `select` and produces
+a `result` tensor.
+
+The following diagram shows how elements in `result` are computed from
+`operand` and `source` using a concrete example.
+
+<img align="center" src="spec_draft/select_and_scatter.svg" />
+
+More formally,
+ * `selected_values = reduce_window_without_init(...)` with the following inputs:
+   * `inputs` $=$ [ `operand` ].
+   * `window_dimensions`, `window_strides`, and `padding` which are used as is.
+   * `base_dilations` $=$ `windows_dilations` $=$ `[1, ..., 1]`.
+   * `body` defined as:
+     ```C++
+     (tensor<E> arg0, tensor<E> arg1) -> tensor<E> {
+      return select(arg0, arg1) ? arg0 : arg1;
+     }
+     ```
+     where `E = element_type(operand)`.
+   where `reduce_window_without_init` works exactly like `reduce_window`,
+   except that the `schedule` of the underlying `reduce` doesn't include
+   init values.
+ * `result[result_index] = reduce([source_values], [init_value], [0], scatter)`
+   where:
+   * `source_values` $=$ [`source[source_index]` for `source_index` in
+     `source_indices`].
+   * `source_indices` $=$ [`source_index` for `source_index` in
+     `indices(source)` if `selected_index(source_index) = result_index`].
+   * `selected_index(source_index) = operand_index` if
+     `selected_values[source_index]` has the `operand` element
+     from `operand_index`.
+
+### Inputs
+
+| Name                | Type                                       | Constraints                    |
+|---------------------|--------------------------------------------|--------------------------------|
+| `operand`           | tensor of any supported type               | (C1-C5), (C7), (C9), (C10-C12) |
+| `source`            | tensor of any supported type               | (C2), (C3)                     |
+| `init_value`        | 0-dimensional tensor of any supported type | (C4)                           |
+| `window_dimensions` | 1-dimensional tensor constant type `si64`  | (C1), (C3), (C5), (C6)         |
+| `window_strides`    | 1-dimensional tensor constant type `si64`  | (C3), (C7), (C8)               |
+| `padding`           | 2-dimensional tensor constant type `si64`  | (C3), (C9)                     |
+| `select`            | `function`                                 | (C10)                          |
+| `scatter`           | `function`                                 | (C11)                          |
+
+### Outputs
+
+| Name     | Type                         | Constraints |
+|----------|------------------------------|-------------|
+| `result` | tensor of any supported type | (C12)       |
+
+### Constraints
+
+  * (C1) rank(`operand`) $=$ size(`window_dimensions`).
+  * (C2) `operand` and `source` have the same element type.
+  * (C3) `shape(source) = (padded_operand_shape == 0 || window_dimensions > padded_operand_shape) ? 0 : floor((padded_operand_shape - window_dimensions) / window_strides) + 1:`
+    * `padded_operand_shape = padding[:, 0] + shape(operand) + padding[:, 1]`.
+  * (C4) element_type(`init_value`) $=$ element_type(`operand`).
+  * (C5) size(`window_dimensions`) $=$ rank(`operand`).
+  * (C6) `window_dimensions[i]` $\gt 0$ for all i $\in$ [0, size(window_dimensions)).
+  * (C7) size(`window_strides`) $=$ rank(`operand`).
+  * (C8) `window_strides[i]` $\gt 0$ for all i $\in$ [0, size(window_strides)).
+  * (C9) dim(`padding`, 0) $=$ rank(`operand`) and dim(`padding`, 1) = 2.
+  * (C10) `select` has type `(tensor<E>, tensor<E>) -> tensor<i1>` where
+         `E = element_type(operand)`.
+  * (C11) `scatter` has type `(tensor<E>, tensor<E>) -> tensor<E>` where
+         `E = element_type(operand)`.
+  * (C12) type(`operand`) $=$ type(`result`).
+
+### Examples
+
+```mlir
+// %operand: [[1, 5], [2, 5], [3, 6], [4, 4]]
+// %source: [[5, 6], [7, 8]]
+// %init_value: 0
+%result = "stablehlo.select_and_scatter"(%operand, %source, %init_value) ({
+  ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+    %0 = stablehlo.compare GE, %arg0, %arg1 : (tensor<i32>, tensor<i32>) -> tensor<i1>
+    stablehlo.return %0 : tensor<i1>
+}, {
+  ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+    %0 = stablehlo.add %arg0, %arg1 : tensor<i32>
+    stablehlo.return %0 : tensor<i32>
+}) {
+  window_dimensions = dense<[3, 1]> : tensor<2xi64>,
+  window_strides = dense<[2, 1]> : tensor<2xi64>,
+  padding = dense<[[0, 1], [0, 0]]> : tensor<2x2xi64>
+} : (tensor<4x2xi32>, tensor<2x2xi32>, tensor<i32>) -> tensor<4x2xi32>
+// %result: [[0, 0], [0, 0], [5, 14], [7, 0]]
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.send
 
 ### Semantics
 
-Sends `inputs` to a channel `channel_id`.
+Sends `inputs` to a channel `channel_id` and produces a `result` token.
 
 The operation takes a token and produces a token to reify its side effects
 as a value that other operations can take a data dependency on.

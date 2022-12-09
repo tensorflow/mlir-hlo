@@ -19,6 +19,7 @@ limitations under the License.
 #include "llvm/ADT/TypeSwitch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "stablehlo/dialect/AssemblyFormat.h"
+#include "stablehlo/dialect/VhloBytecode.h"
 
 // Include order matters
 #include "stablehlo/dialect/VhloEnums.cpp.inc"
@@ -31,9 +32,6 @@ limitations under the License.
 namespace mlir {
 namespace vhlo {
 
-using mlir::hlo::parseDimSizes;
-using mlir::hlo::printDimSizes;
-
 //===----------------------------------------------------------------------===//
 // StableHLO Dialect Constructor
 //===----------------------------------------------------------------------===//
@@ -44,7 +42,7 @@ VhloDialect::VhloDialect(MLIRContext* context)
 #define GET_OP_LIST
 #include "stablehlo/dialect/VhloOps.cpp.inc"
       >();
-  // TODO (gleasonk): addBytecodeInterface(this);
+  addBytecodeInterface(this);
   addTypes<TokenType>();
   addAttributes<
 #define GET_ATTRDEF_LIST

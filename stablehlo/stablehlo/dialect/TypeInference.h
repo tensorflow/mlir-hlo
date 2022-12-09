@@ -19,6 +19,7 @@ limitations under the License.
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
@@ -102,6 +103,9 @@ LogicalResult verifyReplicaGroups(Optional<Location> location,
 // These parameters have the same names as in the ODS and come in the same
 // order in which they are declared in the ODS.
 
+LogicalResult inferAfterAllOp(Dialect* dialect, Optional<Location> location,
+                              SmallVectorImpl<Type>& inferredReturnTypes);
+
 LogicalResult inferBatchNormGradOp(
     Optional<Location> location, Value operand, Value scale,
     uint64_t featureIndex,
@@ -124,6 +128,9 @@ LogicalResult inferConcatenateOp(Optional<Location> location, ValueRange inputs,
                                  int64_t dimension,
                                  SmallVectorImpl<Type>& inferredReturnTypes);
 
+LogicalResult inferCreateTokenOp(Dialect* dialect, Optional<Location> location,
+                                 SmallVectorImpl<Type>& inferredReturnTypes);
+
 LogicalResult inferDotGeneralOp(
     Optional<Location> location, Value lhs, Value rhs,
     ArrayRef<int64_t> lhsBatchingDimensions,
@@ -131,6 +138,15 @@ LogicalResult inferDotGeneralOp(
     ArrayRef<int64_t> lhsContractingDimensions,
     ArrayRef<int64_t> rhsContractingDimensions,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
+LogicalResult inferDynamicUpdateSliceOp(
+    Optional<Location> location, Value operand, Value update,
+    ValueRange startIndices,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
+LogicalResult inferGetDimensionSizeOp(
+    MLIRContext* context, Optional<Location> location,
+    SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferIfOp(Optional<Location> location, RegionRange branches,
                         SmallVectorImpl<Type>& inferredReturnTypes);
@@ -148,7 +164,11 @@ LogicalResult inferPadOp(Optional<Location> location, Value operand,
                          SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferOptimizationBarrierOp(
-    ValueRange operand, SmallVectorImpl<Type>& inferredReturnTypes);
+    Optional<Location> location, ValueRange operand,
+    SmallVectorImpl<Type>& inferredReturnTypes);
+
+LogicalResult inferOutfeedOp(Dialect* dialect, Optional<Location> location,
+                             SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferReduceOp(
     Optional<Location> location, ValueRange inputs, ValueRange initValues,
@@ -163,6 +183,19 @@ LogicalResult inferReduceWindowOp(
     Optional<DenseIntElementsAttr> windowDilations,
     Optional<DenseIntElementsAttr> padding, Region& body,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
+LogicalResult inferReturnOp(Optional<Location> location,
+                            SmallVectorImpl<Type>& inferredReturnTypes);
+
+LogicalResult inferScatterOp(Optional<Location> location, ValueRange inputs,
+                             SmallVectorImpl<Type>& inferredReturnTypes);
+
+LogicalResult inferSelectOp(
+    Optional<Location> location, Value pred, Value onTrue, Value onFalse,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
+LogicalResult inferSelectAndScatterOp(
+    Value operand, SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferSliceOp(Optional<Location> location, Value operand,
                            DenseIntElementsAttr startIndices,

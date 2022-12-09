@@ -505,6 +505,13 @@ LogicalResult verifyReducerShape(Optional<Location> loc, Block& block,
 // Shape functions for ops.
 //===----------------------------------------------------------------------===//
 
+LogicalResult inferAfterAllOp(Dialect* dialect, Optional<Location> location,
+                              SmallVectorImpl<Type>& inferredReturnTypes) {
+  auto hloDialect = cast<HloDialectInterface>(dialect);
+  inferredReturnTypes.push_back(hloDialect->createTokenType());
+  return success();
+}
+
 LogicalResult inferBatchNormGradOp(
     Optional<Location> location, Value operand, Value scale,
     uint64_t featureIndex,
@@ -685,6 +692,13 @@ LogicalResult inferConcatenateOp(Optional<Location> location, ValueRange inputs,
   return success();
 }
 
+LogicalResult inferCreateTokenOp(Dialect* dialect, Optional<Location> location,
+                                 SmallVectorImpl<Type>& inferredReturnTypes) {
+  auto hloDialect = cast<HloDialectInterface>(dialect);
+  inferredReturnTypes.push_back(hloDialect->createTokenType());
+  return success();
+}
+
 LogicalResult inferDotGeneralOp(
     Optional<Location> location, Value lhs, Value rhs,
     ArrayRef<int64_t> lhsBatchingDimensions,
@@ -809,6 +823,65 @@ LogicalResult inferDotGeneralOp(
       dimensions.push_back(rhsShape[i]);
 
   inferredReturnShapes.emplace_back(dimensions, elementType);
+  return success();
+}
+
+LogicalResult inferDynamicUpdateSliceOp(
+    Optional<Location> location, Value operand, Value update,
+    ValueRange startIndices,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  auto operandType = operand.getType().cast<ShapedType>();
+  auto updateType = update.getType().cast<ShapedType>();
+
+  // (C3)
+  int64_t operandRank = operandType.getRank();
+  int64_t updateRank = updateType.getRank();
+  if (updateRank != operandRank)
+    return emitOptionalError(
+        location, "update rank does not match operand rank: ", updateRank,
+        " vs ", operandRank, ".");
+
+  // (C4)
+  if ((int64_t)startIndices.size() != operandRank)
+    return emitOptionalError(
+        location, "expects number of start_indices to match operand rank: ",
+        startIndices.size(), " vs ", operandRank, ".");
+
+  // (C5)
+  if (!startIndices.empty()) {
+    auto firstIndexType = startIndices[0].getType().cast<ShapedType>();
+    Type firstIndexElement = firstIndexType.getElementType();
+    for (auto otherIndex : llvm::drop_begin(startIndices, 1)) {
+      auto otherIndexType = otherIndex.getType().cast<ShapedType>();
+      Type otherIndexElement = otherIndexType.getElementType();
+      if (firstIndexElement != otherIndexElement)
+        return emitOptionalError(
+            location,
+            "start indices must have same element type (encountered mismatch: ",
+            firstIndexElement, " vs ", otherIndexElement, ")");
+    }
+  }
+
+  // (C6)
+  for (auto [index, dims] : llvm::enumerate(
+           llvm::zip(operandType.getShape(), updateType.getShape()))) {
+    auto [operandDim, updateDim] = dims;
+    if (updateDim < 0 || updateDim > operandDim)
+      return emitOptionalError(location, "expects size at dimension ", index,
+                               " of update to be in range [0, ", operandDim,
+                               "]. Got: ", updateDim, ".");
+  }
+
+  inferredReturnShapes.emplace_back(operandType.getShape(),
+                                    operandType.getElementType());
+  return success();
+}
+
+LogicalResult inferGetDimensionSizeOp(
+    MLIRContext* context, Optional<Location> location,
+    SmallVectorImpl<Type>& inferredReturnTypes) {
+  inferredReturnTypes.push_back(
+      RankedTensorType::get({}, IntegerType::get(context, 32)));
   return success();
 }
 
@@ -981,11 +1054,19 @@ LogicalResult inferPadOp(Optional<Location> location, Value operand,
 }
 
 LogicalResult inferOptimizationBarrierOp(
-    ValueRange operand, SmallVectorImpl<Type>& inferredReturnTypes) {
+    Optional<Location> location, ValueRange operand,
+    SmallVectorImpl<Type>& inferredReturnTypes) {
   for (auto inputArgType : operand.getTypes()) {
     inferredReturnTypes.emplace_back(inputArgType);
   }
 
+  return success();
+}
+
+LogicalResult inferOutfeedOp(Dialect* dialect, Optional<Location> location,
+                             SmallVectorImpl<Type>& inferredReturnTypes) {
+  auto hloDialect = cast<HloDialectInterface>(dialect);
+  inferredReturnTypes.push_back(hloDialect->createTokenType());
   return success();
 }
 
@@ -1171,6 +1252,52 @@ LogicalResult inferReduceWindowOp(
           initValueTypes[i].getElementType());
   }
 
+  return success();
+}
+
+LogicalResult inferReturnOp(Optional<Location>, SmallVectorImpl<Type>&) {
+  return success();
+}
+
+LogicalResult inferScatterOp(Optional<Location>, ValueRange inputs,
+                             SmallVectorImpl<Type>& inferredReturnTypes) {
+  llvm::append_range(inferredReturnTypes, inputs.getTypes());
+  return success();
+}
+
+LogicalResult inferSelectOp(
+    Optional<Location> location, Value pred, Value onTrue, Value onFalse,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  auto predType = pred.getType().cast<ShapedType>();
+  auto trueType = onTrue.getType().cast<ShapedType>();
+  auto falseType = onFalse.getType().cast<ShapedType>();
+
+  // The operands `onTrue` and `onFalse` should have compatible types, i.e.,
+  //   (a) have the same element type, and
+  //   (b) have compatible shapes (i.e. the same shape and/or at least one
+  //       dynamic shape)
+  if (!hlo::compatibleShapeAndElementType(trueType, falseType))
+    return emitOptionalError(
+        location, "requires compatible types for non-predicate operands");
+
+  // The predicate, if not-scalar, should have the same shape as the remaining
+  // operands.
+  bool predCannotBeScalar = predType.hasRank() && predType.getRank() != 0;
+  if (predCannotBeScalar)
+    if (failed(verifyCompatibleShape(predType, trueType)))
+      return emitOptionalError(location,
+                               "requires the same shape for all operands");
+
+  // The output shape should be derived from the most specific parts of the
+  // `onTrue` and `onFalse` (see documentation for details).
+  SmallVector<Type> inferredReturnTypes;
+  return hlo::inferMostSpecificTypeComponents(location, {trueType, falseType},
+                                              inferredReturnShapes);
+}
+
+LogicalResult inferSelectAndScatterOp(
+    Value operand, SmallVectorImpl<Type>& inferredReturnTypes) {
+  inferredReturnTypes.push_back(operand.getType());
   return success();
 }
 

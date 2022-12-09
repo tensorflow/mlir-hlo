@@ -147,7 +147,8 @@ def StableHLO_DynamicIotaOp: StableHLO_ShapedInterfaceOp<"dynamic_iota", [Pure]>
   }];
 }
 
-def StableHLO_CreateTokenOp : StableHLO_Op<"create_token", [Pure]> {
+def StableHLO_CreateTokenOp : StableHLO_Op<"create_token", [Pure,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Create Token operator";
 
   let description = [{
@@ -1002,12 +1003,13 @@ def StableHLO_InfeedOp : StableHLO_Op<"infeed", []> {
 
 // OutfeedOp corresponds to 'OutfeedWithToken' xla client API and not 'Outfeed'.
 // OutfeedWithToken allows ordering of outfeed HLO instructions using tokens.
-def StableHLO_OutfeedOp : StableHLO_Op<"outfeed", []> {
+def StableHLO_OutfeedOp : StableHLO_Op<"outfeed",
+    [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
 
   let summary = "Outfeed operator";
 
   let description = [{
-    Writes `inputs` to the outfeed and produces `result`.
+    Writes `inputs` to the outfeed and produces a `result` token.
 
     See:
     https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlooutfeed
@@ -1034,7 +1036,7 @@ def StableHLO_SendOp : StableHLO_Op<"send",
   let summary = "Send operator";
 
   let description = [{
-    Sends `inputs` to a channel `channel_id`.
+    Sends `inputs` to a channel `channel_id` and produces a `result` token.
 
     See:
     https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlosend
@@ -1118,7 +1120,8 @@ def StableHLO_ReplicaIdOp : StableHLO_Op<"replica_id", [Pure,
 // StableHLO control flow op definitions.
 //===----------------------------------------------------------------------===//
 
-def StableHLO_AfterAllOp : StableHLO_Op<"after_all", [Pure]> {
+def StableHLO_AfterAllOp : StableHLO_Op<"after_all", [Pure,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
 
   let summary = "AfterAll operator";
 
@@ -1600,7 +1603,7 @@ def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
 
 def StableHLO_DynamicUpdateSliceOp: StableHLO_Op<"dynamic_update_slice",
       [Pure, AllElementTypesMatch<["operand", "update", "result"]>,
-       AllShapesMatch<["operand", "result"]>]> {
+       AllShapesMatch<["operand", "result"]>, InferTensorType]> {
   let summary = "Dynamic Update Slice operator";
   let description = [{
     Produces a `result` tensor which is equal to the `operand` tensor except
@@ -1622,7 +1625,6 @@ def StableHLO_DynamicUpdateSliceOp: StableHLO_Op<"dynamic_update_slice",
     Variadic<HLO_ScalarIntTensor>:$start_indices
   );
   let results = (outs HLO_Tensor:$result);
-  let hasVerifier = 1;
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
@@ -2292,7 +2294,8 @@ def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify, Pure]>
   let results = (outs HLO_Tensor);
 }
 
-def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size", [Pure]> {
+def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size", [Pure,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "GetDimensionSize operator";
   let description = [{
     Returns the size of the given dimension of the operand.
@@ -2401,7 +2404,9 @@ def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape", [
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
-def StableHLO_ScatterOp: StableHLO_Op<"scatter", [SameVariadicOperandSize, RecursiveMemoryEffects]> {
+def StableHLO_ScatterOp: StableHLO_Op<"scatter",
+      [SameVariadicOperandSize, RecursiveMemoryEffects,
+      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Scatter operator";
   let description = [{
     Produces `results` tensors which are equal to `inputs` tensors except that
@@ -2469,8 +2474,6 @@ def StableHLO_SelectOp: StableHLO_Op<"select", [Pure, HLO_BroadcastingElementwis
 
   let results = (outs HLO_Tensor:$result);
 
-  let hasVerifier = 1;
-
   let assemblyFormat = [{
     operands attr-dict `:`
       custom<SelectOpType>(type($pred), type($on_true), type($on_false), type($result))
@@ -2478,17 +2481,34 @@ def StableHLO_SelectOp: StableHLO_Op<"select", [Pure, HLO_BroadcastingElementwis
 }
 
 def StableHLO_SelectAndScatterOp: StableHLO_Op<"select_and_scatter",
-      [RecursiveMemoryEffects]> {
+      [RecursiveMemoryEffects, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "SelectAndScatter operator";
   let description = [{
-    Runs a windowed selection `select` function over `operand` with shape
-    `window_dimensions` and stride `window_strides`. This will produce an amount
-    of selected locations whose shape matches `source`. These are then scattered
-    to the output which is initialized with `init_value`.
-    Multiple scattered elements which land in the same output location are
-    combined using the `scatter` function.
+    Scatters the values from the `source` tensor using `scatter` based on the
+    outcome of `reduce_window` of the `input` tensor using `select` and produces
+    a `result` tensor.
 
-    See https://www.tensorflow.org/xla/operation_semantics#selectandscatter.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloselect_and_scatter
+
+    Example:
+    ```mlir
+    %result = "stablehlo.select_and_scatter"(%operand, %source, %init_value) ({
+      ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+        %0 = "stablehlo.compare"(%arg0, %arg1) {
+          comparison_direction = #stablehlo<comparison_direction GE>
+        } : (tensor<i32>, tensor<i32>) -> tensor<i1>
+        "stablehlo.return"(%0) : (tensor<i1>) -> ()
+    }, {
+      ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+        %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
+        "stablehlo.return"(%0) : (tensor<i32>) -> ()
+    }) {
+      window_dimensions = dense<[3, 1]> : tensor<2xi64>,
+      window_strides = dense<[2, 1]> : tensor<2xi64>,
+      padding = dense<[[0, 1], [0, 0]]> : tensor<2x2xi64>
+    } : (tensor<4x2xi32>, tensor<2x2xi32>, tensor<i32>) -> tensor<4x2xi32>
+    ```
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
@@ -2724,10 +2744,26 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
     ]> {
   let summary = "ReduceWindow operator";
   let description = [{
-    Returns the result of executing a reduction function over all elements in
-    each window of one or more arrays in parallel.
+    Applies a reduction function `body` to windows of `inputs` and `init_values`
+    and produces `results`.
 
-    See https://www.tensorflow.org/xla/operation_semantics#reducewindow.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreduce_window
+
+    Example:
+    ```mlir
+    %result = "stablehlo.reduce_window"(%input, %init_value) ({
+      ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
+        %0 = stablehlo.add %arg0, %arg1 : tensor<i32>
+        stablehlo.return %0 : tensor<i32>
+    }) {
+      window_dimensions = dense<[2, 1]> : tensor<2xi64>,
+      window_strides = dense<[4, 1]> : tensor<2xi64>,
+      base_dilations = dense<[2, 1]> : tensor<2xi64>,
+      window_dilations = dense<[3, 1]> : tensor<2xi64>,
+      padding = dense<[[2, 1], [0, 0]]> : tensor<2x2xi64>
+    } : (tensor<3x2xi32>, tensor<i32>) -> tensor<2x2xi32>
+    ```
   }];
 
   let arguments = (ins
@@ -2775,7 +2811,9 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
   }];
 }
 
-def StableHLO_ReturnOp : StableHLO_Op<"return", [Pure, Terminator]> {
+def StableHLO_ReturnOp : StableHLO_Op<"return",
+      [Pure, Terminator,
+      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = [{
     The `hlo.return` operation terminates a region and returns values.
 
