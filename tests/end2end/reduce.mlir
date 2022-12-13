@@ -1,6 +1,6 @@
 // RUN: mlir-hlo-opt %s -chlo-legalize-to-hlo -hlo-legalize-to-memref \
-// RUN: -hlo-legalize-to-linalg -arith-bufferize -tensor-bufferize \
-// RUN: -empty-tensor-to-alloc-tensor -bufferization-bufferize \
+// RUN: -hlo-legalize-to-linalg -arith-bufferize -empty-tensor-to-alloc-tensor \
+// RUN: -tensor-bufferize -bufferization-bufferize \
 // RUN: -linalg-bufferize  -finalizing-bufferize \
 // RUN: -canonicalize -buffer-hoisting \
 // RUN: -buffer-deallocation -canonicalize -cse \
