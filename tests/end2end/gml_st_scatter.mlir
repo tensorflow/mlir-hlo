@@ -57,7 +57,7 @@ func.func @main() {
   // CHECK: rank = 2 offset = 0 sizes = [3, 3] strides = [3, 1]
   // CHECK-NEXT: [1, 0, 0]
   // CHECK-NEXT: [3, 3, 0]
-  // CHECK-NEXT: [2, 3, 4]
+  // CHECK-NEXT: [2, 3, 0]
   %result_unranked = tensor.cast %result : tensor<3x3xf32> to tensor<*xf32>
   func.call @printMemrefF32(%result_unranked) : (tensor<*xf32>) -> ()
 
