@@ -238,6 +238,7 @@ add_mlir_library(MhloToLinalg
   HloToLinalgUtils
   LmhloDialect
   MhloDialect
+  MhloToArithmeticConversion
   MhloTypeConversion
   MLIRBufferizationDialect
   MLIRComplexDialect
