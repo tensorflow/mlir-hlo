@@ -1116,6 +1116,25 @@ def StableHLO_ReplicaIdOp : StableHLO_Op<"replica_id", [Pure,
   let assemblyFormat = "attr-dict `:` type(results)";
 }
 
+def StableHLO_PartitionIdOp : StableHLO_Op<"partition_id", [Pure,
+    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+  let summary = "PartitionId operator";
+  let description = [{
+    Produces `partition_id` of the current process.
+
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlopartition_id
+
+    Example:
+    ```mlir
+    %result = stablehlo.partition_id : tensor<ui32>
+    ```
+  }];
+  let results = (outs TensorOf<[UI32]>);
+
+  let assemblyFormat = "attr-dict `:` type(results)";
+}
+
 //===----------------------------------------------------------------------===//
 // StableHLO control flow op definitions.
 //===----------------------------------------------------------------------===//
@@ -1251,6 +1270,8 @@ def StableHLO_WhileOp: StableHLO_Op<"while", [
 
   let results = (outs Variadic<HLO_TensorOrToken>);
 
+  let hasVerifier = 1;
+
   let extraClassDeclaration = [{
     // Method of OpAsmOpInterface used during custom printing to name the block
     // arguments in the nested regions. We name both the condition and the body
@@ -1287,6 +1308,8 @@ def StableHLO_AllGatherOp : StableHLO_Op<"all_gather", [SameOperandsAndResultEle
     %result = "stablehlo.all_gather"(%operand) {
       all_gather_dim = 1 : i64,
       replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
+      // channel_id = 0
+      channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>,
       // use_global_device_ids = false
     } : (tensor<2x2xf32>) -> tensor<2x4xf32>
     ```
@@ -1322,6 +1345,9 @@ def StableHLO_AllReduceOp : StableHLO_Op<"all_reduce",
         stablehlo.return %0 : tensor<f32>
     }) {
       replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
+      // channel_id = 0
+      channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
+      // use_global_device_ids = false
     } : (tensor<4xf32>) -> tensor<4xf32>
     ```
   }];
@@ -1348,9 +1374,28 @@ def StableHLO_ReduceScatterOp : StableHLO_Op<"reduce_scatter",
     [SameOperandsAndResultElementType]> {
   let summary = "ReduceScatter operator";
   let description = [{
-     Performs all_reduce followed by a scatter.
+     Within each process group in the StableHLO grid, performs reduction, using
+     `computations`, over the values of the `operand` tensor from each process,
+     splits the reduction result along `scatter_dimension` into parts, and
+     scatters the split parts between the processes to produce the `result`.
 
-     See https://www.tensorflow.org/xla/operation_semantics#reducescatter
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreduce_scatter
+
+    Example:
+    ```mlir
+    %result = "stablehlo.reduce_scatter"(%operand) ({
+      ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
+      %0 = stablehlo.add %arg0, %arg1 : tensor<f32>
+      stablehlo.return %0 : tensor<f32>
+    }) {
+      scatter_dimension = 1 : i64,
+      replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>,
+      // channel_id = 0
+      channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
+      // use_global_device_ids = false
+    } : (tensor<2x4xf32>) -> tensor<2x2xf32>
+    ```
   }];
 
   let arguments = (ins
@@ -1432,6 +1477,8 @@ def StableHLO_ReduceOp: StableHLO_ShapedInterfaceOp<"reduce", [
   let results = (outs Variadic<HLO_Tensor>);
 
   let hasCustomAssemblyFormat = 1;
+
+  let hasVerifier = 1;
 
   // TODO(hinsu): Verify that the attached body arguments and results are
   // compatible with reduce op's operands.
@@ -1974,18 +2021,24 @@ def StableHLO_ConcatenateOp : StableHLO_ShapedInterfaceOp<"concatenate",
 }
 
 def StableHLO_CollectivePermuteOp: StableHLO_Op<"collective_permute",
-    [Pure, HLO_CompatibleOperandsAndResultType]> {
+    [HLO_CompatibleOperandsAndResultType]> {
   let summary = "CollectivePermute operator";
   let description = [{
-    CollectivePermute is a collective operation that sends and receives data
-    cross replicas.
-    Note that there are the following restrictions on the source_target_pair:
-    - Any two pairs should not have the same target replica id, and they should
-    not have the same source replica id.
-    - If a replica id is not a target in any pair, then the output on that
-    replica is a tensor consists of 0(s) with the same shape as the input.
+    Within each process group in the StableHLO grid, sends the value of the
+    `operand` tensor from the source process to the target process and produces
+    a `result` tensor.
 
-    See https://www.tensorflow.org/xla/operation_semantics#collectivepermute.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocollective_permute
+
+    Example:
+    ```mlir
+    %result = "stablehlo.collective_permute"(%operand) {
+      source_target_pairs = dense<[[0, 1], [1, 2]]> : tensor<2x2xi64>,
+      // channel_id = 0
+      channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
+    } : (tensor<4x2xf32>) -> tensor<4x2xf32>
+    ```
 
   }];
 
@@ -2221,6 +2274,10 @@ def StableHLO_EinsumOp: StableHLO_Op<"einsum", [Pure]>, BASE_EinsumOp {
 
   // TODO(hinsu): Canonicalize to lower this client side HLO op to server
   // side HLO ops.
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `,` `config` `=` $einsum_config attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 def StableHLO_UnaryEinsumOp: StableHLO_Op<"unary_einsum", [Pure]>, BASE_EinsumOp {
@@ -2230,6 +2287,10 @@ def StableHLO_UnaryEinsumOp: StableHLO_Op<"unary_einsum", [Pure]>, BASE_EinsumOp
   );
 
   let results = (outs HLO_Tensor);
+
+  let assemblyFormat = [{
+    $operand `,` `config` `=` $einsum_config attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 def StableHLO_FftOp: StableHLO_Op<"fft", [InferTensorType, Pure]> {
@@ -2593,6 +2654,8 @@ def StableHLO_SortOp : StableHLO_Op<"sort",
   let builders = [
     OpBuilder<(ins "ValueRange":$inputs, CArg<"int64_t", "-1">:$dimension,
       CArg<"bool", "false">:$is_stable)>];
+
+  let hasVerifier = 1;
 }
 
 def StableHLO_ReverseOp: StableHLO_Op<"reverse",
@@ -2782,6 +2845,8 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
   let results = (outs Variadic<HLO_Tensor>);
 
   let regions = (region SizedRegion<1>:$body);
+
+  let hasVerifier = 1;
 
   // Builder for non-variadic version of the operation.
   let builders = [
@@ -2996,19 +3061,16 @@ def StableHLO_ReducePrecisionOp :
     StableHLO_Op<"reduce_precision", [HLO_CompatibleOperandsAndResultType]> {
   let summary = "Reduce precision operator";
   let description = [{
-    Models the effect of converting floating - point values to a lower -
-    precision format(such as IEEE - FP16) and back to the original
-    format. The number of exponent and mantissa bits in the lower -
-    precision format can be specified arbitrarily,
-    although all bit sizes may not be supported on all hardware
-    implementations.
+    Performs element-wise conversion of `operand` to another floating-point type
+    that uses `exponent_bits` and `mantissa_bits` and back to the original
+    floating-point type and produces a `result` tensor.
 
-    See https://www.tensorflow.org/xla/operation_semantics#reduceprecision.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreduce_precision
 
     Example:
-
     ```mlir
-    %0 = stablehlo.reduce_precision %arg0, format = e8m10 : tensor<3x4xf32>
+    %result = stablehlo.reduce_precision %operand, format = e5m2 : tensor<6xf32>
     ```
   }];
   let arguments = (ins

@@ -1456,7 +1456,7 @@ LogicalResult AbsOp::inferReturnTypes(
 // Verifies the source target pairs attached to collective permute.
 LogicalResult verifyCollectivePermuteSourceTargetPairs(
     Operation* op, DenseIntElementsAttr attr) {
-  auto type = attr.getType().dyn_cast<RankedTensorType>();
+  auto type = attr.getType().cast<RankedTensorType>();
   if (type.getRank() != 2)
     return op->emitError() << "expect source_target_pairs attribute to be of "
                               "rank 2, but got rank "
@@ -1470,6 +1470,10 @@ LogicalResult verifyCollectivePermuteSourceTargetPairs(
   llvm::DenseSet<int64_t> targets;
   for (auto i = attr.begin(), e = attr.end(); i != e; ++i) {
     auto val = (*i).getSExtValue();
+    if (val < 0)
+      return op->emitError()
+             << "replica ids in source_target_pairs must be >= 0.";
+
     if (i.getIndex() % 2 == 0) {
       bool isUnique = sources.insert(val).second;
       if (!isUnique) return op->emitError() << "duplicate sources not allowed.";
@@ -2945,7 +2949,14 @@ LogicalResult ReduceWindowOp::inferReturnTypeComponents(
       location, adaptor.getInputs(), adaptor.getInitValues(),
       adaptor.getWindowDimensions(), adaptor.getWindowStrides(),
       adaptor.getBaseDilations(), adaptor.getWindowDilations(),
-      adaptor.getPadding(), adaptor.getBody(), inferredReturnShapes);
+      adaptor.getPadding(), inferredReturnShapes);
+}
+
+LogicalResult ReduceWindowOp::verify() {
+  return hlo::verifyReduceWindowOp(getLoc(), getInputs(), getInitValues(),
+                                   getWindowDimensions(), getWindowStrides(),
+                                   getBaseDilations(), getWindowDilations(),
+                                   getPadding(), getBody());
 }
 
 // Get the operation used for reduction applied to `result_index`th result. Its
@@ -3305,7 +3316,12 @@ LogicalResult ReduceOp::inferReturnTypeComponents(
   ReduceOp::Adaptor adaptor(operands, attributes, regions);
   return hlo::inferReduceOp(location, adaptor.getInputs(),
                             adaptor.getInitValues(), adaptor.getDimensions(),
-                            adaptor.getBody(), inferredReturnShapes);
+                            inferredReturnShapes);
+}
+
+LogicalResult ReduceOp::verify() {
+  return hlo::verifyReduceOp(getLoc(), getInputs(), getInitValues(),
+                             getDimensions(), getBody());
 }
 
 LogicalResult ReduceOp::reifyReturnTypeShapes(
@@ -3738,6 +3754,18 @@ LogicalResult ReplicaIdOp::inferReturnTypes(
 }
 
 //===----------------------------------------------------------------------===//
+// PartitionId Op
+//===----------------------------------------------------------------------===//
+
+LogicalResult PartitionIdOp::inferReturnTypes(
+    MLIRContext* context, Optional<Location>, ValueRange /*operands*/,
+    DictionaryAttr, RegionRange, SmallVectorImpl<Type>& inferredReturnTypes) {
+  inferredReturnTypes.push_back(RankedTensorType::get(
+      /*shape=*/{}, IntegerType::get(context, 32, IntegerType::Unsigned)));
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // If Op
 //===----------------------------------------------------------------------===//
 
@@ -3795,8 +3823,12 @@ LogicalResult SortOp::inferReturnTypeComponents(
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
   SortOp::Adaptor adaptor(operands, attributes, regions);
-  return hlo::inferSortOp(location, adaptor.getInputs(), adaptor.getDimension(),
-                          adaptor.getComparator(), inferredReturnShapes);
+  return hlo::inferSortOp(location, adaptor.getInputs(), inferredReturnShapes);
+}
+
+LogicalResult SortOp::verify() {
+  return hlo::verifySortOp(getLoc(), getInputs(), getDimension(),
+                           getComparator());
 }
 
 //===----------------------------------------------------------------------===//
@@ -4365,8 +4397,11 @@ LogicalResult WhileOp::inferReturnTypes(
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type>& inferredReturnTypes) {
   WhileOp::Adaptor adaptor(operands, attributes, regions);
-  return hlo::inferWhileOp(location, adaptor.getOperand(), adaptor.getCond(),
-                           adaptor.getBody(), inferredReturnTypes);
+  return hlo::inferWhileOp(location, adaptor.getOperand(), inferredReturnTypes);
+}
+
+LogicalResult WhileOp::verify() {
+  return hlo::verifyWhileOp(getLoc(), getOperand(), getCond(), getBody());
 }
 
 /// Print a `while` op.

@@ -4,10 +4,12 @@
 // CHECK-LABEL: func @zero_input
 func.func @zero_input() -> !stablehlo.token {
   // CHECK:      %0 = stablehlo.replica_id : tensor<ui32>
-  // CHECK-NEXT: %1 = stablehlo.create_token : !stablehlo.token
+  // CHECK-NEXT: %1 = stablehlo.partition_id : tensor<ui32>
+  // CHECK-NEXT: %2 = stablehlo.create_token : !stablehlo.token
   %0 = "stablehlo.replica_id"() : () -> tensor<ui32>
-  %1 = "stablehlo.create_token"() : () -> !stablehlo.token
-  return %1 : !stablehlo.token
+  %1 = "stablehlo.partition_id"() : () -> tensor<ui32>
+  %2 = "stablehlo.create_token"() : () -> !stablehlo.token
+  return %2 : !stablehlo.token
 }
 
 // CHECK-LABEL: func @zero_output_ret2
@@ -258,6 +260,15 @@ func.func @dimension_attr(%arg0 : tensor<1x2xf32>, %arg1 : tensor<3xi32>, %arg2 
   %4 = "stablehlo.dynamic_slice"(%arg2, %arg3, %arg3) {slice_sizes = dense<[1, 4]> : tensor<2xi64>} : (tensor<3x4xi32>, tensor<i64>, tensor<i64>) -> tensor<1x4xi32>
   %5 = "stablehlo.pad"(%arg4, %arg5) { edge_padding_high = dense<4> : tensor<1xi64>, edge_padding_low = dense<4> : tensor<1xi64>, interior_padding = dense<0> : tensor<1xi64>} : (tensor<8xf32>, tensor<f32>) -> tensor<16xf32>
   "stablehlo.return"() : () -> ()
+}
+
+// CHECK-LABEL: func @op_einsum
+func.func @op_einsum(%arg0: tensor<8x16xf32>, %arg1: tensor<16x8xf32>) -> tensor<8xf32> {
+  // CHECK:      %0 = stablehlo.einsum %arg0, %arg1, config = "ab,bc->ac" : (tensor<8x16xf32>, tensor<16x8xf32>) -> tensor<8x8xf32>
+  // CHECK-NEXT: %1 = stablehlo.unary_einsum %arg0, config = "ab->a" : (tensor<8x16xf32>) -> tensor<8xf32>
+  %0 = "stablehlo.einsum"(%arg0, %arg1) { einsum_config = "ab,bc->ac" } : (tensor<8x16xf32>, tensor<16x8xf32>) -> tensor<8x8xf32>
+  %1 = "stablehlo.unary_einsum"(%arg0) { einsum_config = "ab->a" } : (tensor<8x16xf32>) -> tensor<8xf32>
+  func.return %1 : tensor<8xf32>
 }
 
 // CHECK-LABEL: func @fft_op

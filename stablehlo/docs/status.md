@@ -61,7 +61,7 @@ one of the following tracking labels.
 | ceil                     | yes           | yes          | yes            | yes             | yes         |
 | cholesky                 | yes           | yes          | yes            | yes             | no          |
 | clamp                    | yes           | revisit      | yes            | yes             | no          |
-| collective_permute       | no            | revisit      | revisit        | no              | no          |
+| collective_permute       | yes           | revisit      | yes            | no              | no          |
 | compare                  | yes           | yes          | yes            | yes             | no          |
 | complex                  | yes           | yes          | yes            | yes             | no          |
 | compute_reshape_shape    | no            | revisit      | no             | yes             | no          |
@@ -72,7 +72,7 @@ one of the following tracking labels.
 | cosine                   | yes           | yes          | yes            | yes             | yes         |
 | count_leading_zeros      | yes           | yes          | yes            | yes             | no          |
 | create_token             | no            | yes*         | yes*           | yes             | no          |
-| cross-replica-sum        | no            | revisit      | revisit        | no              | no          |
+| cross-replica-sum        | no            | revisit      | yes*           | no              | no          |
 | cstr_reshapable          | no            | revisit      | no             | yes             | no          |
 | custom_call              | no            | revisit      | infeasible     | yes             | no          |
 | divide                   | yes           | yes          | yes            | yes             | no          |
@@ -86,7 +86,7 @@ one of the following tracking labels.
 | dynamic_reshape          | no            | revisit      | infeasible     | yes             | no          |
 | dynamic_slice            | yes           | revisit      | yes            | yes             | no          |
 | dynamic_update_slice     | yes           | yes          | yes            | yes             | no          |
-| einsum                   | no            | revisit      | no             | no              | no          |
+| einsum                   | no            | revisit      | no             | yes             | no          |
 | exponential              | yes           | yes          | yes            | yes             | no          |
 | exponential_minus_one    | yes           | yes          | yes            | yes             | no          |
 | fft                      | yes           | revisit      | yes            | yes             | no          |
@@ -112,14 +112,15 @@ one of the following tracking labels.
 | or                       | yes           | yes          | yes            | yes             | yes         |
 | outfeed                  | yes           | yes          | yes            | no              | no          |
 | pad                      | yes           | yes          | yes            | yes             | no          |
+| partition_id             | yes           | yes          | yes            | yes             | no          |
 | popcnt                   | yes           | yes          | yes            | yes             | no          |
 | power                    | yes           | revisit      | yes            | yes             | no          |
 | real                     | yes           | yes          | yes            | yes             | no          |
 | real_dynamic_slice       | no            | revisit      | no             | yes             | no          |
 | recv                     | yes           | revisit      | infeasible     | no              | no          |
 | reduce                   | yes           | revisit      | yes            | revisit         | no          |
-| reduce_precision         | no            | yes*         | yes*           | yes             | no          |
-| reduce_scatter           | no            | revisit      | no             | no              | no          |
+| reduce_precision         | yes           | yes          | yes            | yes             | no          |
+| reduce_scatter           | yes           | revisit      | no             | no              | no          |
 | reduce_window            | yes           | revisit      | yes            | no              | no          |
 | remainder                | yes           | yes          | yes            | yes             | no          |
 | replica_id               | yes           | yes          | yes            | yes             | no          |
@@ -151,7 +152,7 @@ one of the following tracking labels.
 | transpose                | yes           | yes          | yes            | yes             | yes         |
 | triangular_solve         | yes           | revisit      | yes            | no              | no          |
 | tuple                    | yes           | yes          | yes            | yes             | no          |
-| unary_einsum             | no            | revisit      | no             | no              | no          |
+| unary_einsum             | no            | revisit      | no             | yes             | no          |
 | uniform_dequantize       | no            | yes*         | yes*           | yes             | no          |
 | uniform_quantize         | no            | yes*         | infeasible     | yes             | no          |
 | while                    | yes           | revisit      | yes            | revisit         | no          |
