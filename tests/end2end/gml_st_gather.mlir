@@ -14,7 +14,7 @@
 // RUN: | FileCheck %s
 
 func.func @gather(
-    %operand : tensor<5x2x1xf32>, %indices: tensor<3x2xi64>) -> tensor<3x2xf32> {
+    %operand : tensor<5x3x1xf32>, %indices: tensor<4x2xi64>) -> tensor<4x2xf32> {
   %0 = "mhlo.gather"(%operand, %indices) {
     dimension_numbers = #mhlo.gather<
       collapsed_slice_dims = [1, 2],
@@ -24,34 +24,36 @@ func.func @gather(
     >,
     indices_are_sorted = false,
     slice_sizes = dense<[2, 1, 1]> : tensor<3xi64>
-  } : (tensor<5x2x1xf32>, tensor<3x2xi64>) -> tensor<3x2xf32>
-  func.return %0 : tensor<3x2xf32>
+  } : (tensor<5x3x1xf32>, tensor<4x2xi64>) -> tensor<4x2xf32>
+  func.return %0 : tensor<4x2xf32>
 }
 
 
 func.func @main() {
   %operand = arith.constant dense<[
-    [[1.0], [2.0]],
-    [[3.0], [4.0]],
-    [[5.0], [6.0]],
-    [[7.0], [8.0]],
-    [[9.0], [10.0]]
-  ]> : tensor<5x2x1xf32>
+    [[1.0], [2.0], [3.0]],
+    [[4.0], [5.0], [6.0]],
+    [[7.0], [8.0], [9.0]],
+    [[10.0], [11.0], [12.0]],
+    [[13.0], [14.0], [15.0]]
+  ]> : tensor<5x3x1xf32>
 
   %indices = arith.constant dense<[
     [0, 0],
     [1, 0],
-    [4, 1]
-  ]> : tensor<3x2xi64>
+    [4, 3],
+    [-1, -1]
+  ]> : tensor<4x2xi64>
 
   %result = func.call @gather(%operand, %indices)
-      : (tensor<5x2x1xf32>, tensor<3x2xi64>) -> tensor<3x2xf32>
+      : (tensor<5x3x1xf32>, tensor<4x2xi64>) -> tensor<4x2xf32>
 
-  // CHECK: rank = 2 offset = 0 sizes = [3, 2] strides = [2, 1]
-  // CHECK-NEXT: [1, 2]
-  // CHECK-NEXT: [3, 4]
-  // CHECK-NEXT: [10, 10]
-  %result_unranked = tensor.cast %result : tensor<3x2xf32> to tensor<*xf32>
+  // CHECK: rank = 2 offset = 0 sizes = [4, 2] strides = [2, 1]
+  // CHECK-NEXT: [1, 4]
+  // CHECK-NEXT: [4, 7]
+  // CHECK-NEXT: [12, 15]
+  // CHECK-NEXT: [1, 4]
+  %result_unranked = tensor.cast %result : tensor<4x2xf32> to tensor<*xf32>
   func.call @printMemrefF32(%result_unranked) : (tensor<*xf32>) -> ()
 
   func.return
