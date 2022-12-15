@@ -25,6 +25,7 @@ limitations under the License.
 #include <cstdint>
 #include <functional>
 #include <numeric>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <utility>
@@ -255,7 +256,7 @@ LogicalResult verifyReduceScatter(Operation* op, TypeRange operandTypes,
 LogicalResult ReduceScatterOp::verify() {
   if (failed(hlo::verifyReplicaGroups(getLoc(), getReplicaGroups(),
                                       /*allGroupsMustHaveSameSize=*/true,
-                                      /*expectedGroupSize=*/llvm::None)))
+                                      /*expectedGroupSize=*/std::nullopt)))
     return failure();
   auto operandType = getOperand().getType().cast<TensorType>();
   bool operandTypeRanked = operandType.isa<RankedTensorType>();
@@ -2006,7 +2007,7 @@ LogicalResult AllToAllOp::inferReturnTypeComponents(
 LogicalResult AllGatherOp::verify() {
   if (failed(hlo::verifyReplicaGroups(getLoc(), getReplicaGroups(),
                                       /*allGroupsMustHaveSameSize=*/true,
-                                      /*expectedGroupSize=*/llvm::None)))
+                                      /*expectedGroupSize=*/std::nullopt)))
     return failure();
 
   auto operandType = getOperand().getType().dyn_cast<RankedTensorType>();
@@ -2063,7 +2064,7 @@ LogicalResult AllGatherOp::verify() {
 LogicalResult AllReduceOp::verify() {
   if (failed(hlo::verifyReplicaGroups(getLoc(), getReplicaGroups(),
                                       /*allGroupsMustHaveSameSize=*/false,
-                                      /*expectedGroupSize=*/llvm::None)))
+                                      /*expectedGroupSize=*/std::nullopt)))
     return failure();
 
   auto operandType = getOperand().getType().cast<TensorType>();
@@ -5488,7 +5489,7 @@ SortOp createSortOp(PatternRewriter* rewriter, const Location& loc,
 
   // Use TOTALORDER comparison type instead of the default comparison if the
   // element type is of type float.
-  llvm::Optional<StringRef> compareType = llvm::None;
+  llvm::Optional<StringRef> compareType = std::nullopt;
   for (auto const& elementType : elementTypes)
     if (elementType.isa<FloatType>()) {
       compareType.emplace("TOTALORDER");
