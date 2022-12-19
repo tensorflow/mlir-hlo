@@ -74,7 +74,7 @@ def StableHLO_ConstantOp : StableHLO_Op<"constant",
     Produces an `output` tensor from a constant `value`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloconstant
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloconstant
 
     Example:
     ```mlir
@@ -107,7 +107,7 @@ def StableHLO_IotaOp : StableHLO_Op<"iota", [Pure]> {
     along the `iota_dimension` dimension.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloiota
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloiota
 
     Example:
     ```mlir
@@ -207,7 +207,7 @@ def StableHLO_AbsOp: StableHLO_UnaryElementwiseOp<"abs",
     `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloabs
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloabs
 
     Example:
     ```mlir
@@ -225,7 +225,7 @@ def StableHLO_CbrtOp: StableHLO_UnaryElementwiseOp<"cbrt",
     IEEE-754 specification.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocbrt
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlocbrt
 
     Example:
     ```mlir
@@ -241,7 +241,7 @@ def StableHLO_CeilOp: StableHLO_UnaryElementwiseOp<"ceil",
     Performs element-wise ceil of `operand` tensor and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloceil
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloceil
 
     Example:
     ```mlir
@@ -254,15 +254,15 @@ def StableHLO_ConvertOp : StableHLO_UnaryElementwiseOp<"convert",
     [Pure, SameOperandsAndResultShape], HLO_Tensor> {
   let summary = "Convert operator";
   let description = [{
-    Performs element-wise conversion of values from one type to another, e.g.
-    float to int.
+    Performs an element-wise conversion from one element type to another on
+    `operand` tensor and produces a `result` tensor.
 
-    See https://www.tensorflow.org/xla/operation_semantics#convertelementtype.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloconvert
 
     Example:
-
     ```mlir
-    %0 = stablehlo.convert %arg0 : (tensor<2xi32>) -> tensor<2xf32>
+    %result = stablehlo.convert %operand : (tensor<3xi32>) -> tensor<3xcomplex<f32>>
     ```
   }];
   let builders = [
@@ -277,7 +277,7 @@ def StableHLO_ClzOp: StableHLO_UnaryElementwiseOp<"count_leading_zeros",
     `operand` tensor and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocount_leading_zeros
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlocount_leading_zeros
 
     Example:
     ```mlir
@@ -295,7 +295,7 @@ def StableHLO_CosineOp: StableHLO_UnaryElementwiseOp<"cosine",
     specification.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocosine
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlocosine
 
     Example:
     ```mlir
@@ -312,7 +312,7 @@ def StableHLO_ExpOp: StableHLO_UnaryElementwiseOp<"exponential",
     a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloexponential
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloexponential
 
     Example:
     ```mlir
@@ -329,7 +329,7 @@ def StableHLO_Expm1Op: StableHLO_UnaryElementwiseOp<"exponential_minus_one",
     and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloexponential_minus_one
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloexponential_minus_one
 
     Example:
     ```mlir
@@ -346,7 +346,7 @@ def StableHLO_FloorOp: StableHLO_UnaryElementwiseOp<"floor",
     tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlofloor
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlofloor
 
     Example:
     ```mlir
@@ -364,7 +364,7 @@ def StableHLO_ImagOp: StableHLO_UnaryElementwiseOp<"imag",
     `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloimag
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloimag
 
     Example:
     ```mlir
@@ -381,7 +381,7 @@ def StableHLO_IsFiniteOp: StableHLO_UnaryElementwiseOp<"is_finite", [Pure,
     neither +Inf, -Inf, nor NaN) and produces a `y` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlois_finite
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlois_finite
 
     Example:
     ```mlir
@@ -404,7 +404,7 @@ def StableHLO_LogOp: StableHLO_UnaryElementwiseOp<"log",
     `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlolog
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlolog
 
     Example:
     ```mlir
@@ -421,7 +421,7 @@ def StableHLO_Log1pOp: StableHLO_UnaryElementwiseOp<"log_plus_one",
     `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlolog_plus_one
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlolog_plus_one
 
     Example:
     ```mlir
@@ -438,7 +438,7 @@ def StableHLO_LogisticOp: StableHLO_UnaryElementwiseOp<"logistic",
     produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlologistic
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlologistic
 
     Example:
     ```mlir
@@ -455,7 +455,7 @@ def StableHLO_NotOp: StableHLO_UnaryElementwiseOp<"not",
     produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlonot
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlonot
 
     Example:
     ```mlir
@@ -472,7 +472,7 @@ def StableHLO_NegOp: StableHLO_UnaryElementwiseOp<"negate",
     tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlonegate
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlonegate
 
     Example:
     ```mlir
@@ -489,7 +489,7 @@ def StableHLO_PopulationCountOp: StableHLO_UnaryElementwiseOp<"popcnt",
     tensor and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlopopcnt
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlopopcnt
 
     Example:
     ```mlir
@@ -507,7 +507,7 @@ def StableHLO_RealOp: StableHLO_UnaryElementwiseOp<"real",
     `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreal
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloreal
 
     Example:
     ```mlir
@@ -524,7 +524,7 @@ def StableHLO_RoundOp: StableHLO_UnaryElementwiseOp<"round_nearest_afz",
     away from zero, on the `operand` tensor and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloround_nearest_afz
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloround_nearest_afz
 
     Example:
     ```mlir
@@ -542,7 +542,7 @@ def StableHLO_RoundNearestEvenOp: StableHLO_UnaryElementwiseOp<"round_nearest_ev
     tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloround_nearest_even
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloround_nearest_even
 
     Example:
 
@@ -561,7 +561,7 @@ def StableHLO_RsqrtOp: StableHLO_UnaryElementwiseOp<"rsqrt",
     IEEE-754 specification.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlorsqrt
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlorsqrt
 
     Example:
     ```mlir
@@ -579,7 +579,7 @@ def StableHLO_SignOp: StableHLO_UnaryElementwiseOp<"sign",
     tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlosign
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlosign
 
     Example:
     ```mlir
@@ -597,7 +597,7 @@ def StableHLO_SineOp: StableHLO_UnaryElementwiseOp<"sine",
     specification.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlosine
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlosine
 
     Example:
     ```mlir
@@ -615,7 +615,7 @@ def StableHLO_SqrtOp: StableHLO_UnaryElementwiseOp<"sqrt",
     specification.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlosqrt
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlosqrt
 
     Example:
     ```mlir
@@ -634,7 +634,7 @@ def StableHLO_TanhOp: StableHLO_UnaryElementwiseOp<"tanh",
     specification.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlotanh
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlotanh
 
     Example:
     ```mlir
@@ -685,7 +685,7 @@ def StableHLO_AddOp : StableHLO_BinaryElementwiseOp<"add",
     `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloadd
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloadd
 
     Example:
     ```mlir
@@ -703,7 +703,7 @@ def StableHLO_Atan2Op : StableHLO_BinaryElementwiseOp<"atan2",
     specification.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloatan2
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloatan2
 
     Example:
     ```mlir
@@ -720,7 +720,7 @@ def StableHLO_ComplexOp: StableHLO_BinaryElementwiseOp<"complex", [Pure,
     imaginary values, `lhs` and `rhs`, and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocomplex
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlocomplex
 
     Example:
     ```mlir
@@ -744,7 +744,7 @@ def StableHLO_DivOp : StableHLO_BinaryElementwiseOp<"divide",
     and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlodivide
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlodivide
 
     Example:
     ```mlir
@@ -761,7 +761,7 @@ def StableHLO_MaxOp : StableHLO_BinaryElementwiseOp<"maximum",
     a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlomaximum
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlomaximum
 
     Example:
     ```mlir
@@ -778,7 +778,7 @@ def StableHLO_MinOp : StableHLO_BinaryElementwiseOp<"minimum",
     `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlominimum
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlominimum
 
     Example:
     ```mlir
@@ -795,7 +795,7 @@ def StableHLO_MulOp : StableHLO_BinaryElementwiseOp<"multiply",
     `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlomultiply
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlomultiply
 
     Example:
     ```mlir
@@ -812,7 +812,7 @@ def StableHLO_PowOp : StableHLO_BinaryElementwiseOp<"power",
     produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlopower
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlopower
 
     Example:
     ```mlir
@@ -829,7 +829,7 @@ def StableHLO_RemOp : StableHLO_BinaryElementwiseOp<"remainder",
     and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloremainder
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloremainder
 
     Example:
     ```mlir
@@ -846,7 +846,7 @@ def StableHLO_ShiftLeftOp : StableHLO_BinaryElementwiseOp<"shift_left",
     number of bits and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloshift_left
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloshift_left
 
     Example:
     ```mlir
@@ -863,7 +863,7 @@ def StableHLO_ShiftRightArithmeticOp : StableHLO_BinaryElementwiseOp<"shift_righ
     by `rhs` number of bits and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloshift_right_arithmetic
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloshift_right_arithmetic
 
     Example:
     ```mlir
@@ -880,7 +880,7 @@ def StableHLO_ShiftRightLogicalOp : StableHLO_BinaryElementwiseOp<"shift_right_l
     `rhs` number of bits and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloshift_right_logical
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloshift_right_logical
 
     Example:
     ```mlir
@@ -897,7 +897,7 @@ def StableHLO_SubtractOp : StableHLO_BinaryElementwiseOp<"subtract",
     produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlosubtract
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlosubtract
 
     Example:
     ```mlir
@@ -927,7 +927,7 @@ def StableHLO_AndOp: StableHLO_BinaryBiwiseOrLogicalElementwiseOp<"and"> {
     and produces a `result` tensor
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloand
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloand
 
     Example:
     ```mlir
@@ -943,7 +943,7 @@ def StableHLO_OrOp: StableHLO_BinaryBiwiseOrLogicalElementwiseOp<"or"> {
     and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloor
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloor
 
     Example:
     ```mlir
@@ -959,7 +959,7 @@ def StableHLO_XorOp : StableHLO_BinaryBiwiseOrLogicalElementwiseOp<"xor"> {
     types and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloxor
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloxor
 
     Example:
     ```mlir
@@ -982,7 +982,7 @@ def StableHLO_InfeedOp : StableHLO_Op<"infeed", []> {
     Reads data from the infeed and produces `results`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloinfeed
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloinfeed
 
     Example:
     ```mlir
@@ -1012,11 +1012,11 @@ def StableHLO_OutfeedOp : StableHLO_Op<"outfeed",
     Writes `inputs` to the outfeed and produces a `result` token.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlooutfeed
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlooutfeed
 
     Example:
     ```mlir
-    %result = "stablehlo.outfeed"(%inputs0, %token) {
+    %result = "stablehlo.outfeed"(%input0, %token) {
       outfeed_config = ""
     } : (tensor<3x3x3xi32>, !stablehlo.token) -> !stablehlo.token
     ```
@@ -1039,7 +1039,7 @@ def StableHLO_SendOp : StableHLO_Op<"send",
     Sends `inputs` to a channel `channel_id` and produces a `result` token.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlosend
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlosend
 
     Example:
     ```mlir
@@ -1070,7 +1070,7 @@ def StableHLO_RecvOp : StableHLO_Op<"recv", []> {
     Receives data from a channel with `channel_id` and produces `results`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlorecv
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlorecv
 
     Example:
     ```mlir
@@ -1104,7 +1104,7 @@ def StableHLO_ReplicaIdOp : StableHLO_Op<"replica_id", [Pure,
     Produces `replica_id` of the current process.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreplica_id
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloreplica_id
 
     Example:
     ```mlir
@@ -1123,7 +1123,7 @@ def StableHLO_PartitionIdOp : StableHLO_Op<"partition_id", [Pure,
     Produces `partition_id` of the current process.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlopartition_id
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlopartition_id
 
     Example:
     ```mlir
@@ -1149,7 +1149,7 @@ def StableHLO_AfterAllOp : StableHLO_Op<"after_all", [Pure,
     operations that depend on `result`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloafter_all
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloafter_all
 
     Example:
 
@@ -1181,7 +1181,7 @@ def StableHLO_IfOp: StableHLO_Op<"if", [
     `false_branch` depending on the value of `pred`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloif
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloif
 
     Example:
     %result = "stablehlo.if"(%pred) ({
@@ -1215,7 +1215,7 @@ def StableHLO_CaseOp: StableHLO_Op<"case", [
     depending on the value of `index`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocase
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlocase
 
     Example:
     ```mlir
@@ -1249,7 +1249,7 @@ def StableHLO_WhileOp: StableHLO_Op<"while", [
     `cond` function outputs `true`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlowhile
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlowhile
 
     Example:
     %results:2 = "stablehlo.while"(%input0, %input1) ({
@@ -1301,7 +1301,7 @@ def StableHLO_AllGatherOp : StableHLO_Op<"all_gather", [SameOperandsAndResultEle
     `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloall_gather
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloall_gather
 
     Example:
     ```mlir
@@ -1335,7 +1335,7 @@ def StableHLO_AllReduceOp : StableHLO_Op<"all_reduce",
     produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloall_reduce
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloall_reduce
 
     Example:
     ```mlir
@@ -1380,7 +1380,7 @@ def StableHLO_ReduceScatterOp : StableHLO_Op<"reduce_scatter",
      scatters the split parts between the processes to produce the `result`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreduce_scatter
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloreduce_scatter
 
     Example:
     ```mlir
@@ -1420,7 +1420,7 @@ def StableHLO_AllToAllOp : StableHLO_Op<"all_to_all",
     and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloall_to_all
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloall_to_all
 
     Example:
     ```mlir
@@ -1455,7 +1455,7 @@ def StableHLO_ReduceOp: StableHLO_ShapedInterfaceOp<"reduce", [
     `dimensions` and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreduce
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloreduce
 
     Example:
     ```mlir
@@ -1496,7 +1496,7 @@ def StableHLO_GetTupleElementOp: StableHLO_Op<"get_tuple_element", [Pure,
     `result`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloget_tuple_element
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloget_tuple_element
 
     Example:
     ```mlir
@@ -1524,7 +1524,7 @@ def StableHLO_TupleOp : StableHLO_Op<"tuple", [Pure,
     Produces a `result` tuple from values `val`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlotuple
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlotuple
 
     Example:
     ```mlir
@@ -1550,7 +1550,7 @@ def StableHLO_CompareOp: StableHLO_Op<"compare", [Pure, SameOperandsElementType,
     `comparison_direction` and `compare_type`, and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocompare
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlocompare
 
     Example:
     ```mlir
@@ -1593,7 +1593,7 @@ def StableHLO_SliceOp: StableHLO_Op<
     indices and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloslice
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloslice
 
     Example:
     ```mlir
@@ -1624,7 +1624,7 @@ def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
     indices and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlodynamic_slice
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlodynamic_slice
 
     Example:
     ```mlir
@@ -1658,7 +1658,7 @@ def StableHLO_DynamicUpdateSliceOp: StableHLO_Op<"dynamic_update_slice",
     `update`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloslice
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloslice
 
     Example:
     ```mlir
@@ -1695,7 +1695,7 @@ def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [Pure,
     `grad_offset` tensors.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobatch_norm_grad
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlobatch_norm_grad
 
     Example:
     ```mlir
@@ -1734,7 +1734,7 @@ def StableHLO_BatchNormInferenceOp : StableHLO_Op<"batch_norm_inference",
     `feature_index` dimension and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobatch_norm_inference
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlobatch_norm_inference
 
     Example:
     ```mlir
@@ -1770,7 +1770,7 @@ def StableHLO_BatchNormTrainingOp : StableHLO_Op<"batch_norm_training",
     dimension and produces `output`, `batch_mean` and `batch_var` tensors.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobatch_norm_training
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlobatch_norm_training
 
     Example:
     ```mlir
@@ -1804,7 +1804,7 @@ def StableHLO_BitcastConvertOp : StableHLO_ShapedInterfaceOp<"bitcast_convert",
     the type of the `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobitcast_convert
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlobitcast_convert
 
     Example:
     ```mlir
@@ -1862,7 +1862,7 @@ def StableHLO_BroadcastInDimOp : StableHLO_Op<"broadcast_in_dim",
     data in the `operand` tensor and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlobroadcast_in_dim
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlobroadcast_in_dim
 
     Example:
 
@@ -1939,7 +1939,7 @@ def StableHLO_CholeskyOp : StableHLO_Op<"cholesky",
     Computes the Cholesky decomposition of a batch of matrices.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocholesky
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlocholesky
 
     Example:
     ```mlir
@@ -1967,7 +1967,7 @@ def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [Pure,
     value and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloclamp
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloclamp
 
     Example:
     ```mlir
@@ -2000,7 +2000,7 @@ def StableHLO_ConcatenateOp : StableHLO_ShapedInterfaceOp<"concatenate",
     tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloconcatenate
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloconcatenate
 
     Example:
     ```mlir
@@ -2029,7 +2029,7 @@ def StableHLO_CollectivePermuteOp: StableHLO_Op<"collective_permute",
     a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlocollective_permute
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlocollective_permute
 
     Example:
     ```mlir
@@ -2060,9 +2060,26 @@ def StableHLO_CollectivePermuteOp: StableHLO_Op<"collective_permute",
 def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure, InferTensorType]> {
   let summary = "Convolution operator";
   let description = [{
-    Computes a convolution of the kind used in neural networks.
+    Computes dot products between windows of `lhs` and slices of `rhs` and
+    produces `result`.
 
-    See https://www.tensorflow.org/xla/operation_semantics#conv_convolution.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloconvolution
+
+    Example:
+    ```mlir
+    %result = "stablehlo.convolution"(%lhs, %rhs) {
+      window_strides = dense<4> : tensor<2xi64>,
+      padding = dense<0> : tensor<2x2xi64>,
+      lhs_dilation = dense<2> : tensor<2xi64>,
+      rhs_dilation = dense<1> : tensor<2xi64>,
+      window_reversal = dense<false> : tensor<2xi1>,
+      dimension_numbers = #stablehlo.conv<[b, 0, 1, f]x[0, 1, i, o]->[b, 0, 1, f]>,
+      feature_group_count = 1 : i64,
+      batch_group_count = 1 : i64,
+      precision_config = [#stablehlo<precision DEFAULT>, #stablehlo<precision DEFAULT>]
+    } : (tensor<1x4x4x1xi32>, tensor<3x3x1x1xi32>) -> tensor<1x2x2x1xi32>
+    ```
   }];
   let arguments = !con(
     (ins
@@ -2120,44 +2137,21 @@ def StableHLO_CustomCallOp: StableHLO_Op<"custom_call",
     [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "CustomCall operator";
   let description = [{
-    A custom call invokes code external to XLA. The `args` are passed to the
-    external code, and the external code is expected to produce a result of the
-    given type. The exact mechanism is backend-specific. For example, in the CPU
-    backend, a call instruction is emitted which targets a symbol with the name
-    `call_target_name`.
+    Encapsulates an implementation-defined operation `call_target_name` that
+    takes `inputs` and `called_computations` and produces `results`.
 
-    `call_target_name` and `backend_config` can be arbitrary strings, but
-    `call_target_name` should be short as it may be used in labels.
-    `backend_config` can encode arbitrarily large amounts of information.
-
-    `has_side_effect` must be true if the custom call has side-effects.
-    `api_version` specifies the version of the API used by the custom call
-    function.
-
-    A custom call may apply functions within the scope of the parent module.
-    They can be referenced using `called_computations` attribute.
-
-    A custom call can also have layout constraints on operands and results which
-    can be specified as optional `operand_layouts` and `result_layouts`
-    attributes. The layout attribute is an array of rank-1 index tensors and the
-    i-th layout attribute specifies the layout for i-th operand/result.
-
-    The `operand_layouts` & `result_layouts` attributes can be specified under
-    the following constraints:
-    1) Either both `operand_layouts` and `result_layouts` are specified or none.
-    2) None of the operands are of tuple type.
-    3) None of the results are of tuple type except the common case of single
-       tuple result packing non-tuple values is allowed. In this case the i-th
-       `result_layouts` attribute specifies the layout of i-th element in the
-       result tuple.
-
-    See https://www.tensorflow.org/xla/operation_semantics#customcall.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlocustom_call
 
     Example:
-
     ```mlir
-    %1 = stablehlo.custom_call @foo(%arg0, %arg1) {backend_config = "bar", has_side_effect = true}
-          : (tensor<2x3xf32>, tensor<5x5xf32>) -> tensor<1x2x3xf32>
+    %results = "stablehlo.custom_call"(%input0) {
+      call_target_name = "foo",
+      has_side_effect = false,
+      backend_config = "bar",
+      api_version = 1 : i32,
+      called_computations = [@foo]
+    } : (tensor<f32>) -> tensor<f32>
     ```
   }];
 
@@ -2212,7 +2206,6 @@ def StableHLO_DotOp: StableHLO_Op<"dot",
     StableHLO_PrecisionConfigAttr:$precision_config
   );
   let results = (outs HLO_Tensor);
-  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
@@ -2231,10 +2224,24 @@ def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general",
     [Pure, InferTensorTypeWithReify]> {
   let summary = "General Dot operator";
   let description = [{
-    Performs general dot products between vectors, vector/matrix and
-    matrix/matrix multiplication.
+    Computes dot products between slices of `lhs` and slices of `rhs` and
+    produces a `result` tensor.
 
-    See https://www.tensorflow.org/xla/operation_semantics#dotgeneral.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlodot_general
+
+    Example:
+    ```mlir
+    %result = "stablehlo.dot_general"(%lhs, %rhs) {
+      dot_dimension_numbers = #stablehlo.dot<
+        lhs_batching_dimensions = [0],
+        rhs_batching_dimensions = [0],
+        lhs_contracting_dimensions = [2],
+        rhs_contracting_dimensions = [1]
+      >,
+      precision_config = [#stablehlo<precision DEFAULT>, #stablehlo<precision DEFAULT>]
+    } : (tensor<2x2x2xi32>, tensor<2x2x2xi32>) -> tensor<2x2x2xi32>
+    ```
   }];
   let arguments = (ins
     HLO_Tensor:$lhs,
@@ -2300,7 +2307,7 @@ def StableHLO_FftOp: StableHLO_Op<"fft", [InferTensorType, Pure]> {
     inputs/outputs.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlofft
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlofft
 
     Example:
     ```mlir
@@ -2328,7 +2335,7 @@ def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify, Pure]>
     `start_indices` and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlogather
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlogather
 
     Example:
     ```mlir
@@ -2395,7 +2402,7 @@ def StableHLO_MapOp: StableHLO_ShapedInterfaceOp<"map",
     produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlomap
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlomap
 
     Example:
     ```mlir
@@ -2423,7 +2430,7 @@ def StableHLO_ReshapeOp: StableHLO_Op<"reshape",
     Performs reshape of `operand` tensor to a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreshape
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloreshape
 
     Example:
     ```mlir
@@ -2475,7 +2482,7 @@ def StableHLO_ScatterOp: StableHLO_Op<"scatter",
     `updates` using `update_computation`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloscatter
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloscatter
 
    Example:
 
@@ -2520,7 +2527,7 @@ def StableHLO_SelectOp: StableHLO_Op<"select", [Pure, HLO_BroadcastingElementwis
     `on_false` tensor based on the value of the corresponding element of `pred`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloselect
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloselect
 
     Example:
     ```mlir
@@ -2550,7 +2557,7 @@ def StableHLO_SelectAndScatterOp: StableHLO_Op<"select_and_scatter",
     a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloselect_and_scatter
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloselect_and_scatter
 
     Example:
     ```mlir
@@ -2627,7 +2634,7 @@ def StableHLO_SortOp : StableHLO_Op<"sort",
     number of tensors as `results`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreverse
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloreverse
 
     Example:
     %result0, %result1 = "stablehlo.sort"(%input0, %input1) ({
@@ -2666,7 +2673,7 @@ def StableHLO_ReverseOp: StableHLO_Op<"reverse",
     `dimensions` and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreverse
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloreverse
 
     Example:
     ```mlir
@@ -2695,7 +2702,7 @@ def StableHLO_PadOp: StableHLO_ShapedInterfaceOp<"pad",
     elements of the tensor with the given `padding_value`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlopad
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlopad
 
     Example:
     ```mlir
@@ -2749,7 +2756,7 @@ def StableHLO_TransposeOp: StableHLO_ShapedInterfaceOp<"transpose",
     a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlotranspose
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlotranspose
 
     Example:
     ```mlir
@@ -2776,7 +2783,7 @@ def StableHLO_TriangularSolveOp: StableHLO_Op<"triangular_solve",
     coefficient matrices.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlotriangular_solve
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlotriangular_solve
 
     Example:
     ```mlir
@@ -2811,7 +2818,7 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
     and produces `results`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreduce_window
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloreduce_window
 
     Example:
     ```mlir
@@ -2928,7 +2935,7 @@ def StableHLO_OptimizationBarrierOp : StableHLO_Op<"optimization_barrier",
     an identity, i.e. `result` = `operand`.
 
     See
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlooptimization_barrier
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlooptimization_barrier
 
     Example:
     ```mlir
@@ -2963,7 +2970,7 @@ def StableHLO_RngOp : StableHLO_Op<"rng", [InferTensorTypeWithReify, AllElementT
     a `result` tensor of a given shape `shape`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlorng
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlorng
 
     Example:
     ```mlir
@@ -2995,7 +3002,7 @@ def StableHLO_RngBitGeneratorOp : StableHLO_Op<"rng_bit_generator", [Pure]> {
     pseudorandom number generator algorithm `rng_algorithm`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehlorng_bit_generator
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlorng_bit_generator
 
     Example:
     ```mlir
@@ -3066,7 +3073,7 @@ def StableHLO_ReducePrecisionOp :
     floating-point type and produces a `result` tensor.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md#stablehloreduce_precision
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloreduce_precision
 
     Example:
     ```mlir

@@ -24,7 +24,7 @@ one of the following tracking labels.
       implements some verification.
  - Customized labels for Verifier and Type Inference
     - **yes**: there is an implementation, and it's in sync with
-      [StableHLO semantics](https://github.com/openxla/stablehlo/blob/main/docs/spec_draft.md).
+      [StableHLO semantics](https://github.com/openxla/stablehlo/blob/main/docs/spec.md).
     - **yes\***: there is an implementation, and it's in sync with
       [XLA semantics](https://www.tensorflow.org/xla/operation_semantics).
       Since XLA semantics is oftentimes underdocumented, we are using
@@ -67,17 +67,17 @@ one of the following tracking labels.
 | compute_reshape_shape    | no            | revisit      | no             | yes             | no          |
 | concatenate              | yes           | yes          | yes            | yes             | no          |
 | constant                 | yes           | yes          | yes            | yes             | yes         |
-| convert                  | no            | yes*         | infeasible     | yes             | no          |
-| convolution              | no            | yes*         | yes*           | revisit         | no          |
+| convert                  | yes           | yes          | infeasible     | yes             | no          |
+| convolution              | revisit       | yes          | revisit        | revisit         | no          |
 | cosine                   | yes           | yes          | yes            | yes             | yes         |
 | count_leading_zeros      | yes           | yes          | yes            | yes             | no          |
 | create_token             | no            | yes*         | yes*           | yes             | no          |
 | cross-replica-sum        | no            | revisit      | yes*           | no              | no          |
 | cstr_reshapable          | no            | revisit      | no             | yes             | no          |
-| custom_call              | no            | revisit      | infeasible     | yes             | no          |
+| custom_call              | yes           | yes          | infeasible     | yes             | no          |
 | divide                   | yes           | yes          | yes            | yes             | no          |
 | dot                      | no            | revisit      | revisit        | yes             | no          |
-| dot_general              | no            | yes*         | yes*           | no              | no          |
+| dot_general              | yes           | revisit      | revisit        | no              | no          |
 | dynamic_broadcast_in_dim | no            | revisit      | infeasible     | no              | no          |
 | dynamic_conv             | no            | revisit      | no             | no              | no          |
 | dynamic_gather           | no            | revisit      | revisit        | no              | no          |
