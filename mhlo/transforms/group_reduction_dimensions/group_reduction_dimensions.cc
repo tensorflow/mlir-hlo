@@ -156,7 +156,7 @@ LogicalResult tryLowerTo1DOr2DReduction(
 
   // Reify the result shape early so that the pattern can fail without altering
   // the IR.
-  Optional<Value> resultShape;
+  std::optional<Value> resultShape;
   if (requiresDynamicReshape) {
     llvm::SmallVector<Value, 1> reifiedShapes;
     if (failed(llvm::cast<InferShapedTypeOpInterface>(op.getOperation())

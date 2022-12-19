@@ -78,8 +78,8 @@ struct SimplifyBroadcasts : public mlir::OpRewritePattern<shape::BroadcastOp> {
     for (const auto &sInfo : shapesInfo) rank = std::max(rank, sInfo.size());
 
     // Compute broadcast symbolically.
-    SmallVector<Optional<SymbolicBroadcastDimension>> symResult(rank,
-                                                                std::nullopt);
+    SmallVector<std::optional<SymbolicBroadcastDimension>> symResult(
+        rank, std::nullopt);
     for (const auto &sInfo : llvm::enumerate(shapesInfo)) {
       size_t dimOffset = rank - sInfo.value().size();
       for (const auto &symExpr : llvm::enumerate(sInfo.value())) {
@@ -184,9 +184,11 @@ struct AnnotateExpandingDimensionsInDynamicBroadcastInDim
 
     // Collect possibly already annotated info.
     auto insertAll = [](llvm::SmallSetVector<int64_t, 4> &dst,
-                        Optional<DenseIntElementsAttr> src) {
-      if (!src) return;
-      for (auto it : *src) dst.insert(it.getLimitedValue());
+                        std::optional<DenseIntElementsAttr> src) {
+      if (!src)
+        return;
+      for (auto it : *src)
+        dst.insert(it.getLimitedValue());
     };
     insertAll(knownExpandingDims, op.getKnownExpandingDimensions());
     insertAll(knownNonexpandingDims, op.getKnownNonexpandingDimensions());
@@ -641,8 +643,9 @@ SmallVector<int64_t> concretizeOperandShape(
   return result;
 }
 
-llvm::Optional<SmallVector<ReassociationIndices>> requiresReassociationOfKind(
-    DimensionGroupKind kind, const SmallVector<DimensionGroup> &dimGroups) {
+std::optional<SmallVector<ReassociationIndices>>
+requiresReassociationOfKind(DimensionGroupKind kind,
+                            const SmallVector<DimensionGroup> &dimGroups) {
   SmallVector<ReassociationIndices> reassociation;
   reassociation.reserve(dimGroups.size());
   bool isStrictlyReassociating = false;

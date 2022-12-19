@@ -139,7 +139,7 @@ LogicalResult PropagateStaticShapesPattern::matchAndRewrite(
   }
 
   // Collect gpu.launch_func ops which launch the func_op kernel.
-  Optional<SymbolTable::UseRange> symUses =
+  llvm::Optional<SymbolTable::UseRange> symUses =
       symbolTable.getSymbolUses(funcOp, symbolTable.getOp());
   if (!symUses)
     return rewriter.notifyMatchFailure(funcOp, "failed to find symbol uses");

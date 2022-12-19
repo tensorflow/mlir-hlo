@@ -122,8 +122,9 @@ struct ScalarizeLinalgOp : public OpInterfaceRewritePattern<LinalgOp> {
 
 // Returns `startIndices`[0, :] for `startIndices` of shape 1xn. Returns None if
 // startIndices has a different shape.
-Optional<SmallVector<Value>> extractStartIndices(
-    ImplicitLocOpBuilder &b, TypedValue<TensorType> startIndices) {
+std::optional<SmallVector<Value>>
+extractStartIndices(ImplicitLocOpBuilder &b,
+                    TypedValue<TensorType> startIndices) {
   if (startIndices.getType().getRank() != 2 ||
       startIndices.getType().getDimSize(0) != 1) {
     return std::nullopt;

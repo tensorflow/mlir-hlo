@@ -135,7 +135,7 @@ class GraphCycles {
   // the nodes is removed from the graph, and edges to/from it are added to
   // the remaining one, which is returned. If contracting the edge would create
   // a cycle, does nothing and return no value.
-  llvm::Optional<int32_t> ContractEdge(int32_t a, int32_t b);
+  std::optional<int32_t> ContractEdge(int32_t a, int32_t b);
 
   // Return whether dest_node `y` is reachable from source_node `x`
   // by following edges. This is non-thread-safe version.

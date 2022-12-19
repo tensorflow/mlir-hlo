@@ -612,7 +612,7 @@ struct MatmulTransformPattern : public OpRewritePattern<linalg::MatmulOp> {
 
       auto result = tileMatmulReductionDims(rewriter, op);
       if (failed(result)) return failure();
-      tilingReductionDimsResults.push_back(result.value());
+      tilingReductionDimsResults.push_back(*result);
     }
 
     // Peel parallel loops.

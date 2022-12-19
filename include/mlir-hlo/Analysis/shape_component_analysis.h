@@ -97,7 +97,7 @@ class ShapeComponentAnalysis {
     // `1`. This is useful for broadcasts.
     bool isKnownNotOne() const;
     // If this is a reference to a singular symbol, return it.
-    Optional<Symbol> singleton() const;
+    std::optional<Symbol> singleton() const;
 
     bool operator==(const SymbolicExpr &rhs) const {
       return expr == rhs.expr && symbols == rhs.symbols;
@@ -127,13 +127,13 @@ class ShapeComponentAnalysis {
  public:
   // Return the computed components for the shape of a value, e.g., the
   // dimensions of a tensor.
-  Optional<ArrayRef<SymbolicExpr>> GetShapeInfo(Value value);
-  // Return the computed components for the value of a value, e.g, the elements
-  // of a shape tensor.
-  Optional<ArrayRef<SymbolicExpr>> GetValueInfo(Value shape);
+   std::optional<ArrayRef<SymbolicExpr>> GetShapeInfo(Value value);
+   // Return the computed components for the value of a value, e.g, the elements
+   // of a shape tensor.
+   std::optional<ArrayRef<SymbolicExpr>> GetValueInfo(Value shape);
 
-  // Clear analysis data structures.
-  void reset();
+   // Clear analysis data structures.
+   void reset();
 };
 }  // namespace mlir
 

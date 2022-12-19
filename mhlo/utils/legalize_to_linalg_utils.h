@@ -127,7 +127,7 @@ class PointwiseToLinalgConverter : public OpConversionPattern<OpTy> {
     }
 
     // Find result type, if on tensors.
-    Optional<ShapedType> resultTy;
+    std::optional<ShapedType> resultTy;
     resultTy = this->typeConverter->convertType(op->getResultTypes().front())
                    .template dyn_cast<ShapedType>();
 

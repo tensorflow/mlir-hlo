@@ -23,7 +23,7 @@ limitations under the License.
 
 MlirAttribute chloComparisonDirectionAttrGet(MlirContext ctx,
                                              MlirStringRef value) {
-  llvm::Optional<mlir::chlo::ComparisonDirection> comparisonDirection =
+  std::optional<mlir::chlo::ComparisonDirection> comparisonDirection =
       mlir::chlo::symbolizeComparisonDirection(unwrap(value));
   if (!comparisonDirection) llvm_unreachable("Invalid value.");
   return wrap(mlir::chlo::ComparisonDirectionAttr::get(
@@ -44,7 +44,7 @@ MlirStringRef chloComparisonDirectionAttrGetValue(MlirAttribute attr) {
 //===----------------------------------------------------------------------===//
 
 MlirAttribute chloComparisonTypeAttrGet(MlirContext ctx, MlirStringRef value) {
-  llvm::Optional<mlir::chlo::ComparisonType> comparisonType =
+  std::optional<mlir::chlo::ComparisonType> comparisonType =
       mlir::chlo::symbolizeComparisonType(unwrap(value));
   if (!comparisonType) llvm_unreachable("Invalid value.");
   return wrap(

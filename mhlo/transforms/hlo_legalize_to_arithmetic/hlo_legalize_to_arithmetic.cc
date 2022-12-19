@@ -132,7 +132,7 @@ struct ScalarHloToArithmeticPattern : public OpConversionPattern<OpTy> {
 
     auto loc = op.getLoc();
 
-    Optional<ShapedType> resultTy;
+    std::optional<ShapedType> resultTy;
     resultTy = this->typeConverter->convertType(op->getResultTypes().front())
                    .template dyn_cast<ShapedType>();
 

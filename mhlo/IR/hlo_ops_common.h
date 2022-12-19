@@ -107,12 +107,12 @@ LogicalResult verifyReduceScatter(Operation* op, TypeRange operandTypes,
                                   uint64_t scatterDimension);
 
 // Custom formatting for convolution window attributes.
-void printWindowAttributes(OpAsmPrinter& p, Operation* op,
-                           llvm::Optional<DenseIntElementsAttr> windowStrides,
-                           llvm::Optional<DenseIntElementsAttr> padding,
-                           llvm::Optional<DenseIntElementsAttr> lhsDilation,
-                           llvm::Optional<DenseIntElementsAttr> rhsDilation,
-                           llvm::Optional<DenseElementsAttr> windowReversal);
+void printWindowAttributes(OpAsmPrinter &p, Operation *op,
+                           std::optional<DenseIntElementsAttr> windowStrides,
+                           std::optional<DenseIntElementsAttr> padding,
+                           std::optional<DenseIntElementsAttr> lhsDilation,
+                           std::optional<DenseIntElementsAttr> rhsDilation,
+                           std::optional<DenseElementsAttr> windowReversal);
 
 ParseResult parseWindowAttributes(OpAsmParser& parser,
                                   DenseIntElementsAttr& windowStrides,

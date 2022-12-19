@@ -65,7 +65,7 @@ struct ExternalLinalgOpTilingInterface
     Location loc = op->getLoc();
     linalg::LinalgOp linalgOp = cast<linalg::LinalgOp>(op);
     OperandRange valuesToTile = linalgOp->getOperands();
-    SmallVector<Optional<linalg::SliceParameters>> allSliceParams =
+    SmallVector<llvm::Optional<linalg::SliceParameters>> allSliceParams =
         linalg::computeAllSliceParameters(b, loc, linalgOp, valuesToTile,
                                           offsets, sizes, {}, true);
 

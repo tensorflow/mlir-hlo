@@ -109,15 +109,15 @@ class UserangeAnalysis {
 
   /// Returns the index of the first operation that uses the given value or an
   /// empty Optional if the value has no uses.
-  llvm::Optional<size_t> getFirstUseIndex(Value value) const {
+  std::optional<size_t> getFirstUseIndex(Value value) const {
     auto &intervals = useIntervalMap.find(value)->second;
     if (intervals.empty()) return std::nullopt;
     return intervals.begin()->start;
   }
 
   /// Returns the UseInterval::Vector of the given value.
-  llvm::Optional<const UseInterval::Vector *> getUserangeInterval(
-      Value value) const {
+  std::optional<const UseInterval::Vector *>
+  getUserangeInterval(Value value) const {
     auto intervals = useIntervalMap.find(value);
     if (intervals == useIntervalMap.end()) return std::nullopt;
     return &intervals->second;
@@ -125,8 +125,8 @@ class UserangeAnalysis {
 
   /// Returns an UsePositionList* of the given value or an empty Optional
   /// if the value has no uses.
-  llvm::Optional<const UsePositionList *> getUserangePositions(
-      Value value) const {
+  std::optional<const UsePositionList *>
+  getUserangePositions(Value value) const {
     auto usePosition = usePositionMap.find(value);
     if (usePosition == usePositionMap.end() || usePosition->second.empty())
       return std::nullopt;

@@ -34,8 +34,8 @@ struct HloNaryElementwiseAdaptor {
   }
 };
 
-inline llvm::Optional<mhlo::ComparisonDirection> mhloComparisonDirection(
-    chlo::ComparisonDirection value) {
+inline std::optional<mhlo::ComparisonDirection>
+mhloComparisonDirection(chlo::ComparisonDirection value) {
   switch (value) {
     case chlo::ComparisonDirection::EQ:
       return mhlo::ComparisonDirection::EQ;
@@ -53,8 +53,8 @@ inline llvm::Optional<mhlo::ComparisonDirection> mhloComparisonDirection(
   return {};
 }
 
-inline llvm::Optional<mhlo::ComparisonType> mhloComparisonType(
-    chlo::ComparisonType value) {
+inline std::optional<mhlo::ComparisonType>
+mhloComparisonType(chlo::ComparisonType value) {
   switch (value) {
     case chlo::ComparisonType::NOTYPE:
       return mhlo::ComparisonType::NOTYPE;

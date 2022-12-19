@@ -265,7 +265,7 @@ void LoopOp::build(OpBuilder &builder, OperationState &result,
                    ValueRange lowerBounds, ValueRange upperBounds,
                    ValueRange steps, ValueRange inputs, ValueRange outputs,
                    ArrayAttr iteratorTypes,
-                   Optional<ArrayAttr> distributionTypes,
+                   std::optional<ArrayAttr> distributionTypes,
                    function_ref<void(OpBuilder &, Location, ValueRange,
                                      ValueRange, ValueRange)>
                        bodyBuilderFn) {
@@ -656,10 +656,11 @@ struct CollapseSingleIterationLoops : public OpRewritePattern<LoopLikeOp> {
     newLowerBounds.reserve(op.getLowerBound().size());
     newUpperBounds.reserve(op.getUpperBound().size());
     newSteps.reserve(op.getStep().size());
-    auto getConstant = [](Value v) -> Optional<int64_t> {
+    auto getConstant = [](Value v) -> std::optional<int64_t> {
       auto constant =
           dyn_cast_or_null<arith::ConstantIndexOp>(v.getDefiningOp());
-      if (constant) return constant.value();
+      if (constant)
+        return constant.value();
       return std::nullopt;
     };
     for (auto [lowerBound, upperBound, step, iv] :
@@ -782,7 +783,7 @@ LogicalResult ParallelOp::verify() { return success(); }
 void ParallelOp::build(
     OpBuilder &builder, OperationState &result, TypeRange resultTypes,
     ValueRange lowerBounds, ValueRange upperBounds, ValueRange steps,
-    Optional<StringAttr> distributionType,
+    std::optional<StringAttr> distributionType,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn) {
   result.addOperands(lowerBounds);
   result.addOperands(upperBounds);
@@ -1766,10 +1767,11 @@ void TileOp::build(OpBuilder &b, OperationState &result,
                attrs);
 }
 
-LogicalResult TileOp::inferReturnTypes(
-    MLIRContext *ctx, Optional<Location> /*loc*/, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
-    SmallVectorImpl<Type> &inferredReturnTypes) {
+LogicalResult
+TileOp::inferReturnTypes(MLIRContext *ctx, std::optional<Location> /*loc*/,
+                         ValueRange operands, DictionaryAttr attributes,
+                         RegionRange regions,
+                         SmallVectorImpl<Type> &inferredReturnTypes) {
   // Derive result shape.
   TileOp::Adaptor adaptor(operands, attributes, regions);
   SmallVector<int64_t> shape = llvm::to_vector(adaptor.getStaticSizes());
