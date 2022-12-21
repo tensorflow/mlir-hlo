@@ -413,6 +413,7 @@ syntax.
    * [fft](#stablehlofft)
    * [floor](#stablehlofloor)
    * [gather](#stablehlogather)
+   * [get_dimension_size](#stablehloget_dimension_size)
    * [get_tuple_element](#stablehloget_tuple_element)
    * [if](#stablehloif)
    * [imag](#stablehloimag)
@@ -1351,10 +1352,10 @@ returned.
 
 ### Inputs
 
-| Name       | Type                                         |
-|------------|----------------------------------------------|
-| `index`    | 1-dimensional tensor constant of type `si32` |
-| `branches` | variadic number of `function`                |
+| Name       | Type                                |
+|------------|-------------------------------------|
+| `index`    | 1-dimensional tensor of type `si32` |
+| `branches` | variadic number of `function`       |
 
 ### Outputs
 
@@ -1766,7 +1767,7 @@ tensor. More formally,
   * (C2) All tensors in `inputs` have the same shape except for the size of the
   `dimension`th dimension.
   * (C3) `inputs` have N tensors where N >= 1.
-  * (C4) 0 $\le$ `dimension` $\lt$ rank of `inputs[0]`.
+  * (C4) 0 $\le$ `dimension` $\lt$ `rank(inputs[0])`.
   * (C5) `result` has the same element type as the tensors in `inputs`.
   * (C6) `result` has the same shape as the tensors in `inputs` except for the
   size of the `dimension`th dimension, which is calculated as a sum of the size
@@ -2828,6 +2829,41 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
 
 [Back to Ops](#index-of-ops)
 
+## stablehlo.get_dimension_size
+
+### Semantics
+
+Produces the size of the given `dimension` of the `operand`.
+
+### Inputs
+
+| Name          | Type                         |
+|---------------|------------------------------|
+| `operand`     | tensor of any supported type |
+| `dimension`   | constant of type `si64`      |
+
+### Outputs
+
+| Name     | Type                                |
+|----------|-------------------------------------|
+| `result` | 0-dimensional tensor of type `si32` |
+
+### Constraints
+
+  * (C1) 0 $\le$ `dimension` $\lt$ `rank(operand)`. [todo](https://github.com/openxla/stablehlo/issues/790)
+
+### Examples
+
+```mlir
+// %operand: [[1, 2, 3], [4, 5, 6]]
+%result = "stablehlo.get_dimension_size"(%operand) {
+  dimension = 1 : i64
+} : (tensor<2x3xf32>) -> tensor<i32>
+// %result: 3
+```
+
+[Back to Ops](#index-of-ops)
+
 ## stablehlo.get_tuple_element
 
 ### Semantics
@@ -3021,8 +3057,7 @@ defined and one of the following:
 
 ### Constraints
 
-  * (C1) 0 $\le$ `iota_dimension` $\lt$ `R`, where `R` is the rank of the
-  `output`.
+  * (C1) 0 $\le$ `iota_dimension` $\lt$ `rank(output)`.
 
 ### Examples
 
@@ -4317,7 +4352,7 @@ and produces a `result` tensor. More formally,
   * (C1) `operand` and `result` have the same type.
   * (C2) All dimensions in `dimensions` are unique.
   * (C3) For all dimensions `k` in `dimensions`, 0 $\le$ `dimensions[k]` $\lt$
-  `R`, where `R` is the rank of the `result`.
+  `rank(result)`.
 
 ### Examples
 

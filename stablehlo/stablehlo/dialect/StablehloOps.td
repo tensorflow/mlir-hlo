@@ -1438,9 +1438,20 @@ def StableHLO_AllToAllOp : StableHLO_Op<"all_to_all",
     I64Attr:$split_dimension,
     I64Attr:$concat_dimension,
     I64Attr:$split_count,
-    I64ElementsAttr:$replica_groups
+    I64ElementsAttr:$replica_groups,
+    OptionalAttr<StableHLO_ChannelHandle>:$channel_handle
   );
   let results = (outs HLO_Tensor);
+
+  // channel_handle is only used for the SPMD partitioner, so we add a
+  // simplified builder method for convenience.
+  let builders = [
+    OpBuilder<(ins
+      "::mlir::Type":$result_type, "::mlir::Value":$operand,
+      "::mlir::IntegerAttr": $split_dimension,
+      "::mlir::IntegerAttr": $concat_dimension,
+      "::mlir::IntegerAttr": $split_count,
+      "::mlir::DenseIntElementsAttr": $replica_groups)>];
 }
 
 def StableHLO_ReduceOp: StableHLO_ShapedInterfaceOp<"reduce", [
@@ -1510,8 +1521,6 @@ def StableHLO_GetTupleElementOp: StableHLO_Op<"get_tuple_element", [Pure,
 
   let results = (outs HLO_TensorOrTokenOrTuple);
 
-  let hasVerifier = 1;
-
   let assemblyFormat = [{
     $operand `[` $index `]` attr-dict `:` functional-type(operands, results)
   }];
@@ -1534,8 +1543,6 @@ def StableHLO_TupleOp : StableHLO_Op<"tuple", [Pure,
 
   let arguments = (ins Variadic<HLO_TensorOrTokenOrTuple>:$val);
   let results = (outs HLO_Tuple:$result);
-
-  let hasVerifier = 1;
 
   let assemblyFormat = [{
     $val attr-dict `:` custom<TupleOpType>(type($val), type($result))
@@ -1639,7 +1646,6 @@ def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
   );
 
   let results = (outs HLO_Tensor:$result);
-  let hasVerifier = 1;
 
   let assemblyFormat = [{
     $operand `,` custom<VariadicOperandWithAttribute>($start_indices)
@@ -1846,8 +1852,6 @@ def StableHLO_BroadcastOp : StableHLO_ShapedInterfaceOp<"broadcast",
 
   let results = (outs HLO_Tensor);
 
-  let hasVerifier = 1;
-
   let assemblyFormat = [{
     $operand `,` `sizes` `=` custom<DenseI64Array>($broadcast_sizes)
       attr-dict `:` functional-type(operands, results)
@@ -1982,8 +1986,6 @@ def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [Pure,
   );
   let results = (outs HLO_Tensor:$result);
 
-  let hasVerifier = 1;
-
   let assemblyFormat = [{
     $min `,` $operand `,` $max attr-dict
       `:` custom<SameOperandsAndResultType>(type($min), type($operand), type($max), type($result))
@@ -2057,7 +2059,7 @@ def StableHLO_CollectivePermuteOp: StableHLO_Op<"collective_permute",
       "::mlir::DenseIntElementsAttr":$source_target_pairs)>];
 }
 
-def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure, InferTensorType]> {
+def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure]> {
   let summary = "Convolution operator";
   let description = [{
     Computes dot products between windows of `lhs` and slices of `rhs` and
@@ -2088,15 +2090,13 @@ def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure, InferTensorType
     StableHLO_ConvolutionAttributes.attributes);
 
   let results = (outs HLO_Tensor);
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     bool hasWindowReversal() {
       auto reversal = getWindowReversalAttr();
       return reversal && llvm::any_of(reversal.getValues<bool>(),
                                       [](bool v) { return v; });
-    }
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return succeeded(mlir::verifyCompatibleShapes(l, r));
     }
   }];
 
@@ -2184,8 +2184,7 @@ def StableHLO_CustomCallOp: StableHLO_Op<"custom_call",
   }];
 }
 
-def StableHLO_DotOp: StableHLO_Op<"dot",
-    [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+def StableHLO_DotOp: StableHLO_Op<"dot", [Pure]> {
   let summary = "Dot operator";
   let description = [{
     Performs dot products between vectors, vector/matrix and matrix/matrix
@@ -2206,12 +2205,7 @@ def StableHLO_DotOp: StableHLO_Op<"dot",
     StableHLO_PrecisionConfigAttr:$precision_config
   );
   let results = (outs HLO_Tensor);
-
-  let extraClassDeclaration = [{
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return succeeded(mlir::verifyCompatibleShapes(l, r));
-    }
-  }];
+  let hasVerifier = 1;
 
   // Use empty `` to prevent extra whitespace before precision config.
   let assemblyFormat = [{
@@ -2220,8 +2214,7 @@ def StableHLO_DotOp: StableHLO_Op<"dot",
   }];
 }
 
-def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general",
-    [Pure, InferTensorTypeWithReify]> {
+def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general", [Pure]> {
   let summary = "General Dot operator";
   let description = [{
     Computes dot products between slices of `lhs` and slices of `rhs` and
@@ -2251,12 +2244,7 @@ def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general",
   );
 
   let results = (outs HLO_Tensor);
-
-  let extraClassDeclaration = [{
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return succeeded(mlir::verifyCompatibleShapes(l, r));
-    }
-  }];
+  let hasVerifier = 1;
 }
 
 // Define Base Einsum op within the HLO dialect as these are client ops and
@@ -2366,15 +2354,15 @@ def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size", [Pure,
     DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "GetDimensionSize operator";
   let description = [{
-    Returns the size of the given dimension of the operand.
+    Produces the size of the given `dimension` of the `operand`.
 
     See
-    https://www.tensorflow.org/xla/operation_semantics#getdimensionsize.
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloget_dimension_size
 
     Example:
 
     ```mlir
-    %0 = stablehlo.get_dimension_size %arg0, dim = 1 : (tensor<4x2xf32>) -> tensor<i32>
+    %result = stablehlo.get_dimension_size %operand, dim = 1 : (tensor<2x3xf32>) -> tensor<i32>
     ```
   }];
   let arguments = (ins

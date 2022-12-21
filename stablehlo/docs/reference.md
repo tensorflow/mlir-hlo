@@ -1,6 +1,5 @@
 # Interpreter Design
 
-
 ## Data Model
 
 [StableHLO programs](spec.md#programs) are computations over tensors
@@ -17,10 +16,11 @@ discriminated union holding one of `APInt`, `APFloat` or `pair<APFloat,APFloat>`
 for storage. The last one is used for storing elements with complex types.
 
 `Tensor` class has the following APIs to interact with its individual elements:
-  - `Element Tensor::get(llvm::ArrayRef<int64_t> index)`: To extract an
+
+- `Element Tensor::get(llvm::ArrayRef<int64_t> index)`: To extract an
      individual tensor element at multi-dimensional index `index` as `Element`
      object.
-  - `void Tensor::set(llvm::ArrayRef<int64_t> index, Element element);`:
+- `void Tensor::set(llvm::ArrayRef<int64_t> index, Element element);`:
   To update an `Element` object `element` into a tensor at multi-dimensional
   index `index`.
 
@@ -31,14 +31,15 @@ The entry function to the interpreter is
 ```C++
 SmallVector<Tensor> eval(func::FuncOp func, ArrayRef<Tensor> args);
 ```
+
 which does the following:
 
 1. Tracks the SSA arguments of `func` and their associated runtime `Tensor`
    values, provided in `args`, using a symbol table map, M.
 2. Foreach op within `func` in their SSACFG order:
-   * Invokes `eval` on op. For each SSA operand of the op, extract its
-  runtime value from M to be provided as argument to the `eval` invocation.
-   * Tracks the SSA result(s) of the op and the evaluated value in M.
+   - Invokes `eval` on op. For each SSA operand of the op, extract its
+     runtime value from M to be provided as argument to the `eval` invocation.
+   - Tracks the SSA result(s) of the op and the evaluated value in M.
 
 The op-level `eval` as mentioned in (2) is responsible for implementing the
 execution semantics of the op. Following is an example for `stablehlo::AddOp`.
