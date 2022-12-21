@@ -1030,6 +1030,7 @@ cc_library(
         "//stablehlo:stablehlo_ops",
         "//stablehlo:stablehlo_ops_inc_gen",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:AsmParser",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:Transforms",
