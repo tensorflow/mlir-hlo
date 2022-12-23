@@ -505,7 +505,6 @@ cc_library(
         ":lhlo_ops_structs_inc_gen",
         ":lhlo_structured_interface",
         ":mlir_hlo",
-        "//stablehlo:stablehlo_type_inference",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:BufferizationDialect",
         "@llvm-project//mlir:ControlFlowInterfaces",
