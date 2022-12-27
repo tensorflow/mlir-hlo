@@ -1080,10 +1080,9 @@ cc_library(
 cc_library(
     name = "transforms_passes",
     srcs = [
+        "analysis/test_userange_analysis.cc",
         "include/mlir-hlo/Transforms/passes.h.inc",
         "include/mlir-hlo/Transforms/rewriters.h",
-        "lib/Analysis/test_shape_component_analysis.cc",
-        "lib/Analysis/test_userange_analysis.cc",
         "lib/Transforms/alloc_to_arg_pass.cc",
         "lib/Transforms/buffer_packing.cc",
         "lib/Transforms/buffer_reuse.cc",
@@ -1100,6 +1099,7 @@ cc_library(
         "lib/Transforms/tile_loops_pass.cc",
         "lib/Transforms/unbufferize_pass.cc",
         "lib/Transforms/unroll_loops.cc",
+        "mhlo/analysis/test_shape_component_analysis.cc",
     ],
     hdrs = ["include/mlir-hlo/Transforms/passes.h"],
     deps = [
@@ -1304,9 +1304,12 @@ gentbl_cc_library(
 
 cc_library(
     name = "userange_analysis",
-    srcs = ["lib/Analysis/userange_analysis.cc"],
-    hdrs = ["include/mlir-hlo/Analysis/userange_analysis.h"],
-    includes = ["include"],
+    srcs = ["analysis/userange_analysis.cc"],
+    hdrs = ["analysis/userange_analysis.h"],
+    includes = [
+        ".",
+        "include",
+    ],
     deps = [
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Analysis",
@@ -1318,9 +1321,12 @@ cc_library(
 
 cc_library(
     name = "shape_component_analysis",
-    srcs = ["lib/Analysis/shape_component_analysis.cc"],
-    hdrs = ["include/mlir-hlo/Analysis/shape_component_analysis.h"],
-    includes = ["include"],
+    srcs = ["mhlo/analysis/shape_component_analysis.cc"],
+    hdrs = ["mhlo/analysis/shape_component_analysis.h"],
+    includes = [
+        ".",
+        "include",
+    ],
     deps = [
         ":mlir_hlo",
         "@llvm-project//llvm:Support",
