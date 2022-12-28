@@ -31,7 +31,17 @@ namespace hlo {
 //===----------------------------------------------------------------------===//
 // Utilities for shape functions
 //===----------------------------------------------------------------------===//
-// TODO(#270): Remove them when all shape functions are moved to this file.
+
+void reifyGatherDimSizes(int64_t resultRank,
+                         llvm::function_ref<Value(int64_t)> getStartIndicesDim,
+                         llvm::function_ref<Value(int64_t)> getSliceDim,
+                         ArrayRef<int64_t> offsetDims,
+                         ArrayRef<int64_t> collapsedSliceDims,
+                         ArrayRef<int64_t> startIndexMap,
+                         int64_t indexVectorDim, SmallVectorImpl<Value>& shape);
+
+// TODO(zhouxin) Remove these utils when all type inference code are integrated
+// And move `WindowDimension` to `TypeInference.cpp`
 
 bool compatibleShapeAndElementType(Type type1, Type type2,
                                    bool ignoreFpPrecision = false);
@@ -152,6 +162,10 @@ LogicalResult inferClampOp(
     Optional<Location> location, Value min, Value operand, Value max,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
+LogicalResult inferCompareOp(
+    MLIRContext* context, Optional<Location>, Value lhs,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
 LogicalResult inferComplexOp(Optional<Location> location, Value lhs,
                              SmallVectorImpl<Type>& inferredReturnTypes);
 
@@ -165,6 +179,13 @@ LogicalResult inferConstantOp(Optional<Location>, ElementsAttr value,
 LogicalResult inferCreateTokenOp(Dialect* dialect, Optional<Location> location,
                                  SmallVectorImpl<Type>& inferredReturnTypes);
 
+LogicalResult inferDynamicGatherOp(
+    Optional<Location> location, Value operand, Value startIndices,
+    Value sliceSizes, ArrayRef<int64_t> offsetDims,
+    ArrayRef<int64_t> collapsedSliceDims, ArrayRef<int64_t> startIndexMap,
+    int64_t indexVectorDim,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
 LogicalResult inferDynamicSliceOp(
     Optional<Location> location, Value operand, ValueRange startIndices,
     DenseIntElementsAttr sliceSizes,
@@ -175,9 +196,19 @@ LogicalResult inferDynamicUpdateSliceOp(
     ValueRange startIndices,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
+LogicalResult inferGatherOp(
+    Optional<Location> location, Value operand, Value startIndices,
+    ArrayRef<int64_t> offsetDims, ArrayRef<int64_t> collapsedSliceDims,
+    ArrayRef<int64_t> startIndexMap, int64_t indexVectorDim,
+    DenseIntElementsAttr sliceSizes,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
 LogicalResult inferGetTupleElementOp(
     Optional<Location> location, Value operand, int32_t index,
     SmallVectorImpl<Type>& inferredReturnTypes);
+
+LogicalResult inferImagOp(Optional<Location> location, Value operand,
+                          SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferIsFiniteOp(MLIRContext* context, Optional<Location>, Value x,
                               SmallVectorImpl<Type>& inferredReturnTypes);
@@ -229,6 +260,9 @@ LogicalResult inferReduceWindowOp(
     Optional<DenseIntElementsAttr> padding,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
+LogicalResult inferReplicaIdOp(MLIRContext* context, Optional<Location>,
+                               SmallVectorImpl<Type>& inferredReturnTypes);
+
 LogicalResult inferReturnOp(Optional<Location> location,
                             SmallVectorImpl<Type>& inferredReturnTypes);
 
@@ -268,12 +302,21 @@ LogicalResult inferTupleOp(MLIRContext* context, Optional<Location> location,
                            ValueRange val,
                            SmallVectorImpl<Type>& inferredReturnTypes);
 
+LogicalResult inferUniformDequantizeOp(
+    Optional<Location> location, Value operand,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
 LogicalResult inferWhileOp(Optional<Location> location, ValueRange operand,
                            SmallVectorImpl<Type>& inferredReturnTypes);
 
 //===----------------------------------------------------------------------===//
 // Verifiers for ops.
 //===----------------------------------------------------------------------===//
+
+LogicalResult verifyAllGatherOp(Optional<Location> location, Value operand,
+                                int64_t allGatherDim,
+                                DenseIntElementsAttr replicaGroups,
+                                bool useGlobalDeviceIds, Value result);
 
 LogicalResult verifyAllReduceOp(Optional<Location> location, Value operand,
                                 DenseIntElementsAttr replicaGroups,
@@ -321,6 +364,11 @@ LogicalResult verifyDynamicBroadcastInDimOp(
     Optional<DenseIntElementsAttr> knownExpandingDimensions,
     Optional<DenseIntElementsAttr> knownNonexpandingDimensions, Value result);
 
+LogicalResult verifyDynamicPadOp(Optional<Location> location, Value operand,
+                                 Value paddingValue, Value edgePaddingLow,
+                                 Value edgePaddingHigh, Value interiorPadding,
+                                 Value result);
+
 LogicalResult verifyDynamicReshapeOp(Optional<Location> location,
                                      Value outputShape, Value result);
 
@@ -335,6 +383,9 @@ LogicalResult verifyReduceOp(Optional<Location> location, ValueRange inputs,
                              ValueRange initValues,
                              DenseIntElementsAttr dimensions, Region& body);
 
+LogicalResult verifyReducePrecisionOp(Optional<Location> location,
+                                      int32_t exponentBits);
+
 LogicalResult verifyReduceScatterOp(Optional<Location> location, Value operand,
                                     int64_t scatterDimension,
                                     DenseIntElementsAttr replicaGroups,
@@ -348,6 +399,26 @@ LogicalResult verifyReduceWindowOp(
     Optional<DenseIntElementsAttr> baseDilations,
     Optional<DenseIntElementsAttr> windowDilations,
     Optional<DenseIntElementsAttr> padding, Region& body);
+
+LogicalResult verifyReshapeOp(Optional<Location> location, Value operand,
+                              Value result);
+
+LogicalResult verifyRngBitGeneratorOp(Optional<Location> location,
+                                      Value initialState, Value outputState);
+
+LogicalResult verifyScatterOp(Optional<Location> location, ValueRange inputs,
+                              Value scatterIndices, ValueRange updates,
+                              ArrayRef<int64_t> updateWindowDims,
+                              ArrayRef<int64_t> insertedWindowDims,
+                              ArrayRef<int64_t> scatterDimsToOperandDims,
+                              int64_t indexVectorDim,
+                              Region& updateComputation);
+
+LogicalResult verifySelectAndScatterOp(
+    Optional<Location> location, Value operand, Value source, Value initValue,
+    Optional<DenseIntElementsAttr> windowDimensions,
+    Optional<DenseIntElementsAttr> windowStrides,
+    Optional<DenseIntElementsAttr> padding, Region& select, Region& scatter);
 
 LogicalResult verifySortOp(Optional<Location> location, ValueRange inputs,
                            int64_t dimension, Region& comparator);

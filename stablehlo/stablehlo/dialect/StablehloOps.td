@@ -1664,7 +1664,7 @@ def StableHLO_DynamicUpdateSliceOp: StableHLO_Op<"dynamic_update_slice",
     `update`.
 
     See:
-    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehloslice
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#stablehlodynamic_update_slice
 
     Example:
     ```mlir
@@ -2862,9 +2862,6 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
   // TODO(hinsu): Implement custom printer and parser.
 
   let extraClassDeclaration = [{
-    // Get the operation used for reduction applied to `result_index`th result.
-    Operation *getReductionOp(int result_index);
-
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
       return mlir::hlo::isCompatibleForHloTypeInference(l, r);
     }
