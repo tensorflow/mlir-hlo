@@ -393,116 +393,18 @@ escapeSequence  ::= '\' ('"' | '\' | 'n' | 't' | (hexadecimalDigit hexadecimalDi
 escape sequences. They are encoding-agnostic, so the interpretation of these
 bytes is implementation-defined. String literals have type `string`.
 
-## Index of Ops
+## Ops
 
-  * [abs](#stablehloabs)
-  * [add](#stablehloadd)
-  * [after_all](#stablehloafter_all)
-  * [all_gather](#stablehloall_gather)
-  * [all_reduce](#stablehloall_reduce)
-  * [all_to_all](#stablehloall_to_all)
-  * [and](#stablehloand)
-  * [atan2](#stablehloatan2)
-  * [batch_norm_grad](#stablehlobatch_norm_grad)
-  * [batch_norm_inference](#stablehlobatch_norm_inference)
-  * [batch_norm_training](#stablehlobatch_norm_training)
-  * [bitcast_convert](#stablehlobitcast_convert)
-  * [broadcast_in_dim](#stablehlobroadcast_in_dim)
-  * [case](#stablehlocase)
-  * [cbrt](#stablehlocbrt)
-  * [ceil](#stablehloceil)
-  * [cholesky](#stablehlocholesky)
-  * [clamp](#stablehloclamp)
-  * [collective_permute](#stablehlocollective_permute)
-  * [compare](#stablehlocompare)
-  * [complex](#stablehlocomplex)
-  * [concatenate](#stablehloconcatenate)
-  * [constant](#stablehloconstant)
-  * [convert](#stablehloconvert)
-  * [convolution](#stablehloconvolution)
-  * [cosine](#stablehlocosine)
-  * [count_leading_zeros](#stablehlocount_leading_zeros)
-  * [custom_call](#stablehlocustom_call)
-  * [divide](#stablehlodivide)
-  * [dot_general](#stablehlodot_general)
-  * [dynamic_slice](#stablehlodynamic_slice)
-  * [dynamic_update_slice](#stablehlodynamic_update_slice)
-  * [exponential](#stablehloexponential)
-  * [exponential_minus_one](#stablehloexponential_minus_one)
-  * [fft](#stablehlofft)
-  * [floor](#stablehlofloor)
-  * [gather](#stablehlogather)
-  * [get_dimension_size](#stablehloget_dimension_size)
-  * [get_tuple_element](#stablehloget_tuple_element)
-  * [if](#stablehloif)
-  * [imag](#stablehloimag)
-  * [infeed](#stablehloinfeed)
-  * [iota](#stablehloiota)
-  * [is_finite](#stablehlois_finite)
-  * [log](#stablehlolog)
-  * [log_plus_one](#stablehlolog_plus_one)
-  * [logistic](#stablehlologistic)
-  * [map](#stablehlomap)
-  * [maximum](#stablehlomaximum)
-  * [minimum](#stablehlominimum)
-  * [multiply](#stablehlomultiply)
-  * [negate](#stablehlonegate)
-  * [not](#stablehlonot)
-  * [optimization_barrier](#stablehlooptimization_barrier)
-  * [or](#stablehloor)
-  * [outfeed](#stablehlooutfeed)
-  * [pad](#stablehlopad)
-  * [partition_id](#stablehlopartition_id)
-  * [popcnt](#stablehlopopcnt)
-  * [power](#stablehlopower)
-  * [real](#stablehloreal)
-  * [recv](#stablehlorecv)
-  * [reduce](#stablehloreduce)
-  * [reduce_precision](#stablehloreduce_precision)
-  * [reduce_scatter](#stablehloreduce_scatter)
-  * [reduce_window](#stablehloreduce_window)
-  * [remainder](#stablehloremainder)
-  * [replica_id](#stablehloreplica_id)
-  * [reshape](#stablehloreshape)
-  * [reverse](#stablehloreverse)
-  * [rng](#stablehlorng)
-  * [rng_bit_generator](#stablehlorng_bit_generator)
-  * [round_nearest_afz](#stablehloround_nearest_afz)
-  * [round_nearest_even](#stablehloround_nearest_even)
-  * [rsqrt](#stablehlorsqrt)
-  * [scatter](#stablehloscatter)
-  * [select](#stablehloselect)
-  * [select_and_scatter](#stablehloselect_and_scatter)
-  * [send](#stablehlosend)
-  * [shift_left](#stablehloshift_left)
-  * [shift_right_arithmetic](#stablehloshift_right_arithmetic)
-  * [shift_right_logical](#stablehloshift_right_logical)
-  * [sign](#stablehlosign)
-  * [sine](#stablehlosine)
-  * [slice](#stablehloslice)
-  * [sort](#stablehlosort)
-  * [sqrt](#stablehlosqrt)
-  * [subtract](#stablehlosubtract)
-  * [tanh](#stablehlotanh)
-  * [transpose](#stablehlotranspose)
-  * [triangular_solve](#stablehlotriangular_solve)
-  * [tuple](#stablehlotuple)
-  * [while](#stablehlowhile)
-  * [xor](#stablehloxor)
-
-## stablehlo.abs
+## abs
 
 ### Semantics
 
-Performs element-wise absolute value of `operand` tensor and produces a `result`
-tensor. For floating-point element types, it implements the `abs` operation from
-the IEEE-754 specification.
+Performs element-wise abs operation on `operand` tensor and produces a `result`
+tensor. Depending on the element type, does the following:
 
-For n-bit signed integer, the absolute value of $-2^{n-1}$ is implementation-
-defined and one of the following:
-
-  * Saturation to $2^{n-1}-1$
-  * $-2^{n-1}$
+  * For signed integers: integer modulus.
+  * For floats: `abs` from IEEE-754.
+  * For complex numbers: complex modulus.
 
 ### Inputs
 
@@ -532,39 +434,30 @@ defined and one of the following:
 // %result: [2, 0, 2]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.add
+## add
 
 ### Semantics
 
 Performs element-wise addition of two tensors `lhs` and `rhs` and produces a
-`result` tensor. For integer element types, if the element-wise sum has an
-unsigned/signed overflow, the result is implementation-defined and one
-of the following:
+`result` tensor. Depending on the element type, does the following:
 
-  * mathematical result modulo $2^n$, where n is the bit width of the result,
-  for unsigned overflow. For signed integer overflow, wraps the result around
-  the representable range $[-2^{n-1},\ 2^{n-1} - 1]$.
-  * saturation to $2^{n-1} - 1$ (or $-2^{n-1}$) for signed overflow and
-  saturation to $2^n - 1$ (or $0$) for unsigned overflow.
-
-For floating-point element types, it implements the `addition` operation from
-the IEEE-754 specification. For boolean element type, the behavior is same as
-[stablehlo.or](#stablehloor).
+  * For booleans: logical OR.
+  * For integers: integer addition.
+  * For floats: `addition` from IEEE-754.
+  * For complex numbers: complex addition.
 
 ### Inputs
 
-| Name  | Type                         |
-|-------|------------------------------|
-| `lhs` | tensor of any supported type |
-| `rhs` | tensor of any supported type |
+| Name  | Type   |
+|-------|--------|
+| `lhs` | tensor |
+| `rhs` | tensor |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -581,9 +474,7 @@ the IEEE-754 specification. For boolean element type, the behavior is same as
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_add.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.after_all
+## after_all
 
 ### Semantics
 
@@ -609,9 +500,7 @@ it only exists to establish data dependencies from `result` to `inputs`.
 %result = "stablehlo.after_all"(%input0, %input1) : (!stablehlo.token, !stablehlo.token) -> !stablehlo.token
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.all_gather
+## all_gather
 
 ### Semantics
 
@@ -639,7 +528,7 @@ Afterwards, within each `process_group`:
 
 | Name                    | Type                                         |
 |-------------------------|----------------------------------------------|
-| `operand`               | tensor of any supported type                 |
+| `operand`               | tensor                                       |
 | `all_gather_dim`        | constant of type `si64`                      |
 | `replica_groups`        | 2-dimensional tensor constant of type `si64` |
 | `channel_id`            | constant of type `si64`                      |
@@ -647,9 +536,9 @@ Afterwards, within each `process_group`:
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -685,9 +574,7 @@ Afterwards, within each `process_group`:
 // %result@(1, 0): [[1.0, 2.0, 5.0, 6.0], [3.0, 4.0, 7.0, 8.0]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.all_reduce
+## all_reduce
 
 ### Semantics
 
@@ -726,7 +613,7 @@ Afterwards, within each `process_group`:
 
 | Name                    | Type                                                             |
 |-------------------------|------------------------------------------------------------------|
-| `operand`               | tensor of any supported type                                     |
+| `operand`               | tensor                                                           |
 | `replica_groups`        | variadic number of 1-dimensional tensor constants of type `si64` |
 | `channel_id`            | constant of type `si64`                                          |
 | `use_global_device_ids` | constant of type `i1`                                            |
@@ -734,9 +621,9 @@ Afterwards, within each `process_group`:
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -774,9 +661,7 @@ Afterwards, within each `process_group`:
 // %result@(1, 0): [6.0, 8.0, 10.0, 12.0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.all_to_all
+## all_to_all
 
 ### Semantics
 
@@ -787,8 +672,12 @@ Within each process group in the StableHLO grid, splits the values of the
 between the processes, concatenates the scattered parts along `concat_dimension`
 and produces a `result` tensor.
 
-The operation splits the StableHLO grid into process groups using the
-`cross_replica(replica_groups)` strategy.
+The operation splits the StableHLO grid into `process_groups` as follows:
+
+  * `channel_id <= 0`,
+    `cross_replica(replica_groups)`.
+  * `channel_id > 0`,
+    `cross_partition(replica_groups)`.
 
 Afterwards, within each `process_group`:
 
@@ -822,17 +711,18 @@ Afterwards, within each `process_group`:
 
 | Name               | Type                                         |
 |--------------------|----------------------------------------------|
-| `operand`          | tensor of any supported type                 |
+| `operand`          | tensor                                       |
 | `split_dimension`  | constant of type `si64`                      |
 | `concat_dimension` | constant of type `si64`                      |
 | `split_count`      | constant of type `si64`                      |
 | `replica_groups`   | 2-dimensional tensor constant of type `si64` |
+| `channel_id`       | constant of type `si64`                      |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -841,7 +731,9 @@ Afterwards, within each `process_group`:
   * (C3) `concat_dimension` $\in$ [0, rank(`operand`)).
   * (C4) `split_count` $\gt$ 0.
   * (C5) All values in `replica_groups` are unique.
-  * (C6) `size(replica_groups)` = `num_replicas`.
+  * (C6) `size(replica_groups)` depends on the process grouping strategy:
+    * If `cross_replica`, `num_replicas`.
+    * If `cross_partition`, `num_partitions`.
   * (C7) $0 \le$ `replica_groups`[i] $\lt$ size(`replica_groups`) $\forall i$
          in `indices(replica_groups)`.
   * (C8) `type(result) = type(operand)` except:
@@ -883,28 +775,28 @@ Afterwards, within each `process_group`:
 //                 ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.and
+## and
 
 ### Semantics
 
-Performs element-wise bitwise or logical AND of two tensors `lhs` and `rhs` and
-produces a `result` tensor. For integer tensors, computes the bitwise operation.
-For boolean tensors, computes the logical operation.
+Performs element-wise AND of two tensors `lhs` and `rhs` and produces a `result`
+tensor. Depending on the element type, does the following:
+
+  * For booleans: logical AND.
+  * For integers: bitwise AND.
 
 ### Inputs
 
 | Name  | Type                              |
 |-------|-----------------------------------|
-| `lhs` | tensor of integer or boolean type |
-| `rhs` | tensor of integer or boolean type |
+| `lhs` | tensor of boolean or integer type |
+| `rhs` | tensor of boolean or integer type |
 
 ### Outputs
 
 | Name     | Type                              |
 |----------|-----------------------------------|
-| `result` | tensor of integer or boolean type |
+| `result` | tensor of boolean or integer type |
 
 ### Constraints
 
@@ -919,16 +811,15 @@ For boolean tensors, computes the logical operation.
 // %result: [[1, 2], [3, 0]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.atan2
+## atan2
 
 ### Semantics
 
 Performs element-wise atan2 operation on `lhs` and `rhs` tensor and produces a
-`result` tensor, implementing the `atan2` operation from the IEEE-754
-specification. For complex element types, it computes a complex atan2 function
-with corner cases TBD. Numeric precision is implementation-defined.
+`result` tensor. Depending on the element type, does the following:
+
+  * For floats: `atan2` from IEEE-754.
+  * For complex numbers: complex atan2.
 
 ### Inputs
 
@@ -956,15 +847,12 @@ with corner cases TBD. Numeric precision is implementation-defined.
 // %result: [0.0, 1.57079637, -1.57079637] // [0.0, pi/2, -pi/2]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.batch_norm_grad
+## batch_norm_grad
 
 ### Semantics
 
-Computes gradients of several inputs of
-[batch_norm_training](#stablehlobatch_norm_training) backpropagating from
-`grad_output`, and produces `grad_operand`, `grad_scale` and `grad_offset`
+Computes gradients of several inputs of `batch_norm_training` backpropagating
+from `grad_output`, and produces `grad_operand`, `grad_scale` and `grad_offset`
 tensors. More formally, this operation can be expressed as a decomposition to
 existing StableHLO operations using Python-like syntax as follows:
 
@@ -1078,9 +966,7 @@ def batch_norm_grad(operand, scale, mean, variance, grad_output, epsilon, featur
 // %grad_offset: [0.4, 0.4]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.batch_norm_inference
+## batch_norm_inference
 
 ### Semantics
 
@@ -1105,8 +991,6 @@ def batch_norm_inference(operand, scale, offset, mean, variance, epsilon, featur
   normalized_operand = divide(centered_operand, stddev)
   return add(multiply(scale_bcast, normalized_operand), offset_bcast)
 ```
-
-Numeric precision is implementation-defined.
 
 ### Inputs
 
@@ -1158,9 +1042,7 @@ Numeric precision is implementation-defined.
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.batch_norm_training
+## batch_norm_training
 
 ### Semantics
 
@@ -1193,8 +1075,6 @@ def batch_norm_training(operand, scale, offset, epsilon, feature_index):
   return batch_norm_inference(operand, scale, offset, mean,
                               variance, epsilon, feature_index)
 ```
-
-Numeric precision is implementation-defined.
 
 ### Inputs
 
@@ -1246,9 +1126,7 @@ Numeric precision is implementation-defined.
 // %batch_var: [1.0, 1.0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.bitcast_convert
+## bitcast_convert
 
 ### Semantics
 
@@ -1272,15 +1150,15 @@ representation of element types is implementation-defined as well.
 
 ### Inputs
 
-| Name      | Type                         |
-|-----------|------------------------------|
-| `operand` | tensor of any supported type |
+| Name      | Type   |
+|-----------|--------|
+| `operand` | tensor |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -1308,9 +1186,7 @@ representation of element types is implementation-defined as well.
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.broadcast_in_dim
+## broadcast_in_dim
 
 ### Semantics
 
@@ -1324,14 +1200,14 @@ dimensions `k` in `operand`.
 
 | Name                   | Type                                         |
 |------------------------|----------------------------------------------|
-| `operand`              | tensor of any supported type                 |
+| `operand`              | tensor                                       |
 | `broadcast_dimensions` | 1-dimensional tensor constant of type `si64` |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -1367,9 +1243,7 @@ dimensions `k` in `operand`.
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.case
+## case
 
 ### Semantics
 
@@ -1387,9 +1261,9 @@ returned.
 
 ### Outputs
 
-| Name      | Type                                                       |
-|-----------|------------------------------------------------------------|
-| `results` | variadic number of tensors of any supported type or tokens |
+| Name      | Type                                 |
+|-----------|--------------------------------------|
+| `results` | variadic number of tensors or tokens |
 
 ### Constraints
 
@@ -1412,16 +1286,15 @@ returned.
 // %result: 11
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.cbrt
+## cbrt
 
 ### Semantics
 
 Performs element-wise cubic root operation on `operand` tensor and produces a
-`result` tensor, implementing the `rootn(x, 3)` operation from the IEEE-754
-specification. For complex element types, it computes a complex cubic root, with
-corner cases TBD. Numeric precision is implementation-defined.
+`result` tensor. Depending on the element type, does the following:
+
+  * For floats: `rootn(x, 3)` from IEEE-754.
+  * For complex numbers: complex cubic root.
 
 ### Inputs
 
@@ -1447,9 +1320,7 @@ corner cases TBD. Numeric precision is implementation-defined.
 // %result: [0.0, 1.0, 2.0, 3.0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.ceil
+## ceil
 
 ### Semantics
 
@@ -1483,9 +1354,7 @@ specification.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_ceil.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.cholesky
+## cholesky
 
 ### Semantics
 
@@ -1538,9 +1407,7 @@ matrix, then the behavior is undefined.
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.clamp
+## clamp
 
 ### Semantics
 
@@ -1548,23 +1415,21 @@ Clamps every element of the `operand` tensor between a minimum and maximum
 value and produces a `result` tensor. More formally, `result[i0, ..., iR-1]` =
 `minimum(maximum(operand[i0, ..., iR-1], min_val), max_val)`,
 where `min_val = rank(min) == 0 ? min : min[i0, ..., iR-1]`,
-`max_val = rank(max) == 0 ? max : max[i0, ..., iR-1]`, `minimum` and `maximum`
-operations correspond to [stablehlo.minimum](#stablehlominimum) and
-[stablehlo.maximum](#stablehlomaximum).
+`max_val = rank(max) == 0 ? max : max[i0, ..., iR-1]`.
 
 ### Inputs
 
-| Name      | Type                         |
-|-----------|------------------------------|
-| `min`     | tensor of any supported type |
-| `operand` | tensor of any supported type |
-| `max`     | tensor of any supported type |
+| Name      | Type   |
+|-----------|--------|
+| `min`     | tensor |
+| `operand` | tensor |
+| `max`     | tensor |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -1583,9 +1448,7 @@ operations correspond to [stablehlo.minimum](#stablehlominimum) and
 // %result: [5, 13, 20]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.collective_permute
+## collective_permute
 
 ### Semantics
 
@@ -1610,15 +1473,15 @@ Afterwards, `result@process` is given by:
 
 | Name                  | Type                                         |
 |-----------------------|----------------------------------------------|
-| `operand`             | tensor of any supported type                 |
+| `operand`             | tensor                                       |
 | `source_target_pairs` | 2-dimensional tensor constant of type `si64` |
 | `channel_id`          | constant of type `si64`                      |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -1648,9 +1511,7 @@ Afterwards, `result@process` is given by:
 // %result@(1, 0): [[1, 2], [3, 4]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.compare
+## compare
 
 ### Semantics
 
@@ -1660,7 +1521,7 @@ Performs element-wise comparison of `lhs` and `rhs` tensors according to
 The values of `comparison_direction` and `compare_type` have the following
 semantics:
 
-For integer and boolean element types:
+For boolean and integer element types:
 
   * `EQ`: `lhs` $=$ `rhs`.
   * `NE`: `lhs` $\ne$ `rhs`.
@@ -1690,8 +1551,8 @@ performed using the provided `comparison_direction` and `compare_type`.
 
 | Name                   | Type                                                    |
 |------------------------|---------------------------------------------------------|
-| `lhs`                  | tensor of any supported type                            |
-| `rhs`                  | tensor of any supported type                            |
+| `lhs`                  | tensor                                                  |
+| `rhs`                  | tensor                                                  |
 | `comparison_direction` | enum of `EQ`, `NE`, `GE`, `GT`, `LE`, and `LT`          |
 | `compare_type`         | enum of `FLOAT`, `TOTALORDER`, `SIGNED`, and `UNSIGNED` |
 
@@ -1725,9 +1586,7 @@ performed using the provided `comparison_direction` and `compare_type`.
 // %result: [true, false]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.complex
+## complex
 
 ### Semantics
 
@@ -1762,9 +1621,7 @@ imaginary values, `lhs` and `rhs`, and produces a `result` tensor.
 // %result: [(1.0, 2.0), (3.0, 4.0)]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.concatenate
+## concatenate
 
 ### Semantics
 
@@ -1779,16 +1636,16 @@ tensor. More formally,
 
 ### Inputs
 
-| Name        | Type                                             |
-|-------------|--------------------------------------------------|
-| `inputs`    | variadic number of tensors of any supported type |
-| `dimension` | constant of type `si64`                          |
+| Name        | Type                       |
+|-------------|----------------------------|
+| `inputs`    | variadic number of tensors |
+| `dimension` | constant of type `si64`    |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -1813,9 +1670,7 @@ tensor. More formally,
 // %result: [[1, 2], [3, 4], [5, 6], [7, 8]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.constant
+## constant
 
 ### Semantics
 
@@ -1823,15 +1678,15 @@ Produces an `output` tensor from a constant `value`.
 
 ### Inputs
 
-| Name    | Type                           |
-|---------|--------------------------------|
-| `value` | constant of any supported type |
+| Name    | Type     |
+|---------|----------|
+| `value` | constant |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `output` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `output` | tensor |
 
 ### Constraints
 
@@ -1848,9 +1703,7 @@ Produces an `output` tensor from a constant `value`.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_constant.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.convert
+## convert
 
 ### Semantics
 
@@ -1897,15 +1750,15 @@ converted to zero, and the value `true` is converted to one. For
 
 ### Inputs
 
-| Name      | Type                         |
-|-----------|------------------------------|
-| `operand` | tensor of any supported type |
+| Name      | Type   |
+|-----------|--------|
+| `operand` | tensor |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -1919,9 +1772,7 @@ converted to zero, and the value `true` is converted to one. For
 // %result: [(1.0, 0.0), (2.0, 0.0), (3.0, 0.0)]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.convolution
+## convolution
 
 ### Semantics
 
@@ -1979,8 +1830,8 @@ If `batch_group_count > 1`:
 
 | Name                              | Type                                                        | Constraints                            |
 |-----------------------------------|-------------------------------------------------------------|----------------------------------------|
-| `lhs`                             | tensor of any supported type                                | (C1), (C2), (C11), (C12), (C26), (C27) |
-| `rhs`                             | tensor of any supported type                                | (C1), (C2), (C15), (C16), (C17), (C26) |
+| `lhs`                             | tensor                                                      | (C1), (C2), (C11), (C12), (C26), (C27) |
+| `rhs`                             | tensor                                                      | (C1), (C2), (C15), (C16), (C17), (C26) |
 | `window_strides`                  | 1-dimensional tensor constant of type `si64`                | (C3), (C4), (C26)                      |
 | `padding`                         | 2-dimensional tensor constant of type `si64`                | (C5), (C26)                            |
 | `lhs_dilation`                    | 1-dimensional tensor constant of type `si64`                | (C6), (C7), (C26)                      |
@@ -2001,9 +1852,9 @@ If `batch_group_count > 1`:
 
 ### Outputs
 
-| Name     | Type                         | Constraints         |
-|----------|------------------------------|---------------------|
-| `result` | tensor of any supported type | (C26), (C27), (C28) |
+| Name     | Type   | Constraints         |
+|----------|--------|---------------------|
+| `result` | tensor | (C26), (C27), (C28) |
 
 ### Constraints
 
@@ -2102,15 +1953,15 @@ If `batch_group_count > 1`:
 //          ]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.cosine
+## cosine
 
 ### Semantics
 
 Performs element-wise cosine operation on `operand` tensor and produces a
-`result` tensor, implementing the `cos` operation from the IEEE-754
-specification. Numeric precision is implementation-defined.
+`result` tensor. Depending on the element type, does the following:
+
+  * For floats: `cos` from IEEE-754.
+  * For complex numbers: complex cosine.
 
 ### Inputs
 
@@ -2141,9 +1992,7 @@ specification. Numeric precision is implementation-defined.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_cosine.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.count_leading_zeros
+## count_leading_zeros
 
 ### Semantics
 
@@ -2174,9 +2023,7 @@ tensor and produces a `result` tensor.
 // %result: [[8, 7], [1, 0]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.custom_call
+## custom_call
 
 ### Semantics
 
@@ -2187,20 +2034,20 @@ implementation-defined metadata.
 
 ### Inputs
 
-| Name                  | Type                                                            |
-|-----------------------|-----------------------------------------------------------------|
-| `inputs`              | variadic number of values of any supported type                 |
-| `call_target_name`    | constant of type `string`                                       |
-| `has_side_effect`     | constant of type `i1`                                           |
-| `backend_config`      | constant of type `string`                                       |
-| `api_version`         | constant of type `si32`                                         |
-| `called_computations` | variadic number of functions                                    |
+| Name                  | Type                         |
+|-----------------------|------------------------------|
+| `inputs`              | variadic number of values    |
+| `call_target_name`    | constant of type `string`    |
+| `has_side_effect`     | constant of type `i1`        |
+| `backend_config`      | constant of type `string`    |
+| `api_version`         | constant of type `si32`      |
+| `called_computations` | variadic number of functions |
 
 ### Outputs
 
-| Name      | Type                                            |
-|-----------|-------------------------------------------------|
-| `results` | variadic number of values of any supported type |
+| Name      | Type                      |
+|-----------|---------------------------|
+| `results` | variadic number of values |
 
 ### Examples
 
@@ -2214,18 +2061,16 @@ implementation-defined metadata.
 } : (tensor<f32>) -> tensor<f32>
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.divide
+## divide
 
 ### Semantics
 
 Performs element-wise division of dividend `lhs` and divisor `rhs` tensors and
-produces a `result` tensor. For floating-point element types, it implements the
-`division` operation from IEEE-754 specification. For integer element types, it
-implements integer division truncating any fractional part. For n-bit integer
-types, division overflow (division by zero or division of $-2^{n-1}$ with $-1$)
-produces an implementation-defined value.
+produces a `result` tensor. Depending on the element type, does the following:
+
+  * For integers: integer division.
+  * For floats: `division` from IEEE-754.
+  * For complex numbers: complex division.
 
 ### Inputs
 
@@ -2258,9 +2103,7 @@ produces an implementation-defined value.
 // %result: [5, -5, -5, 5]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.dot_general
+## dot_general
 
 ### Semantics
 
@@ -2303,8 +2146,8 @@ computations on accelerator backends. This can be one of the following:
 
 | Name                         | Type                                                        |
 |------------------------------|-------------------------------------------------------------|
-| `lhs`                        | tensor of any supported type                                |
-| `rhs`                        | tensor of any supported type                                |
+| `lhs`                        | tensor                                                      |
+| `rhs`                        | tensor                                                      |
 | `lhs_batching_dimensions`    | 1-dimensional tensor constant of type `si64`                |
 | `rhs_batching_dimensions`    | 1-dimensional tensor constant of type `si64`                |
 | `lhs_contracting_dimensions` | 1-dimensional tensor constant of type `si64`                |
@@ -2313,9 +2156,9 @@ computations on accelerator backends. This can be one of the following:
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -2379,9 +2222,7 @@ computations on accelerator backends. This can be one of the following:
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_dot_general.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.dynamic_slice
+## dynamic_slice
 
 ### Semantics
 
@@ -2400,15 +2241,15 @@ More formally, `result[i0, ..., iR-1] = operand[j0, ..., jR-1]` where:
 
 | Name            | Type                                                     |
 |-----------------|----------------------------------------------------------|
-| `operand`       | tensor of any supported type                             |
+| `operand`       | tensor                                                   |
 | `start_indices` | variadic number of 0-dimensional tensors of integer type |
 | `slice_sizes`   | 1-dimensional tensor constant of type `si64`             |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -2439,9 +2280,7 @@ More formally, `result[i0, ..., iR-1] = operand[j0, ..., jR-1]` where:
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.dynamic_update_slice
+## dynamic_update_slice
 
 ### Semantics
 
@@ -2459,15 +2298,15 @@ More formally, `result[i0, ..., iR-1]` is defined as:
 
 | Name            | Type                                                     |
 |-----------------|----------------------------------------------------------|
-| `operand`       | tensor of any supported type                             |
-| `update`        | tensor of any supported type                             |
+| `operand`       | tensor                                                   |
+| `update`        | tensor                                                   |
 | `start_indices` | variadic number of 0-dimensional tensors of integer type |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -2504,17 +2343,15 @@ More formally, `result[i0, ..., iR-1]` is defined as:
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.exponential
+## exponential
 
 ### Semantics
 
 Performs element-wise exponential operation on `operand` tensor and produces a
-`result` tensor. For floating-point element types, it implements the `exp`
-operation from the IEEE-754 specification. For complex element types, it
-computes a complex exponential, with corner cases TBD. Numeric precision is
-implementation-defined.
+`result` tensor. Depending on the element type, does the following:
+
+  * For floats: `exp` from IEEE-754.
+  * For complex numbers: complex exponential.
 
 ### Inputs
 
@@ -2544,17 +2381,15 @@ implementation-defined.
 // %result: (-1.13120438, 2.47172667)
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.exponential_minus_one
+## exponential_minus_one
 
 ### Semantics
 
 Performs element-wise exponential minus one operation on `operand` tensor and
-produces a `result` tensor. For floating-point element types, it implements the
-`expm1` operation from the IEEE-754 specification. For complex element types, it
-computes a complex exponential minus one, with corner cases TBD. Numeric
-precision is implementation-defined.
+produces a `result` tensor. Depending on the element type, does the following:
+
+  * For floats: `expm1` from IEEE-754.
+  * For complex numbers: complex exponential minus one.
 
 ### Inputs
 
@@ -2580,9 +2415,7 @@ precision is implementation-defined.
 // %result: [0.0, 1.71828187]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.fft
+## fft
 
 ### Semantics
 
@@ -2699,9 +2532,7 @@ for `fft_type = RFFT`. For example, for `L = 3`:
 // %result: [(1.0, 0.0), (1.0, 0.0), (1.0, 0.0), (1.0, 0.0)]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.floor
+## floor
 
 ### Semantics
 
@@ -2735,9 +2566,7 @@ specification.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_floor.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.gather
+## gather
 
 ### Semantics
 
@@ -2779,8 +2608,8 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
 
 | Name                   | Type                                         | Constraints                      |
 |------------------------|----------------------------------------------|----------------------------------|
-| `operand`              | tensor of any supported type                 | (C1), (C10), (C11), (C12), (C15) |
-| `start_indices`        | tensor of any supported integer type         | (C2), (C3), (C13)                |
+| `operand`              | tensor                                       | (C1), (C10), (C11), (C12), (C15) |
+| `start_indices`        | tensor of integer type                       | (C2), (C3), (C13)                |
 | `offset_dims`          | 1-dimensional tensor constant of type `si64` | (C1), (C4), (C5),                |
 | `collapsed_slice_dims` | 1-dimensional tensor constant of type `si64` | (C1), (C6), (C7), (C8), (C13)    |
 | `start_index_map`      | 1-dimensional tensor constant of type `si64` | (C3), (C9), (C10)                |
@@ -2790,9 +2619,9 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -2862,9 +2691,7 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.get_dimension_size
+## get_dimension_size
 
 ### Semantics
 
@@ -2872,10 +2699,10 @@ Produces the size of the given `dimension` of the `operand`.
 
 ### Inputs
 
-| Name          | Type                         |
-|---------------|------------------------------|
-| `operand`     | tensor of any supported type |
-| `dimension`   | constant of type `si64`      |
+| Name        | Type                    |
+|-------------|-------------------------|
+| `operand`   | tensor                  |
+| `dimension` | constant of type `si64` |
 
 ### Outputs
 
@@ -2898,9 +2725,7 @@ Produces the size of the given `dimension` of the `operand`.
 // %result: 3
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.get_tuple_element
+## get_tuple_element
 
 ### Semantics
 
@@ -2935,9 +2760,7 @@ Extracts element at `index` position of the `operand` tuple and produces a
 // %result: [1.0, 2.0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.if
+## if
 
 ### Semantics
 
@@ -2956,9 +2779,9 @@ output of `true_branch` is returned, else if pred is `false`, output of
 
 ### Outputs
 
-| Name      | Type                                                       |
-|-----------|------------------------------------------------------------|
-| `results` | variadic number of tensors of any supported type or tokens |
+| Name      | Type                                 |
+|-----------|--------------------------------------|
+| `results` | variadic number of tensors or tokens |
 
 ### Constraints
 
@@ -2980,16 +2803,13 @@ output of `true_branch` is returned, else if pred is `false`, output of
 // %result: 10
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.imag
+## imag
 
 ### Semantics
 
 Extracts the imaginary part, element-wise, from the `operand` and produces a
-`result` tensor.
-
-More formally, for each element `x`: `imag(x) = is_complex(x) ? x.imag : 0.0`.
+`result` tensor. More formally, for each element `x`:
+`imag(x) = is_complex(x) ? x.imag : 0.0`.
 
 ### Inputs
 
@@ -3018,9 +2838,7 @@ More formally, for each element `x`: `imag(x) = is_complex(x) ? x.imag : 0.0`.
 // %result: [2.0, 4.0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.infeed
+## infeed
 
 ### Semantics
 
@@ -3041,9 +2859,9 @@ as a value that other operations can take a data dependency on.
 
 ### Outputs
 
-| Name      | Type                                                       |
-|-----------|------------------------------------------------------------|
-| `results` | variadic number of tensors of any supported type or tokens |
+| Name      | Type                                 |
+|-----------|--------------------------------------|
+| `results` | variadic number of tensors or tokens |
 
 ### Constraints
 
@@ -3060,25 +2878,13 @@ as a value that other operations can take a data dependency on.
 } : (!stablehlo.token) -> (tensor<3x3x3xi32>, !stablehlo.token)
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.iota
+## iota
 
 ### Semantics
 
 Fills an `output` tensor with values in increasing order starting from zero
 along the `iota_dimension` dimension. More formally,
 `output[i0, ..., id, ..., iR-1] = id`, where `d` is equal to `iota_dimension`.
-
-For integers, if the dimension size is larger than what the element type's
-maximum value can hold, an overflow occurs and the behavior is implementation-
-defined and one of the following:
-
-  * mathematical result modulo $2^n$, where n is the bit width of the result,
-  for unsigned overflow. For signed integer overflow, wraps the result around
-  the representable range $[-2^{n-1},\ 2^{n-1} - 1]$.
-  * saturation to $2^{n-1} - 1$ for signed overflow and saturation to $2^n - 1$
-  for unsigned overflow.
 
 ### Inputs
 
@@ -3122,9 +2928,7 @@ defined and one of the following:
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_iota.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.is_finite
+## is_finite
 
 ### Semantics
 
@@ -3157,17 +2961,15 @@ operation from the IEEE-754 specification.
 // %y: [false, false, false, true, true, true, true]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.log
+## log
 
 ### Semantics
 
 Performs element-wise logarithm operation on `operand` tensor and produces a
-`result` tensor. For floating-point element types, it implements the `log`
-operation from the IEEE-754 specification. For complex element types, it
-computes a complex logarithm, with corner cases TBD. Numeric precision is
-implementation-defined.
+`result` tensor. Depending on the element type, does the following:
+
+  * For floats: `log` from IEEE-754.
+  * For complex numbers: complex logarithm.
 
 ### Inputs
 
@@ -3197,17 +2999,15 @@ implementation-defined.
 // %result: (0.80471896, 1.10714871)
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.log_plus_one
+## log_plus_one
 
 ### Semantics
 
-Performs element-wise log plus one operation on `operand` tensor and produces a
-`result` tensor. For floating-point element types, it implements the `logp1`
-operation from the IEEE-754 specification. For complex element types, it
-computes a complex log plus one, with corner cases TBD. Numeric precision is
-implementation-defined.
+Performs element-wise logarithm plus one operation on `operand` tensor and
+produces a `result` tensor. Depending on the element type, does the following:
+
+  * For floats: `logp1` from IEEE-754.
+  * For complex numbers: complex logarithm plus one.
 
 ### Inputs
 
@@ -3233,18 +3033,15 @@ implementation-defined.
 // %result: [-nan, 0.0, -6.90776825, 2.07944155, 2.0, 2.77258873]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.logistic
+## logistic
 
 ### Semantics
 
-Performs element-wise logistic (sigmoid) function on `operand` tensor and
-produces a `result` tensor. For floating-point element types, it implements:
-$$logistic(x) = division(1, addition(1, exp(-x)))$$
-where `addition`, `division`, and `exp` are operations from IEEE-754
-specification. For complex element types, it computes a complex logistic
-function, with corner cases TBD. Numeric precision is implementation-defined.
+Performs element-wise logistic operation on `operand` tensor and produces a
+`result` tensor. Depending on the element type, does the following:
+
+  * For floats: `division(1, addition(1, exp(-x)))` from IEEE-754.
+  * For complex numbers: complex logistic.
 
 ### Inputs
 
@@ -3274,9 +3071,7 @@ function, with corner cases TBD. Numeric precision is implementation-defined.
 // %result: (1.02141536, 0.40343871)
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.map
+## map
 
 ### Semantics
 
@@ -3288,17 +3083,17 @@ More formally, `result[i0, ..., iR-1] = computation(inputs[0][i0, ..., iR-1],`
 
 ### Inputs
 
-| Name          | Type                                             |
-|---------------|--------------------------------------------------|
-| `inputs`      | variadic number of tensors of any supported type |
-| `dimensions`  | 1-dimensional tensor constant of type `si64`     |
-| `computation` | function                                         |
+| Name          | Type                                         |
+|---------------|----------------------------------------------|
+| `inputs`      | variadic number of tensors                   |
+| `dimensions`  | 1-dimensional tensor constant of type `si64` |
+| `computation` | function                                     |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -3324,30 +3119,30 @@ More formally, `result[i0, ..., iR-1] = computation(inputs[0][i0, ..., iR-1],`
 // %result: [[0, 5], [12, 21]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.maximum
+## maximum
 
 ### Semantics
 
 Performs element-wise max operation on tensors `lhs` and `rhs` and produces a
-`result` tensor. For floating-point element types, it implements the `maximum`
-operation from the IEEE-754 specification. For complex element types, it performs
-lexicographic comparison on the (real, imaginary) pairs with corner cases TBD.
-For boolean element type, the behavior is same as [stablehlo.or](#stablehloor).
+`result` tensor. Depending on the element type, does the following:
+
+  * For booleans: logical OR.
+  * For integers: integer maximum.
+  * For floats: `maximum` from IEEE-754.
+  * For complex numbers: lexicographic maximum for the `(real, imaginary)` pair.
 
 ### Inputs
 
-| Name  | Type                         |
-|-------|------------------------------|
-| `lhs` | tensor of any supported type |
-| `rhs` | tensor of any supported type |
+| Name  | Type   |
+|-------|--------|
+| `lhs` | tensor |
+| `rhs` | tensor |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -3364,31 +3159,30 @@ For boolean element type, the behavior is same as [stablehlo.or](#stablehloor).
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_maximum.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.minimum
+## minimum
 
 ### Semantics
 
 Performs element-wise min operation on tensors `lhs` and `rhs` and produces a
-`result` tensor. For floating-point element types, it implements the `minimum`
-operation from the IEEE-754 specification. For complex element types, it performs
-lexicographic comparison on the (real, imaginary) pairs with corner cases TBD.
-For boolean element type, the behavior is same as
-[stablehlo.and](#stablehloand).
+`result` tensor. Depending on the element type, does the following:
+
+  * For booleans: logical AND.
+  * For integers: integer minimum.
+  * For floats: `minimum` from IEEE-754.
+  * For complex numbers: lexicographic minimum for the `(real, imaginary)` pair.
 
 ### Inputs
 
-| Name  | Type                         |
-|-------|------------------------------|
-| `lhs` | tensor of any supported type |
-| `rhs` | tensor of any supported type |
+| Name  | Type   |
+|-------|--------|
+| `lhs` | tensor |
+| `rhs` | tensor |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -3405,44 +3199,30 @@ For boolean element type, the behavior is same as
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_minimum.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.multiply
+## multiply
 
 ### Semantics
 
 Performs element-wise product of two tensors `lhs` and `rhs` and produces a
-`result` tensor. For integer element types, if the element-wise product has an
-unsigned/signed overflow, the result is implementation-defined and one
-of the following:
+`result` tensor. Depending on the element type, does the following:
 
-  * mathematical result modulo $2^n$, where n is the bit width of the result,
-  for unsigned overflow. For signed integer overflow, wraps the result around
-  the representable range $[-2^{n-1},\ \ 2^{n-1} - 1]$.
-  * saturation to $2^{n-1} - 1$ (or $-2^{n-1}$) for signed overflow and
-  saturation to $2^n - 1$ (or $0$) for unsigned overflow.
-
-For floating-point element types, it implements the `multiplication` operation
-from the IEEE-754 specification.
-
-For complex element types, it computes a complex multiplication, with corner
-cases TBD.
-
-For boolean element type, the behavior is same as
-[stablehlo.and](#stablehloand).
+  * For booleans: logical AND.
+  * For integers: integer multiplication.
+  * For floats: `multiplication` from IEEE-754.
+  * For complex numbers: complex multiplication.
 
 ### Inputs
 
-| Name  | Type                         |
-|-------|------------------------------|
-| `lhs` | tensor of any supported type |
-| `rhs` | tensor of any supported type |
+| Name  | Type   |
+|-------|--------|
+| `lhs` | tensor |
+| `rhs` | tensor |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -3459,24 +3239,18 @@ For boolean element type, the behavior is same as
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_multiply.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.negate
+## negate
 
 ### Semantics
 
 Performs element-wise negation of `operand` tensor and produces a `result`
-tensor. For floating-point element types, it implements the `negate` operation
-from the IEEE-754 specification. For signed integer types, it performs the
-regular negation operation where the negation of $-2^{n-1}$ is implementation-
-defined and one of the following:
+tensor. Depending on the element type, does the following:
 
-  * Saturation to $2^{n-1}-1$
-  * $-2^{n-1}$
-
-For unsigned integer types, it bitcasts to the corresponding signed integer type,
-performs the regular negation operation and bitcasts back to the original
-unsigned integer type.
+  * For signed integers: integer negation.
+  * For unsigned integers: bitcast to signed integer, integer negation, bitcast
+    back to unsigned integer.
+  * For floats: `negate` from IEEE-754.
+  * For complex numbers: complex negation.
 
 ### Inputs
 
@@ -3510,26 +3284,27 @@ unsigned integer type.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_negate.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.not
+## not
 
 ### Semantics
 
-Performs element-wise bitwise NOT of tensor `operand` of type integer and
-produces a `result` tensor. For boolean tensors, it computes the logical NOT.
+Performs element-wise NOT of tensor `operand` and produces a `result` tensor.
+Depending on the element type, does the following:
+
+  * For booleans: logical NOT.
+  * For integers: bitwise NOT.
 
 ### Arguments
 
 | Name      | Type                              |
 |-----------|-----------------------------------|
-| `operand` | tensor of integer or boolean type |
+| `operand` | tensor of boolean or integer type |
 
 ### Outputs
 
 | Name     | Type                              |
 |----------|-----------------------------------|
-| `result` | tensor of integer or boolean type |
+| `result` | tensor of boolean or integer type |
 
 ### Constraints
 
@@ -3549,9 +3324,7 @@ produces a `result` tensor. For boolean tensors, it computes the logical NOT.
 // %result: [false, true]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.optimization_barrier
+## optimization_barrier
 
 ### Semantics
 
@@ -3562,15 +3335,15 @@ an identity, i.e. `result` = `operand`.
 
 ### Arguments
 
-| Name      | Type                                                       |
-|-----------|------------------------------------------------------------|
-| `operand` | variadic number of tensors of any supported type or tokens |
+| Name      | Type                                 |
+|-----------|--------------------------------------|
+| `operand` | variadic number of tensors or tokens |
 
 ### Outputs
 
-| Name     | Type                                                       |
-|----------|------------------------------------------------------------|
-| `result` | variadic number of tensors of any supported type or tokens |
+| Name     | Type                                 |
+|----------|--------------------------------------|
+| `result` | variadic number of tensors or tokens |
 
 ### Constraints
 
@@ -3587,15 +3360,15 @@ an identity, i.e. `result` = `operand`.
 // %result1: 1.0
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.or
+## or
 
 ### Semantics
 
-Performs element-wise bitwise OR of two tensors `lhs` and `rhs` of integer types
-and produces a `result` tensor. For boolean tensors, it computes the logical
-operation.
+Performs element-wise OR of two tensors `lhs` and `rhs` and produces a `result`
+tensor. Depending on the element type, does the following:
+
+  * For booleans: logical OR.
+  * For integers: bitwise OR.
 
 ### Inputs
 
@@ -3630,9 +3403,7 @@ operation.
 // %result: [[false, true], [true, true]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.outfeed
+## outfeed
 
 ### Semantics
 
@@ -3645,11 +3416,11 @@ as a value that other operations can take a data dependency on.
 
 ### Inputs
 
-| Name             | Type                                             |
-|------------------|--------------------------------------------------|
-| `inputs`         | variadic number of tensors of any supported type |
-| `token`          | `token`                                          |
-| `outfeed_config` | constant of type `string`                        |
+| Name             | Type                       |
+|------------------|----------------------------|
+| `inputs`         | variadic number of tensors |
+| `token`          | `token`                    |
+| `outfeed_config` | constant of type `string`  |
 
 ### Outputs
 
@@ -3665,9 +3436,7 @@ as a value that other operations can take a data dependency on.
 } : (tensor<3x3x3xi32>, !stablehlo.token) -> !stablehlo.token
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.pad
+## pad
 
 ### Semantics
 
@@ -3695,17 +3464,17 @@ More formally, `result[i0, ..., iR-1]` is equal to:
 
 | Name                | Type                                         |
 |---------------------|----------------------------------------------|
-| `operand`           | tensor of any supported type                 |
-| `padding_value`     | 0-dimensional tensor of any supported type   |
+| `operand`           | tensor                                       |
+| `padding_value`     | 0-dimensional tensor                         |
 | `edge_padding_low`  | 1-dimensional tensor constant of type `si64` |
 | `edge_padding_high` | 1-dimensional tensor constant of type `si64` |
 | `interior_padding`  | 1-dimensional tensor constant of type `si64` |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -3741,9 +3510,7 @@ More formally, `result[i0, ..., iR-1]` is equal to:
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.partition_id
+## partition_id
 
 ### Semantics
 
@@ -3761,9 +3528,7 @@ Produces `partition_id` of the current process.
 %result = "stablehlo.partition_id"() : () -> tensor<ui32>
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.popcnt
+## popcnt
 
 ### Semantics
 
@@ -3794,35 +3559,16 @@ and produces a `result` tensor.
 // %result: [0, 1, 1, 7]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.power
+## power
 
 ### Semantics
 
 Performs element-wise exponentiation of `lhs` tensor by `rhs` tensor and
-produces a `result` tensor.
+produces a `result` tensor. Depending on the element type, does the following:
 
-For integer element types, if the exponentiation has an unsigned/signed
-overflow, the result is implementation-defined and one of the following:
-
-  * mathematical result modulo $2^n$, where n is the bit width of the result,
-  for unsigned overflow. For signed integer overflow, wraps the result around
-  the representable range $[-2^{n-1},\ 2^{n-1} - 1]$.
-  * saturation to $2^{n-1} - 1$ (or $-2^{n-1}$) for signed overflow and
-  saturation to $2^n - 1$ (or $0$) for unsigned overflow.
-
-For an integer, `x`, raised to a negative power, `y`, the behaviour is as
-follows:
-
-  * If `abs(x)` $\gt$ 1, then result is 0.
-  * If `abs(x)` $=$ 1, then result is equivalent to `x^abs(y)`.
-  * If `abs(x)` $=$ 0, then behaviour is implementation-defined.
-
-For floating-point element types, it implements the `pow` operation from the
-IEEE-754 specification. For complex element types, it computes complex
-exponentiation, with corner cases TBD. Numeric precision is
-implementation-defined.
+  * For integers: integer exponentiation.
+  * For floats: `pow` from IEEE-754.
+  * For complex numbers: complex exponentiation.
 
 ### Inputs
 
@@ -3850,16 +3596,13 @@ implementation-defined.
 // %result: [4.0, 0.0, -nan, 25.0, 0.333333343, inf]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.real
+## real
 
 ### Semantics
 
 Extracts the real part, element-wise, from the `operand` and produces a `result`
-tensor.
-
-More formally, for each element `x`: `real(x) = is_complex(x) ? x.real : x`.
+tensor. More formally, for each element `x`:
+`real(x) = is_complex(x) ? x.real : x`.
 
 ### Inputs
 
@@ -3888,9 +3631,7 @@ More formally, for each element `x`: `real(x) = is_complex(x) ? x.real : x`.
 // %result: [1.0, 3.0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.recv
+## recv
 
 ### Semantics
 
@@ -3915,9 +3656,9 @@ other operations can take a data dependency on.
 
 ### Outputs
 
-| Name      | Type                                                      |
-|-----------|-----------------------------------------------------------|
-| `results` | variadic number of tensors of any supported type or token |
+| Name      | Type                                 |
+|-----------|--------------------------------------|
+| `results` | variadic number of tensors or tokens |
 
 ### Constraints
 
@@ -3939,9 +3680,7 @@ other operations can take a data dependency on.
 } : (!stablehlo.token) -> (tensor<3x4xi32>, !stablehlo.token)
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.reduce
+## reduce
 
 ### Semantics
 
@@ -3954,8 +3693,7 @@ same results for all inputs on all implementations.
 
 However, this condition doesn't hold for many popular reductions. E.g.
 floating-point addition for `body` and zero for `init_values` don't actually
-form a monoid because floating-point addition is not associative. What this
-means for numeric precision is implementation-defined.
+form a monoid because floating-point addition is not associative.
 
 More formally, `results[:][j0, ..., jR-1] = reduce(input_slices)` where:
 
@@ -3974,18 +3712,18 @@ More formally, `results[:][j0, ..., jR-1] = reduce(input_slices)` where:
 
 ### Inputs
 
-| Name          | Type                                                           |
-|---------------|----------------------------------------------------------------|
-| `inputs`      | variadic number of tensors of any supported type               |
-| `init_values` | variadic number of 0-dimensional tensors of any supported type |
-| `dimensions`  | 1-dimensional tensor constant of type `si64`                   |
-| `body`        | function                                                       |
+| Name          | Type                                         |
+|---------------|----------------------------------------------|
+| `inputs`      | variadic number of tensors                   |
+| `init_values` | variadic number of 0-dimensional tensors     |
+| `dimensions`  | 1-dimensional tensor constant of type `si64` |
+| `body`        | function                                     |
 
 ### Outputs
 
-| Name      | Type                                             |
-|-----------|--------------------------------------------------|
-| `results` | variadic number of tensors of any supported type |
+| Name      | Type                       |
+|-----------|----------------------------|
+| `results` | variadic number of tensors |
 
 ### Constraints
 
@@ -4018,9 +3756,7 @@ More formally, `results[:][j0, ..., jR-1] = reduce(input_slices)` where:
 // %result = [15]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.reduce_precision
+## reduce_precision
 
 ### Semantics
 
@@ -4073,9 +3809,7 @@ More formally:
 // %result: [0xFF800000, 0x7F800000, 0x7FFFFFFF, 0.0, 1024.0, 0x7F800000]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.reduce_scatter
+## reduce_scatter
 
 ### Semantics
 
@@ -4108,7 +3842,7 @@ Afterwards, within each `process_group`:
 
 | Name                    | Type                                         |
 |-------------------------|----------------------------------------------|
-| `operand`               | tensor of any supported type                 |
+| `operand`               | tensor                                       |
 | `scatter_dimension`     | constant of type `si64`                      |
 | `replica_groups`        | 2-dimensional tensor constant of type `si64` |
 | `channel_id`            | constant of type `si64`                      |
@@ -4117,9 +3851,9 @@ Afterwards, within each `process_group`:
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -4176,9 +3910,7 @@ Afterwards, within each `process_group`:
 //                 ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.reduce_window
+## reduce_window
 
 ### Semantics
 
@@ -4202,22 +3934,22 @@ where:
 
 ### Inputs
 
-| Name                | Type                                                           | Constraints                                     |
-|---------------------|----------------------------------------------------------------|-------------------------------------------------|
-| `inputs`            | variadic number of tensors of any supported type               | (C1-C4), (C6), (C8), (C10), (C12), (C13), (C15) |
-| `init_values`       | variadic number of 0-dimensional tensors of any supported type | (C1), (C13), (C16)                              |
-| `window_dimensions` | 1-dimensional tensor constant of type `si64`                   | (C4), (C5), (C15)                               |
-| `window_strides`    | 1-dimensional tensor constant of type `si64`                   | (C6), (C7), (C15)                               |
-| `base_dilations`    | 1-dimensional tensor constant of type `si64`                   | (C8), (C9), (C15)                               |
-| `window_dilations`  | 1-dimensional tensor constant of type `si64`                   | (C10), (C11), (C15)                             |
-| `padding`           | 2-dimensional tensor constant of type `si64`                   | (C12), (C15)                                    |
-| `body`              | function                                                       | (C13)                                           |
+| Name                | Type                                         | Constraints                                     |
+|---------------------|----------------------------------------------|-------------------------------------------------|
+| `inputs`            | variadic number of tensors                   | (C1-C4), (C6), (C8), (C10), (C12), (C13), (C15) |
+| `init_values`       | variadic number of 0-dimensional tensors     | (C1), (C13), (C16)                              |
+| `window_dimensions` | 1-dimensional tensor constant of type `si64` | (C4), (C5), (C15)                               |
+| `window_strides`    | 1-dimensional tensor constant of type `si64` | (C6), (C7), (C15)                               |
+| `base_dilations`    | 1-dimensional tensor constant of type `si64` | (C8), (C9), (C15)                               |
+| `window_dilations`  | 1-dimensional tensor constant of type `si64` | (C10), (C11), (C15)                             |
+| `padding`           | 2-dimensional tensor constant of type `si64` | (C12), (C15)                                    |
+| `body`              | function                                     | (C13)                                           |
 
 ### Outputs
 
-| Name      | Type                                             | Constraints     |
-|-----------|--------------------------------------------------|-----------------|
-| `results` | variadic number of tensors of any supported type | (C1), (C14-C16) |
+| Name      | Type                       | Constraints     |
+|-----------|----------------------------|-----------------|
+| `results` | variadic number of tensors | (C1), (C14-C16) |
 
 ### Constraints
 
@@ -4267,22 +3999,19 @@ where:
 // %result = [[0, 0], [3, 4]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.remainder
+## remainder
 
 ### Semantics
 
 Performs element-wise remainder of dividend `lhs` and divisor `rhs` tensors and
-produces a `result` tensor. The sign of the result is taken from the dividend,
-and the absolute value of the result is always less than the divisor's absolute
-value. The remainder is calculated as `lhs - d * rhs`, where
-`d = stablehlo.divide`. For floating-point element types, this is in contrast
-with the `remainder` operation from IEEE-754 specification where `d` is an
-integral value nearest to the exact value of `lhs/rhs` with ties to even. For
-floating-point types, the corner cases are TBD. For n-bit integer, division
-overflow (remainder by zero or remainder of $-2^{n-1}$ with $-1$) produces an
-implementation-defined value.
+produces a `result` tensor.
+
+More formally, the sign of the result is taken from the dividend, and the
+absolute value of the result is always less than the divisor's absolute value.
+The remainder is calculated as `lhs - d * rhs`, where `d = stablehlo.divide`.
+For floating-point element types, this is in contrast with the `remainder`
+operation from IEEE-754 specification where `d` is an integral value nearest to
+the exact value of `lhs/rhs` with ties to even.
 
 ### Inputs
 
@@ -4315,9 +4044,7 @@ implementation-defined value.
 // %result: [2, -2, 2, -2]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.replica_id
+## replica_id
 
 ### Semantics
 
@@ -4335,9 +4062,7 @@ Produces `replica_id` of the current process.
 %result = "stablehlo.replica_id"() : () -> tensor<ui32>
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.reshape
+## reshape
 
 ### Semantics
 
@@ -4351,15 +4076,15 @@ spaces of `result` and `operand`.
 
 ### Inputs
 
-| Name      | Type                         |
-|-----------|------------------------------|
-| `operand` | tensor of any supported type |
+| Name      | Type   |
+|-----------|--------|
+| `operand` | tensor |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -4376,9 +4101,7 @@ spaces of `result` and `operand`.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_reshape.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.reverse
+## reverse
 
 ### Semantics
 
@@ -4391,14 +4114,14 @@ and produces a `result` tensor. More formally,
 
 | Name         | Type                                         |
 |--------------|----------------------------------------------|
-| `operand`    | tensor of any supported type                 |
+| `operand`    | tensor                                       |
 | `dimensions` | 1-dimensional tensor constant of type `si64` |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -4427,9 +4150,7 @@ and produces a `result` tensor. More formally,
 // %result: [[2, 1], [4, 3], [6, 5]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.rng
+## rng
 
 ### Semantics
 
@@ -4486,9 +4207,7 @@ hidden state.
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.rng_bit_generator
+## rng_bit_generator
 
 ### Semantics
 
@@ -4543,9 +4262,7 @@ deterministic between implementations.
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.round_nearest_afz
+## round_nearest_afz
 
 ### Semantics
 
@@ -4577,9 +4294,7 @@ the `roundToIntegralTiesToAway` operation from the IEEE-754 specification.
 // %result: [-3.0, 0.0, 1.0, 1.0, 3.0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.round_nearest_even
+## round_nearest_even
 
 ### Semantics
 
@@ -4612,15 +4327,15 @@ specification.
 // %result: [-2.0, 0.0, 0.0, 1.0, 2.0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.rsqrt
+## rsqrt
 
 ### Semantics
 
 Performs element-wise reciprocal square root operation on `operand` tensor and
-produces a `result` tensor, implementing the `rSqrt` operation from the IEEE-754
-specification. Numeric precision is implementation-defined.
+produces a `result` tensor. Depending on the element type, does the following:
+
+  * For floats: `rSqrt` from IEEE-754.
+  * For complex numbers: complex reciprocal square root.
 
 ### Inputs
 
@@ -4650,9 +4365,7 @@ specification. Numeric precision is implementation-defined.
 // %result: [(0.56886448, -0.35157758)]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.scatter
+## scatter
 
 ### Semantics
 
@@ -4714,24 +4427,24 @@ is undefined.
 
 ### Inputs
 
-| Name                           | Type                                              | Constraints                                              |
-|--------------------------------|---------------------------------------------------|----------------------------------------------------------|
-| `inputs`                       | variadic number of tensors of any supported types | (C1), (C2), (C4), (C5), (C6), (C10), (C13), (C15), (C16) |
-| `scatter_indices`              | tensor of any supported integer type              | (C4), (C11), (C14)                                       |
-| `updates`                      | variadic number of tensors of any supported types | (C3), (C4), (C5), (C6), (C8)                             |
-| `update_window_dims`           | 1-dimensional tensor constant of type `si64`      | (C2), (C4), (C7), (C8)                                   |
-| `inserted_window_dims`         | 1-dimensional tensor constant of type `si64`      | (C2), (C4), (C9), (C10)                                  |
-| `scatter_dims_to_operand_dims` | 1-dimensional tensor constant of type `si64`      | (C11),(C12), (C13)                                       |
-| `index_vector_dim`             | constant of type `si64`                           | (C4), (C11), (C14)                                       |
-| `indices_are_sorted`           | constant of type `i1`                             |                                                          |
-| `unique_indices`               | constant of type `i1`                             |                                                          |
-| `update_computation`           | function                                          | (C15)                                                    |
+| Name                           | Type                                         | Constraints                                              |
+|--------------------------------|----------------------------------------------|----------------------------------------------------------|
+| `inputs`                       | variadic number of tensors                   | (C1), (C2), (C4), (C5), (C6), (C10), (C13), (C15), (C16) |
+| `scatter_indices`              | tensor of integer type                       | (C4), (C11), (C14)                                       |
+| `updates`                      | variadic number of tensors                   | (C3), (C4), (C5), (C6), (C8)                             |
+| `update_window_dims`           | 1-dimensional tensor constant of type `si64` | (C2), (C4), (C7), (C8)                                   |
+| `inserted_window_dims`         | 1-dimensional tensor constant of type `si64` | (C2), (C4), (C9), (C10)                                  |
+| `scatter_dims_to_operand_dims` | 1-dimensional tensor constant of type `si64` | (C11),(C12), (C13)                                       |
+| `index_vector_dim`             | constant of type `si64`                      | (C4), (C11), (C14)                                       |
+| `indices_are_sorted`           | constant of type `i1`                        |                                                          |
+| `unique_indices`               | constant of type `i1`                        |                                                          |
+| `update_computation`           | function                                     | (C15)                                                    |
 
 ### Outputs
 
-| Name      | Type                                              |
-|-----------|---------------------------------------------------|
-| `results` | variadic number of tensors of any supported types |
+| Name      | Type                       |
+|-----------|----------------------------|
+| `results` | variadic number of tensors |
 
 ### Constraints
 
@@ -4805,9 +4518,7 @@ is undefined.
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.select
+## select
 
 ### Semantics
 
@@ -4821,17 +4532,17 @@ where `pred_val = rank(pred) == 0 ? pred : pred[i0, ..., iR-1]`.
 
 ### Inputs
 
-| Name       | Type                         |
-|------------|------------------------------|
-| `pred`     | tensor of type `i1`          |
-| `on_true`  | tensor of any supported type |
-| `on_false` | tensor of any supported type |
+| Name       | Type                |
+|------------|---------------------|
+| `pred`     | tensor of type `i1` |
+| `on_true`  | tensor              |
+| `on_false` | tensor              |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -4848,9 +4559,7 @@ where `pred_val = rank(pred) == 0 ? pred : pred[i0, ..., iR-1]`.
 // %result: [[5, 2], [3, 8]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.select_and_scatter
+## select_and_scatter
 
 ### Semantics
 
@@ -4895,9 +4604,9 @@ More formally:
 
 | Name                | Type                                         | Constraints                    |
 |---------------------|----------------------------------------------|--------------------------------|
-| `operand`           | tensor of any supported type                 | (C1-C5), (C7), (C9), (C10-C12) |
-| `source`            | tensor of any supported type                 | (C2), (C3)                     |
-| `init_value`        | 0-dimensional tensor of any supported type   | (C4)                           |
+| `operand`           | tensor                                       | (C1-C5), (C7), (C9), (C10-C12) |
+| `source`            | tensor                                       | (C2), (C3)                     |
+| `init_value`        | 0-dimensional tensor                         | (C4)                           |
 | `window_dimensions` | 1-dimensional tensor constant of type `si64` | (C1), (C3), (C5), (C6)         |
 | `window_strides`    | 1-dimensional tensor constant of type `si64` | (C3), (C7), (C8)               |
 | `padding`           | 2-dimensional tensor constant of type `si64` | (C3), (C9)                     |
@@ -4906,9 +4615,9 @@ More formally:
 
 ### Outputs
 
-| Name     | Type                         | Constraints |
-|----------|------------------------------|-------------|
-| `result` | tensor of any supported type | (C12)       |
+| Name     | Type   | Constraints |
+|----------|--------|-------------|
+| `result` | tensor | (C12)       |
 
 ### Constraints
 
@@ -4951,9 +4660,7 @@ More formally:
 // %result: [[0, 0], [0, 0], [5, 14], [7, 0]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.send
+## send
 
 ### Semantics
 
@@ -4968,13 +4675,13 @@ implementation-defined.
 
 ### Inputs
 
-| Name               | Type                                             |
-|--------------------|--------------------------------------------------|
-| `inputs`           | variadic number of tensors of any supported type |
-| `token`            | `token`                                          |
-| `channel_id`       | constant of type `si64`                          |
-| `channel_type`     | enum of `DEVICE_TO_DEVICE` and `DEVICE_TO_HOST`  |
-| `is_host_transfer` | constant of type `i1`                            |
+| Name               | Type                                            |
+|--------------------|-------------------------------------------------|
+| `inputs`           | variadic number of tensors                      |
+| `token`            | `token`                                         |
+| `channel_id`       | constant of type `si64`                         |
+| `channel_type`     | enum of `DEVICE_TO_DEVICE` and `DEVICE_TO_HOST` |
+| `is_host_transfer` | constant of type `i1`                           |
 
 ### Outputs
 
@@ -5000,9 +4707,7 @@ implementation-defined.
 } : (tensor<3x4xi32>, !stablehlo.token) -> !stablehlo.token
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.shift_left
+## shift_left
 
 ### Semantics
 
@@ -5035,9 +4740,7 @@ of bits and produces a `result` tensor.
 // %result: [-2, -8, 24, 0, -128, 0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.shift_right_arithmetic
+## shift_right_arithmetic
 
 ### Semantics
 
@@ -5070,9 +4773,7 @@ Performs element-wise arithmetic right-shift operation on the `lhs` tensor by
 // %result: [-1, -32, -5, 1, 1, 0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.shift_right_logical
+## shift_right_logical
 
 ### Semantics
 
@@ -5105,9 +4806,7 @@ number of bits and produces a `result` tensor.
 // %result: [127, 32, 27, 1, 1, 0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.sign
+## sign
 
 ### Semantics
 
@@ -5161,15 +4860,15 @@ def sign(x):
 // %result: [-1.0, 1.0, 0x7FFFFFFF, -1.0, -0.0, 0.0, 1.0]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.sine
+## sine
 
 ### Semantics
 
 Performs element-wise sine operation on `operand` tensor and produces a `result`
-tensor, implementing the `sin` operation from the IEEE-754 specification.
-Numeric precision is implementation-defined.
+tensor. Depending on the element type, does the following:
+
+  * For floats: `sin` from IEEE-754.
+  * For complex numbers: complex sine.
 
 ### Inputs
 
@@ -5200,9 +4899,7 @@ Numeric precision is implementation-defined.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_sine.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.slice
+## slice
 
 ### Semantics
 
@@ -5219,16 +4916,16 @@ More formally, `result[i0, ..., iR-1] = operand[j0, ..., jR-1]` where
 
 | Name            | Type                                         |
 |-----------------|----------------------------------------------|
-| `operand`       | tensor of any supported type                 |
+| `operand`       | tensor                                       |
 | `start_indices` | 1-dimensional tensor constant of type `si64` |
 | `limit_indices` | 1-dimensional tensor constant of type `si64` |
 | `strides`       | 1-dimensional tensor constant of type `si64` |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -5273,9 +4970,7 @@ More formally, `result[i0, ..., iR-1] = operand[j0, ..., jR-1]` where
 //           ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.sort
+## sort
 
 ### Semantics
 
@@ -5297,18 +4992,18 @@ More formally, for all `0 <= id < jd < dim(inputs[0], d)`, either
 
 ### Inputs
 
-| Name         | Type                                             |
-|--------------|--------------------------------------------------|
-| `inputs`     | variadic number of tensors of any supported type |
-| `dimension`  | constant of type `si64`                          |
-| `is_stable`  | constant of type `i1`                            |
-| `comparator` | function                                         |
+| Name         | Type                       |
+|--------------|----------------------------|
+| `inputs`     | variadic number of tensors |
+| `dimension`  | constant of type `si64`    |
+| `is_stable`  | constant of type `i1`      |
+| `comparator` | function                   |
 
 ### Outputs
 
-| Name      | Type                                             |
-|-----------|--------------------------------------------------|
-| `results` | variadic number of tensors of any supported type |
+| Name      | Type                       |
+|-----------|----------------------------|
+| `results` | variadic number of tensors |
 
 ### Constraints
 
@@ -5359,15 +5054,15 @@ More formally, for all `0 <= id < jd < dim(inputs[0], d)`, either
 // %result1 = [[1, 2, 3], [1, 2, 3]]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.sqrt
+## sqrt
 
 ### Semantics
 
 Performs element-wise square root operation on `operand` tensor and produces a
-`result` tensor, implementing the `squareRoot` operation from the IEEE-754
-specification.
+`result` tensor. Depending on the element type, does the following:
+
+  * For floats: `squareRoot` from IEEE-754.
+  * For complex numbers: complex square root.
 
 ### Inputs
 
@@ -5397,25 +5092,16 @@ specification.
 // %result: [(1.27201965, 0.78615138)]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.subtract
+## subtract
 
 ### Semantics
 
 Performs element-wise subtraction of two tensors `lhs` and `rhs` and produces a
-`result` tensor. For integer element types, if the element-wise difference has
-an unsigned/signed overflow, the result is implementation-defined and one of the
-following:
+`result` tensor. Depending on the element type, does the following:
 
-  * mathematical result modulo $2^n$, where n is the bit width of the result,
-  for unsigned overflow. For signed integer overflow, wraps the result around
-  the representable range $[-2^{n-1},\ 2^{n-1} - 1]$.
-  * saturation to $2^{n-1} - 1$ (or $-2^{n-1}$) for signed overflow and
-  saturation to $2^n - 1$ (or $0$) for unsigned overflow.
-
-For floating-point element types, it implements the `subtraction` operation from
-the IEEE-754 specification.
+  * For integers: integer subtraction.
+  * For floats: `subtraction` from IEEE-754.
+  * For complex numbers: complex subtraction.
 
 ### Inputs
 
@@ -5445,15 +5131,15 @@ the IEEE-754 specification.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_subtract.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.tanh
+## tanh
 
 ### Semantics
 
-Performs element-wise tanh operation on `operand` tensor and produces a `result`
-tensor, implementing the `tanh` operation from the IEEE-754 specification.
-Numeric precision is implementation-defined.
+Performs element-wise hyperbolic tangent operation on `operand` tensor and
+produces a `result` tensor. Depending on the element type, does the following:
+
+  * For floats: `tanh` from IEEE-754.
+  * For complex numbers: complex hyperbolic tangent.
 
 ### Inputs
 
@@ -5481,9 +5167,7 @@ Numeric precision is implementation-defined.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_tanh.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.transpose
+## transpose
 
 ### Semantics
 
@@ -5495,14 +5179,14 @@ where `i[d] = j[permutation[d]]`.
 
 | Name          | Type                                         |
 |---------------|----------------------------------------------|
-| `operand`     | tensor of any supported type                 |
+| `operand`     | tensor                                       |
 | `permutation` | 1-dimensional tensor constant of type `si64` |
 
 ### Outputs
 
-| Name     | Type                         |
-|----------|------------------------------|
-| `result` | tensor of any supported type |
+| Name     | Type   |
+|----------|--------|
+| `result` | tensor |
 
 ### Constraints
 
@@ -5530,9 +5214,7 @@ where `i[d] = j[permutation[d]]`.
 
 &nbsp;[More Examples](../stablehlo/tests/interpret_transpose.mlir)
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.triangular_solve
+## triangular_solve
 
 ### Semantics
 
@@ -5608,9 +5290,7 @@ elements of `a` are equal to 1, otherwise the behavior is undefined.
 //          ]
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.tuple
+## tuple
 
 ### Semantics
 
@@ -5618,15 +5298,15 @@ Produces a `result` tuple from values `val`.
 
 ### Inputs
 
-| Name  | Type                                            |
-|-------|-------------------------------------------------|
-| `val` | variadic number of values of any supported type |
+| Name  | Type                      |
+|-------|---------------------------|
+| `val` | variadic number of values |
 
 ### Outputs
 
-| Name     | Type    |
-|----------|---------|
-| `result` | tuple   |
+| Name     | Type  |
+|----------|-------|
+| `result` | tuple |
 
 ### Constraints
 
@@ -5642,9 +5322,7 @@ Produces a `result` tuple from values `val`.
 // %result: ([1.0, 2.0], (3))
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.while
+## while
 
 ### Semantics
 
@@ -5663,17 +5341,17 @@ The behavior of an infinite loop is TBD.
 
 ### Inputs
 
-| Name       | Type                                                       |
-|------------|------------------------------------------------------------|
-| `operands` | variadic number of tensors of any supported type or tokens |
-| `cond`     | function                                                   |
-| `body`     | function                                                   |
+| Name       | Type                                 |
+|------------|--------------------------------------|
+| `operands` | variadic number of tensors or tokens |
+| `cond`     | function                             |
+| `body`     | function                             |
 
 ### Outputs
 
-| Name      | Type                                                       |
-|-----------|------------------------------------------------------------|
-| `results` | variadic number of tensors of any supported type or tokens |
+| Name      | Type                                 |
+|-----------|--------------------------------------|
+| `results` | variadic number of tensors or tokens |
 
 ### Constraints
 
@@ -5704,28 +5382,28 @@ The behavior of an infinite loop is TBD.
 // %results1: 10
 ```
 
-[Back to Ops](#index-of-ops)
-
-## stablehlo.xor
+## xor
 
 ### Semantics
 
-Performs element-wise bitwise XOR of two tensors `lhs` and `rhs` of integer
-types and produces a `result` tensor. For boolean tensors, it computes the
-logical operation.
+Performs element-wise XOR of two tensors `lhs` and `rhs` and produces a `result`
+tensor. Depending on the element type, does the following:
+
+  * For booleans: logical XOR.
+  * For integers: bitwise XOR.
 
 ### Inputs
 
 | Name  | Type                              |
 |-------|-----------------------------------|
-| `lhs` | tensor of integer or boolean type |
-| `rhs` | tensor of integer or boolean type |
+| `lhs` | tensor of boolean or integer type |
+| `rhs` | tensor of boolean or integer type |
 
 ### Outputs
 
 | Name     | Type                              |
 |----------|-----------------------------------|
-| `result` | tensor of integer or boolean type |
+| `result` | tensor of boolean or integer type |
 
 ### Constraints
 
@@ -5746,8 +5424,6 @@ logical operation.
 %result = "stablehlo.xor"(%lhs, %rhs) : (tensor<2x2xi1>, tensor<2x2xi1>) -> tensor<2x2xi1>
 // %result: [[false, true], [true, false]]
 ```
-
-[Back to Ops](#index-of-ops)
 
 ## Execution
 

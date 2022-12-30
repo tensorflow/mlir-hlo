@@ -196,6 +196,11 @@ LogicalResult inferDynamicUpdateSliceOp(
     ValueRange startIndices,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
+LogicalResult inferFftOp(
+    Optional<Location> location, Value operand, bool isFftTypeRfft,
+    bool isFftTypeIrfft, DenseIntElementsAttr fftLength,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
 LogicalResult inferGatherOp(
     Optional<Location> location, Value operand, Value startIndices,
     ArrayRef<int64_t> offsetDims, ArrayRef<int64_t> collapsedSliceDims,
@@ -372,12 +377,18 @@ LogicalResult verifyDynamicPadOp(Optional<Location> location, Value operand,
 LogicalResult verifyDynamicReshapeOp(Optional<Location> location,
                                      Value outputShape, Value result);
 
+LogicalResult verifyInfeedOp(Dialect* dialect, Optional<Location> location,
+                             Optional<ArrayAttr> layout, ValueRange results);
+
 LogicalResult verifyIotaOp(Optional<Location> location, int64_t iotaDimension,
                            Value result);
 
 LogicalResult verifyRealDynamicSliceOp(Optional<Location> location,
                                        Value operand, Value startIndices,
                                        Value limitIndices, Value strides);
+
+LogicalResult verifyRecvOp(Dialect* dialect, Optional<Location> location,
+                           ValueRange results);
 
 LogicalResult verifyReduceOp(Optional<Location> location, ValueRange inputs,
                              ValueRange initValues,
@@ -402,6 +413,9 @@ LogicalResult verifyReduceWindowOp(
 
 LogicalResult verifyReshapeOp(Optional<Location> location, Value operand,
                               Value result);
+
+LogicalResult verifyRngOp(Optional<Location> location, Value a, Value b,
+                          bool isRngDistributionUniform);
 
 LogicalResult verifyRngBitGeneratorOp(Optional<Location> location,
                                       Value initialState, Value outputState);

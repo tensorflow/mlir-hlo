@@ -657,107 +657,15 @@ LogicalResult DotGeneralOp::reifyReturnTypeShapes(
 // FftOp
 //===----------------------------------------------------------------------===//
 
-// We intend to verify the following properties
-// P1. 1 <= rank <= 3
-// P2. Element types agree with fft_type
-// P3. Operand shape dimensions agree with fft_length for the given fft_type
 LogicalResult FftOp::inferReturnTypeComponents(
     MLIRContext*, Optional<Location> location, ValueShapeRange operands,
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
   FftOp::Adaptor adaptor(operands, attributes, regions);
-  auto fftLength = adaptor.getFftLength().getValues<int64_t>();
-  int64_t fftRank = fftLength.size();
-
-  // P1.
-  if (fftRank > 3 || fftRank < 1) {
-    return emitOptionalError(location, "rank must be between 1 and 3, but got ",
-                             fftRank, ".");
-  }
-
-  // P2. Element type agreement
-  // FFT : C -> C
-  // IFFT : C -> C
-  // RFFT : R -> C
-  // IRFFT : C -> R
-  auto fftType = adaptor.getFftType();
-  auto operandType = adaptor.getOperand().getType().cast<TensorType>();
-  Type operandElementType = operandType.getElementType();
-  // Check the input element type and infer return element type
-  if (fftType == FftType::RFFT) {
-    if (!operandElementType.isF32() && !operandElementType.isF64()) {
-      return emitOptionalError(
-          location, "RFFT requires f32 or f64 input type, but is given ",
-          operandElementType, ".");
-    }
-  } else {
-    if (!operandElementType.isa<ComplexType>()) {
-      return emitOptionalError(
-          location, stringifyFftType(fftType),
-          " takes a complex tensor as input, but is given ", operandType, ".");
-    }
-  }
-  // Generate the output element type
-  Type resultElementType = operandElementType;
-  if (fftType == FftType::RFFT) {  // RFFT : R -> C
-    resultElementType = ComplexType::get(resultElementType);
-  } else if (fftType == FftType::IRFFT) {  // IRFFT : C -> R
-    resultElementType = operandElementType.cast<ComplexType>().getElementType();
-  }
-
-  // P3. Check input shape and infer return shape
-  operandType = operandType.dyn_cast<RankedTensorType>();
-  if (!operandType) {
-    inferredReturnShapes.emplace_back(resultElementType);
-    return success();
-  }
-  auto operandShape = operandType.getShape();
-  if (static_cast<int64_t>(operandShape.size()) < fftRank) {
-    return emitOptionalError(
-        location, "operand rank must not be less than fft rank of ", fftRank,
-        " for operand of type ", operandType, ".");
-  }
-
-  SmallVector<int64_t> resultShape = to_vector(operandShape);
-
-  if (fftType == FftType::RFFT) {
-    auto shapeBack = operandShape.take_back(fftRank);
-    for (auto [operandDim, fftDim] : llvm::zip(shapeBack, fftLength)) {
-      if (operandDim != fftDim) {
-        return emitOptionalError(
-            location,
-            "RFFT requires innermost dimensions match fft_length. Got: ",
-            operandShape, " but wanted ", fftLength, ".");
-      }
-    }
-    if (fftLength[fftRank - 1] != 0) {
-      resultShape[resultShape.size() - 1] = fftLength[fftRank - 1] / 2 + 1;
-    }
-  }
-  if (fftType == FftType::IRFFT) {
-    auto shapeBack = operandShape.take_back(fftRank).drop_back();
-    for (auto [operandDim, fftDim] : llvm::zip(shapeBack, fftLength)) {
-      if (operandDim != fftDim) {
-        return emitOptionalError(location,
-                                 "IRFFT requires non-final dimensions "
-                                 "match fft_length. Got: ",
-                                 operandShape, " but wanted ", fftLength,
-                                 ", and ", operandDim, " != ", fftDim, ".");
-      }
-    }
-    if ((operandShape[operandShape.size() - 1] != 0 ||
-         fftLength[fftRank - 1] != 0) &&
-        operandShape[operandShape.size() - 1] != fftLength[fftRank - 1] / 2 + 1)
-      return emitOptionalError(location,
-                               "IRFFT requires innermost dimension match "
-                               "fft_length[-1]/2+1. Got: ",
-                               operandShape, " but fft_length is ", fftLength,
-                               ".");
-    resultShape[resultShape.size() - 1] = fftLength[fftRank - 1];
-  }
-
-  inferredReturnShapes.emplace_back(resultShape, resultElementType);
-  return success();
+  return hlo::inferFftOp(location, adaptor.getOperand(),
+                         adaptor.getFftType() == FftType::RFFT,
+                         adaptor.getFftType() == FftType::IRFFT,
+                         adaptor.getFftLength(), inferredReturnShapes);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1425,56 +1333,9 @@ LogicalResult RealDynamicSliceOp::reifyReturnTypeShapes(
 // InfeedOp
 //===----------------------------------------------------------------------===//
 
-// Checks that the result type is of the form `zero_or_more_type(s),
-// stablehlo::token`
 LogicalResult InfeedOp::verify() {
-  auto resultTypes = getResultTypes();
-  if (resultTypes.empty())
-    return emitOpError()
-           << "result is expected to be at least of size 1, but got "
-           << resultTypes.size();
-
-  if (!resultTypes[resultTypes.size() - 1].isa<TokenType>())
-    return emitOpError() << "last element of result types is expected to "
-                            "be of token type, but got "
-                         << resultTypes[resultTypes.size() - 1];
-
-  // Verify layout attribute
-  constexpr char kLayoutAttr[] = "layout";
-  if (!getOperation()->hasAttr(kLayoutAttr)) return success();
-
-  mlir::ArrayAttr layout =
-      getOperation()->getAttrOfType<mlir::ArrayAttr>(kLayoutAttr);
-  if (!layout)
-    return emitOpError() << "layout-attribute expected to be of array-type.";
-
-  if (layout.size() != resultTypes.size() - 1) {
-    return emitOpError() << "layout-attribute size must be "
-                         << resultTypes.size() - 1
-                         << " (which is the number of "
-                            "op-results - 1 (for token result)), but got "
-                         << layout.size();
-  }
-
-  for (auto childLayout : layout) {
-    mlir::ArrayAttr childLayoutArr = childLayout.dyn_cast<mlir::ArrayAttr>();
-    if (!childLayoutArr) {
-      return emitOpError() << "layout-attribute expected to have "
-                              "elements of type array, but got "
-                           << childLayout;
-    }
-
-    for (auto i : childLayoutArr) {
-      mlir::IntegerAttr attr = i.dyn_cast<mlir::IntegerAttr>();
-      if (!attr) {
-        return emitOpError() << "layout-attribute's leaf elements are "
-                                "expected to be of type integer, but got "
-                             << i;
-      }
-    }
-  }
-
-  return success();
+  auto dialect = getContext()->getLoadedDialect<StablehloDialect>();
+  return hlo::verifyInfeedOp(dialect, getLoc(), getLayout(), getResults());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1524,19 +1385,9 @@ LogicalResult SendOp::inferReturnTypes(
 // RecvOp
 //===----------------------------------------------------------------------===//
 
-// Checks that the result type is of the form `zero_or_more_type(s),
-// stablehlo::token`
 LogicalResult RecvOp::verify() {
-  auto resultTypes = getResultTypes();
-  if (resultTypes.empty())
-    return emitOpError()
-           << "result is expected to be at least of size 1, but got "
-           << resultTypes.size();
-  if (!resultTypes[resultTypes.size() - 1].isa<TokenType>())
-    return emitOpError() << "last element of result types is expected to "
-                            "be of token type, but got "
-                         << resultTypes[resultTypes.size() - 1];
-  return success();
+  auto dialect = getContext()->getLoadedDialect<StablehloDialect>();
+  return hlo::verifyRecvOp(dialect, getLoc(), getResults());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1566,11 +1417,6 @@ LogicalResult ReduceWindowOp::verify() {
 // ReducePrecisionOp
 //===----------------------------------------------------------------------===//
 
-// The following property is already enforced by the ODS:
-//  P0. operand element type is float
-//  P1. mantissa_bits >= 0
-// We intend to verify the following properties
-//  P2. exponent_bits >= 1
 LogicalResult ReducePrecisionOp::verify() {
   return hlo::verifyReducePrecisionOp(getLoc(), getExponentBits());
 }
@@ -1985,16 +1831,8 @@ LogicalResult RngBitGeneratorOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult RngOp::verify() {
-  auto dist = getRngDistribution();
-  if (dist == RngDistribution::UNIFORM) {
-    return success();
-  }
-  auto muTy = getA().getType().cast<TensorType>().getElementType();
-  auto sigmaTy = getB().getType().cast<TensorType>().getElementType();
-  if (muTy.isa<FloatType>() && sigmaTy.isa<FloatType>()) {
-    return success();
-  }
-  return emitOpError() << "mu and sigma must be floats";
+  return hlo::verifyRngOp(getLoc(), getA(), getB(),
+                          getRngDistribution() == RngDistribution::UNIFORM);
 }
 
 LogicalResult RngOp::inferReturnTypeComponents(
@@ -2663,6 +2501,8 @@ struct StablehloHloDialectInterface : public hlo::HloDialectInterface {
   Type createTokenType() const override {
     return TokenType::get(getDialect()->getContext());
   }
+
+  bool isTokenType(Type type) const override { return type.isa<TokenType>(); }
 
   Attribute createTypeExtensions(ArrayRef<int64_t> bounds) const override {
     return TypeExtensionsAttr::get(getDialect()->getContext(), bounds);
