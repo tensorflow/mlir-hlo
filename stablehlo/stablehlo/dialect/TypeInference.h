@@ -107,6 +107,16 @@ LogicalResult verifyReplicaGroups(Optional<Location> location,
                                   bool useGlobalDeviceIds,
                                   Optional<size_t> expectedGroupSize);
 
+LogicalResult verifyConvolutionAttributes(
+    Optional<Location> location, Value lhs, Value rhs,
+    int64_t inputBatchDimension, int64_t inputFeatureDimension,
+    ArrayRef<int64_t> inputSpatialDimensions,
+    int64_t kernelInputFeatureDimension, int64_t kernelOutputFeatureDimension,
+    ArrayRef<int64_t> kernelSpatialDimensions, int64_t outputBatchDimension,
+    int64_t outputFeatureDimension, ArrayRef<int64_t> outputSpatialDimensions,
+    int64_t featureGroupCount, int64_t batchGroupCount,
+    Optional<ArrayAttr> precisionConfig);
+
 //===----------------------------------------------------------------------===//
 // Shape functions for ops.
 //===----------------------------------------------------------------------===//
