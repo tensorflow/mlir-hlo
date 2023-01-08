@@ -2911,8 +2911,7 @@ LogicalResult verifyConvolutionOp(
 }
 
 LogicalResult verifyDotOp(Optional<Location> location, Value lhs, Value rhs,
-                          Optional<ArrayAttr> /*precisionConfig*/,
-                          Value result) {
+                          Optional<ArrayAttr> precisionConfig, Value result) {
   auto lhsType = lhs.getType().dyn_cast<RankedTensorType>();
   auto rhsType = rhs.getType().dyn_cast<RankedTensorType>();
   auto resultType = result.getType().dyn_cast<RankedTensorType>();
@@ -2929,7 +2928,7 @@ LogicalResult verifyDotOp(Optional<Location> location, Value lhs, Value rhs,
         location, "inferred shape '", dimSizesToString(inferredShape), "' ",
         "is incompatible with return type of operation ", resultType, "");
 
-  return success();
+  return verifyPrecisionConfig(location, precisionConfig);
 }
 
 LogicalResult verifyDotGeneralOp(Optional<Location> location, Value lhs,
