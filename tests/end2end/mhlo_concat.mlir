@@ -1,5 +1,5 @@
 // RUN: mlir-hlo-opt %s \
-// RUN: --legalize-mhlo-to-thlo \
+// RUN: --legalize-mhlo-to-thlo="enable-experimental=true" \
 // RUN: --gml-tiling="tile-sizes=1,1 distribute=false op-name=thlo.concatenate" \
 // RUN: --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \

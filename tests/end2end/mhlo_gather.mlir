@@ -1,5 +1,5 @@
 // RUN: mlir-hlo-opt %s \
-// RUN: --hlo-canonicalize-gather --legalize-mhlo-to-thlo \
+// RUN: --hlo-canonicalize-gather --legalize-mhlo-to-thlo="enable-experimental=true" \
 // RUN: --hlo-legalize-to-linalg \
 // RUN: --gml-tiling="tile-sizes=1 distribute=false op-name=thlo.gather" \
 // RUN: --scalarize -cse --canonicalize |\
