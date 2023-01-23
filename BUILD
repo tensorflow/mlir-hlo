@@ -1844,6 +1844,7 @@ cc_library(
     ),
     strip_include_prefix = ".",
     deps = [
+        ":gml_st",
         ":mlir_hlo",
         ":mlir_interpreter_dialect_utils",
         ":mlir_interpreter_framework",
