@@ -186,7 +186,7 @@ void printDimSizes(AsmPrinter& p, llvm::ArrayRef<int64_t> dimSizes);
 
 FailureOr<SmallVector<int64_t>> parseDimSizes(AsmParser& parser);
 ParseResult parseDimSizes(AsmParser& parser,
-                          FailureOr<SmallVector<int64_t>>& dimSizes);
+                          SmallVectorImpl<int64_t>& dimSizes);
 
 // ExponentMantissa - Abbreviated printing of exponent and mantissa as e#m#.
 //

@@ -349,7 +349,7 @@ FailureOr<SmallVector<int64_t>> parseDimSizes(AsmParser& parser) {
 }
 
 ParseResult parseDimSizes(AsmParser& parser,
-                          FailureOr<SmallVector<int64_t>>& dimSizes) {
+                          SmallVectorImpl<int64_t>& dimSizes) {
   auto failOrDimSizes = parseDimSizes(parser);
   if (failed(failOrDimSizes)) {
     return failure();
