@@ -1223,7 +1223,6 @@ cc_library(
         ":gml_st_passes",
         ":gml_st_test_passes_inc_gen",
         ":gml_st_transforms",
-        ":tiling_interface_impl",
         "@llvm-project//mlir:AffineDialect",
         "@llvm-project//mlir:BufferizationDialect",
         "@llvm-project//mlir:BufferizationTransforms",
@@ -1349,8 +1348,6 @@ cc_library(
         ":lhlo",
         ":mlir_hlo",
         ":thlo",
-        ":tiling_interface",
-        ":tiling_interface_impl",
         ":type_conversion",
         "//stablehlo:chlo_ops",
         "@llvm-project//llvm:Support",
@@ -1387,6 +1384,7 @@ cc_library(
         "@llvm-project//mlir:TensorTilingInterfaceImpl",
         "@llvm-project//mlir:TensorTransforms",
         "@llvm-project//mlir:TensorUtils",
+        "@llvm-project//mlir:TilingInterface",
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
         "@llvm-project//mlir:VectorDialect",
@@ -1582,76 +1580,6 @@ cc_library(
     ],
 )
 
-td_library(
-    name = "tiling_interface_td_files",
-    srcs = ["gml_st/interfaces/tiling_interface.td"],
-    includes = ["."],
-    deps = ["@llvm-project//mlir:OpBaseTdFiles"],
-)
-
-gentbl_cc_library(
-    name = "tiling_interface_inc_gen",
-    strip_include_prefix = ".",
-    tbl_outs = [
-        (
-            ["-gen-op-interface-decls"],
-            "gml_st/interfaces/tiling_interface.h.inc",
-        ),
-        (
-            ["-gen-op-interface-defs"],
-            "gml_st/interfaces/tiling_interface.cc.inc",
-        ),
-    ],
-    tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "gml_st/interfaces/tiling_interface.td",
-    deps = ["@llvm-project//mlir:OpBaseTdFiles"],
-)
-
-cc_library(
-    name = "tiling_interface",
-    srcs = [
-        "gml_st/interfaces/tiling_interface.cc",
-        "gml_st/interfaces/tiling_interface.cc.inc",
-        "gml_st/interfaces/tiling_interface.h.inc",
-    ],
-    hdrs = ["gml_st/interfaces/tiling_interface.h"],
-    strip_include_prefix = ".",
-    deps = [
-        ":gml_st",
-        ":tiling_interface_inc_gen",
-        "@llvm-project//mlir:ArithDialect",
-        "@llvm-project//mlir:DialectUtils",
-        "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:TensorDialect",
-        "@llvm-project//mlir:ViewLikeInterface",
-    ],
-)
-
-cc_library(
-    name = "tiling_interface_impl",
-    srcs = ["gml_st/interfaces/tiling_interface_impl.cc"],
-    hdrs = ["gml_st/interfaces/tiling_interface_impl.h"],
-    strip_include_prefix = ".",
-    deps = [
-        ":gml_st",
-        ":thlo",
-        ":tiling_interface",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:AffineDialect",
-        "@llvm-project//mlir:ArithDialect",
-        "@llvm-project//mlir:ArithUtils",
-        "@llvm-project//mlir:DestinationStyleOpInterface",
-        "@llvm-project//mlir:DialectUtils",
-        "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:LinalgDialect",
-        "@llvm-project//mlir:LinalgTransforms",
-        "@llvm-project//mlir:LinalgUtils",
-        "@llvm-project//mlir:Support",
-        "@llvm-project//mlir:TensorDialect",
-        "@llvm-project//mlir:TensorUtils",
-    ],
-)
-
 cc_library(
     name = "gml_st_bufferizable_op_interface",
     srcs = ["gml_st/interfaces/bufferizable_op_interface_impl.cc"],
@@ -1742,10 +1670,10 @@ gentbl_cc_library(
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "thlo/IR/thlo_ops.td",
-    td_srcs = ["gml_st/interfaces/tiling_interface.td"],
     deps = [
         ":thlo_ops_td_files",
-        "@llvm-project//mlir:LinalgStructuredOpsTdFiles",
+        "@llvm-project//mlir:DestinationStyleOpInterfaceTdFiles",
+        "@llvm-project//mlir:TilingInterfaceTdFiles",
     ],
 )
 
@@ -1757,7 +1685,6 @@ cc_library(
     deps = [
         ":gml_st",
         ":thlo_ops_inc_gen",
-        ":tiling_interface",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:ArithUtils",
@@ -1773,6 +1700,7 @@ cc_library(
         "@llvm-project//mlir:SCFDialect",
         "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:TensorUtils",
+        "@llvm-project//mlir:TilingInterface",
         "@llvm-project//mlir:ViewLikeInterface",
     ],
 )
@@ -1822,6 +1750,7 @@ cc_library(
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:ArithUtils",
         "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
         "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:SCFDialect",
