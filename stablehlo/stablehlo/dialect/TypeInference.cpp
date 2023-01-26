@@ -2251,9 +2251,7 @@ LogicalResult inferGatherOp(
   }
 
   auto getSliceDim = [&sliceSizes](int64_t index) -> int64_t {
-    return sliceSizes.getValues<int64_t>()[index] == -1
-               ? ShapedType::kDynamic
-               : sliceSizes.getValues<int64_t>()[index];
+    return sliceSizes.getValues<int64_t>()[index];
   };
 
   return inferGatherReturnTypeComponents(
