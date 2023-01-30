@@ -16,21 +16,21 @@ limitations under the License.
 #include <memory>
 #include <utility>
 
-#include "./passes.h"
 #include "mhlo/IR/hlo_ops.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "tosa/transforms/passes.h"
 
 #define GEN_PASS_DEF_TOSALEGALIZEMHLOPASS
-#include "passes.h.inc"
+#include "tosa/transforms/passes.h.inc"
 
 #define PASS_NAME "tosa-legalize-mhlo"
 #define DEBUG_TYPE PASS_NAME
 
-#include "legalize_mhlo/legalize_mhlo.pdll.h.inc"
+#include "tosa/transforms/legalize_mhlo/legalize_mhlo.pdll.h.inc"
 
 namespace mlir {
 namespace tosa {

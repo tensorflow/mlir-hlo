@@ -215,10 +215,9 @@ struct FusionPass : public impl::FusionPassBase<FusionPass> {
 
 bool isEqualOp(const Operation* lhsC, const Operation* rhsC) {
   return OperationEquivalence::isEquivalentTo(
-      const_cast<Operation*>(lhsC), const_cast<Operation*>(rhsC),
+      const_cast<Operation *>(lhsC), const_cast<Operation *>(rhsC),
       OperationEquivalence::exactValueMatch,
-      OperationEquivalence::ignoreValueEquivalence,
-      OperationEquivalence::IgnoreLocations);
+      /* markEquivalent */ nullptr, OperationEquivalence::IgnoreLocations);
 }
 
 template <class OpTy>
