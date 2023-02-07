@@ -2981,7 +2981,17 @@ func.func @reshape_invalid_shapes(%operand: tensor<2x4xf32>) -> tensor<3x3xf32> 
 
 // -----
 
-func.func @reverse_duplicate_dimensions(%operand: tensor<3x2xi32>) -> tensor<3x2xi32> {
+// CHECK-LABEL: func @reverse
+func.func @reverse(%operand: tensor<3x2xi32>) -> tensor<3x2xi32> {
+  %0 = "stablehlo.reverse"(%operand) {
+    dimensions = dense<[0, 1]> : tensor<2xi64>
+  } : (tensor<3x2xi32>) -> tensor<3x2xi32>
+  func.return %0 : tensor<3x2xi32>
+}
+
+// -----
+
+func.func @reverse_c2(%operand: tensor<3x2xi32>) -> tensor<3x2xi32> {
   // expected-error @+1 {{dimensions should be unique. Got: 0, 0}}
   %0 = "stablehlo.reverse"(%operand) {
     dimensions = dense<[0, 0]> : tensor<2xi64>
@@ -2991,28 +3001,38 @@ func.func @reverse_duplicate_dimensions(%operand: tensor<3x2xi32>) -> tensor<3x2
 
 // -----
 
-func.func @reverse_invalid_dimensions_unranked(%operand: tensor<*xi32>) -> tensor<*xi32> {
+func.func @reverse_c3(%operand: tensor<*xi32>) -> tensor<*xi32> {
   // expected-error @+1 {{all dimensions should be non-negative. Got dimension: -1.}}
   %0 = "stablehlo.reverse"(%operand) {
-    dimensions = dense<-1> : tensor<i64>
+    dimensions = dense<-1> : tensor<1xi64>
   } : (tensor<*xi32>) -> tensor<*xi32>
   func.return %0 : tensor<*xi32>
 }
 
 // -----
 
-func.func @reverse_invalid_dimensions_negative(%operand: tensor<3x2xi32>) -> tensor<3x2xi32> {
+func.func @reverse_c3(%operand: tensor<3x2xi32>) -> tensor<3x2xi32> {
   // expected-error @+1 {{all dimensions should be non-negative. Got dimension: -1.}}
   %0 = "stablehlo.reverse"(%operand) {
-    dimensions = dense<-1> : tensor<i64>
+    dimensions = dense<-1> : tensor<1xi64>
   } : (tensor<3x2xi32>) -> tensor<3x2xi32>
   func.return %0 : tensor<3x2xi32>
 }
 
 // -----
 
-func.func @reverse_invalid_dimensions(%operand: tensor<3x2xi32>) -> tensor<3x2xi32> {
+func.func @reverse_c3(%operand: tensor<3x2xi32>) -> tensor<3x2xi32> {
   // expected-error @+1 {{all dimensions should be between [0, 2). Got dimension: 2.}}
+  %0 = "stablehlo.reverse"(%operand) {
+    dimensions = dense<2> : tensor<1xi64>
+  } : (tensor<3x2xi32>) -> tensor<3x2xi32>
+  func.return %0 : tensor<3x2xi32>
+}
+
+// -----
+
+func.func @reverse_i2(%operand: tensor<3x2xi32>) -> tensor<3x2xi32> {
+  // expected-error @+1 {{dimensions has rank 0 instead of required rank 1.}}
   %0 = "stablehlo.reverse"(%operand) {
     dimensions = dense<2> : tensor<i64>
   } : (tensor<3x2xi32>) -> tensor<3x2xi32>
@@ -4260,6 +4280,22 @@ func.func @get_dimension_size(%I: tensor<1x128x512xf32>) -> tensor<i32> {
 
 // -----
 
+func.func @get_dimension_size_negative_dimension(%I: tensor<1x128x512xf32>) -> tensor<i32> {
+  // expected-error@+1 {{requires non-negative dimension attribute; found (-1)}}
+  %size = "stablehlo.get_dimension_size"(%I) {dimension = -1 : i64} : (tensor<1x128x512xf32>) -> tensor<i32>
+  func.return %size : tensor<i32>
+}
+
+// -----
+
+func.func @get_dimension_size_invalid_dimension(%I: tensor<1x128x512xf32>) -> tensor<i32> {
+  // expected-error@+1 {{requires dimension attribute in range [0, 3); found (3)}}
+  %size = "stablehlo.get_dimension_size"(%I) {dimension = 3 : i64} : (tensor<1x128x512xf32>) -> tensor<i32>
+  func.return %size : tensor<i32>
+}
+
+// -----
+
 func.func @set_dimension_size(%I: tensor<1x128x512xf32>) -> tensor<1x128x512xf32> {
   %dim = stablehlo.constant dense<512> : tensor<1xi32>
 
@@ -4270,9 +4306,17 @@ func.func @set_dimension_size(%I: tensor<1x128x512xf32>) -> tensor<1x128x512xf32
 
 // -----
 
-func.func @set_dimension_size(%I: tensor<1x128x512xf32>) -> tensor<1x128x512xf32> {
+func.func @set_dimension_size_negative_dimension(%I: tensor<1x128x512xf32>) -> tensor<1x128x512xf32> {
   %dim = stablehlo.constant dense<512> : tensor<i32>
+  // expected-error@+1 {{requires non-negative dimension attribute; found (-1)}}
+  %result = "stablehlo.set_dimension_size"(%I, %dim) {dimension =-1 : i64} : (tensor<1x128x512xf32>, tensor<i32>) -> tensor<1x128x512xf32>
+  func.return %result : tensor<1x128x512xf32>
+}
 
+// -----
+
+func.func @set_dimension_size_invalid_dimension(%I: tensor<1x128x512xf32>) -> tensor<1x128x512xf32> {
+  %dim = stablehlo.constant dense<512> : tensor<i32>
   // expected-error@+1 {{requires dimension attribute in range [0, 3); found (3)}}
   %result = "stablehlo.set_dimension_size"(%I, %dim) {dimension = 3 : i64} : (tensor<1x128x512xf32>, tensor<i32>) -> tensor<1x128x512xf32>
   func.return %result : tensor<1x128x512xf32>
@@ -5763,9 +5807,17 @@ func.func @is_finite_mismatch_return_shape(%arg0: tensor<3xf32>) -> tensor<4xi1>
 
 // -----
 
-func.func @invalid_dimension_attr(%arg0: tensor<?x?xf32, #stablehlo.type_extensions<bounds = [3, -1]>>, %arg1: tensor<i32>) -> tensor<*xf32> {
-  // expected-error@+1 {{requires dimension attribute in range [0, 2); found (-1)}}
+func.func @negative_dimension_attr(%arg0: tensor<?x?xf32, #stablehlo.type_extensions<bounds = [3, -1]>>, %arg1: tensor<i32>) -> tensor<*xf32> {
+  // expected-error@+1 {{requires non-negative dimension attribute; found (-1)}}
   %result = "stablehlo.set_dimension_size"(%arg0, %arg1) {dimension = -1 : i64} : (tensor<?x?xf32, #stablehlo.type_extensions<bounds = [3, -1]>>, tensor<i32>) -> tensor<*xf32>
+  func.return %result : tensor<*xf32>
+}
+
+// -----
+
+func.func @invalid_dimension_attr(%arg0: tensor<?x?xf32, #stablehlo.type_extensions<bounds = [3, -1]>>, %arg1: tensor<i32>) -> tensor<*xf32> {
+  // expected-error@+1 {{requires dimension attribute in range [0, 2); found (2)}}
+  %result = "stablehlo.set_dimension_size"(%arg0, %arg1) {dimension = 2 : i64} : (tensor<?x?xf32, #stablehlo.type_extensions<bounds = [3, -1]>>, tensor<i32>) -> tensor<*xf32>
   func.return %result : tensor<*xf32>
 }
 

@@ -92,7 +92,7 @@ one of the following tracking labels.
 | fft                      | yes           | revisit      | yes            | yes             | no          |
 | floor                    | yes           | yes          | yes            | yes             | yes         |
 | gather                   | yes           | yes          | yes            | no              | no          |
-| get_dimension_size       | yes           | revisit      | yes            | yes             | no          |
+| get_dimension_size       | yes           | yes          | yes            | yes             | no          |
 | get_tuple_element        | yes           | yes          | yes            | yes             | no          |
 | if                       | yes           | revisit      | yes            | no              | no          |
 | imag                     | yes           | yes          | yes            | yes             | no          |
@@ -125,8 +125,8 @@ one of the following tracking labels.
 | remainder                | yes           | yes          | yes            | yes             | no          |
 | replica_id               | yes           | yes          | yes            | yes             | no          |
 | reshape                  | yes           | yes          | infeasible     | yes             | yes         |
-| return                   | no            | revisit      | yes            | yes             | no          |
-| reverse                  | yes           | yes          | yes            | yes             | no          |
+| return                   | no            | revisit      | infeasible     | yes             | no          |
+| reverse                  | yes           | yes          | yes            | yes             | yes         |
 | rng                      | yes           | yes          | yes            | yes             | no          |
 | rng_bit_generator        | yes           | revisit      | infeasible     | yes             | no          |
 | round_nearest_afz        | yes           | yes          | yes            | yes             | no          |

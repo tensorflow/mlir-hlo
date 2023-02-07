@@ -2293,7 +2293,7 @@ the slice starting at `start_indices` is updated with the values in `update`.
 
 More formally, `result[i0, ..., iR-1]` is defined as:
 
-* `update[j0, ..., jR-1]` if `jd = adjusted_start_indices[d][] + id` where
+* `update[j0, ..., jR-1]` if `id = adjusted_start_indices[d][] + jd` where
   `adjusted_start_indices =
   clamp(0, start_indices, shape(operand) - shape(update))`.
 * `operand[i0, ..., iR-1]` otherwise.
@@ -2717,7 +2717,6 @@ Produces the size of the given `dimension` of the `operand`.
 #### Constraints
 
 * (C1) 0 $\le$ `dimension` $\lt$ `rank(operand)`.
-  [todo](https://github.com/openxla/stablehlo/issues/790)
 
 #### Examples
 
@@ -4144,22 +4143,14 @@ and produces a `result` tensor. More formally,
 #### Examples
 
 ```mlir
-// Reverse along dimension 0
-
-// %operand = [[1, 2], [3, 4], [5, 6]]
-%result = "stablehlo.reverse"(%operand) {
-  dimensions = dense<0> : tensor<i64>
-} : (tensor<3x2xi32>) -> tensor<3x2xi32>
-// %result: [[5, 6], [3, 4], [1, 2]]
-
-// Reverse along dimension 1
-
 // %operand = [[1, 2], [3, 4], [5, 6]]
 %result = "stablehlo.reverse"(%operand) {
   dimensions = dense<1> : tensor<i64>
 } : (tensor<3x2xi32>) -> tensor<3x2xi32>
 // %result: [[2, 1], [4, 3], [6, 5]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_reverse.mlir)
 
 ### rng
 

@@ -2639,8 +2639,8 @@ def StableHLO_SortOp : StableHLO_Op<"sort",
 }
 
 def StableHLO_ReverseOp: StableHLO_Op<"reverse",
-      [Pure, HLO_CompatibleOperandsAndResultType]> {
-  let summary = "Reverse operator";
+      [Pure, HLO_CompatibleOperandsAndResultType /*reverse_c1*/]> {
+  let summary = "Reverse operation";
   let description = [{
     Reverses the order of elements in the `operand` along the specified
     `dimensions` and produces a `result` tensor.
@@ -2650,7 +2650,7 @@ def StableHLO_ReverseOp: StableHLO_Op<"reverse",
 
     Example:
     ```mlir
-    %0 = stablehlo.reverse %arg0, dims = [1] : tensor<3x2xi32>
+    %result = stablehlo.reverse %operand, dims = [1] : tensor<3x2xi32>
     ```
   }];
   let arguments = (ins
@@ -2843,21 +2843,22 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
       build($_builder, $_state, TypeRange(result_type), ValueRange(operand),
             ValueRange(init_value), window_dimensions, window_strides,
             base_dilations, window_dilations, padding);
-    }]>
+    }]>,
+    OpBuilder<(ins "ValueRange":$operands,
+      "ValueRange":$init_values,
+      "DenseIntElementsAttr":$window_dimensions,
+      "DenseIntElementsAttr":$window_strides,
+      "DenseIntElementsAttr":$base_dilations,
+      "DenseIntElementsAttr":$window_dilations,
+      "DenseIntElementsAttr":$padding,
+      "function_ref<void(OpBuilder &, Location, ValueRange)>":$bodyBuilder
+    )>,
   ];
 
   // TODO(hinsu): Implement custom printer and parser.
-
-  let extraClassDeclaration = [{
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return mlir::hlo::isCompatibleForHloTypeInference(l, r);
-    }
-  }];
 }
 
-def StableHLO_ReturnOp : StableHLO_Op<"return",
-      [Pure, Terminator,
-      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+def StableHLO_ReturnOp : StableHLO_Op<"return", [Pure, Terminator]> {
   let summary = [{
     The `hlo.return` operation terminates a region and returns values.
 
@@ -2879,6 +2880,28 @@ def StableHLO_ReturnOp : StableHLO_Op<"return",
 }
 
 def StableHLO_TorchIndexSelectOp : StableHLO_Op<"torch_index_select", [Pure]> {
+  let summary = "TorchIndexSelect operator";
+  let description = [{
+    Returns a new tensor which indexes the input tensor along dimension `dim`
+    using the entries in `index`.
+
+    The returned tensor has the same dimensions as `operand`, except for the
+    `dim`th dimension which is replaced by the shape of `index` without the
+    leading `batch_dims` dimensions;
+
+    The `batch_dims` attribute specifies the number of major batch dimensions
+    (0 or more) that act like a multidimensional loop over both the input and
+    the index.
+
+    Example:
+
+    ```mlir
+    %0 = "stablehlo.torch_index_select"(%arg0, %arg1) {
+      batch_dims = 1 : i64, dim = 2 : i64
+    } : (tensor<8x128x3072x64xf32>, tensor<8x16x1024xi32>) -> tensor<8x128x16x1024x64xf32>
+    ```
+  }];
+
   let arguments = (ins
     HLO_Tensor:$operand,
     HLO_Tensor:$index,
@@ -2958,8 +2981,6 @@ def StableHLO_RngOp : StableHLO_Op<"rng", [InferTensorTypeWithReify, AllElementT
 
   let results = (outs HLO_PredIntOrFpTensor:$result);
 
-  let hasVerifier = 1;
-
   let assemblyFormat = [{
     $a `,` $b `,` $shape `,` `distribution` `=` $rng_distribution
       attr-dict `:` functional-type(operands, results)
@@ -3037,7 +3058,7 @@ def StableHLO_UniformDequantizeOp : StableHLO_UnaryElementwiseOp<"uniform_dequan
 }
 
 def StableHLO_ReducePrecisionOp :
-    StableHLO_Op<"reduce_precision", [HLO_CompatibleOperandsAndResultType]> {
+    StableHLO_Op<"reduce_precision", [HLO_CompatibleOperandsAndResultType, Pure]> {
   let summary = "Reduce precision operator";
   let description = [{
     Performs element-wise conversion of `operand` to another floating-point type

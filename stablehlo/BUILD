@@ -387,6 +387,7 @@ cc_library(
         ":vhlo_op_interfaces_inc_gen",
         ":vhlo_ops_inc_gen",
         ":vhlo_type_interfaces_inc_gen",
+        ":vhlo_types",
         ":vhlo_types_inc_gen",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
@@ -430,6 +431,29 @@ td_library(
         "@llvm-project//mlir:BuiltinDialectTdFiles",
         "@llvm-project//mlir:OpBaseTdFiles",
         "@llvm-project//mlir:ShapeOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "vhlo_types",
+    srcs = [
+        "stablehlo/dialect/VhloTypes.cpp",
+    ],
+    hdrs = [
+        "stablehlo/dialect/VhloTypes.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":stablehlo_assembly_format",
+        ":version",
+        ":vhlo_type_interfaces_inc_gen",
+        ":vhlo_types_inc_gen",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:QuantOps",
+        "@llvm-project//mlir:ShapeDialect",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:Transforms",
     ],
 )
 
@@ -491,6 +515,7 @@ cc_library(
     name = "stablehlo_passes",
     srcs = [
         "stablehlo/transforms/StablehloLegalizeToVhlo.cpp",
+        "stablehlo/transforms/StablehloRefineShapes.cpp",
         "stablehlo/transforms/VhloLegalizeToStablehlo.cpp",
         "stablehlo/transforms/VhloToVersion.cpp",
     ],
@@ -500,16 +525,25 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":chlo_ops",
         ":stablehlo_ops",
         ":stablehlo_ops_inc_gen",
         ":stablehlo_pass_inc_gen",
         ":stablehlo_type_conversion",
+        ":stablehlo_type_inference",
         ":version",
         ":vhlo_ops",
+        ":vhlo_types",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:InferTypeOpInterface",
         "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:QuantOps",
+        "@llvm-project//mlir:ShapeDialect",
         "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -649,7 +683,10 @@ cc_library(
         ":stablehlo_ops",
         ":vhlo_ops",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:QuantOps",
+        "@llvm-project//mlir:ShapeDialect",
         "@llvm-project//mlir:SparseTensorDialect",
+        "@llvm-project//mlir:TensorDialect",
     ],
 )
 

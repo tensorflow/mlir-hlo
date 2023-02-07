@@ -100,63 +100,13 @@ void createArgs(ArrayRef<OpAsmParser::UnresolvedOperand> operands,
 // Utilities for the canonicalize patterns
 //===----------------------------------------------------------------------===//
 
-// Verifies that dimension attribute for the op correctly indexes in operand or
-// result shape.
-template <typename OpT>
-static LogicalResult verifyDimAttr(OpT op) {
-  int64_t rank = -1;
-  if (auto ty =
-          op.getOperand().getType().template dyn_cast<RankedTensorType>()) {
-    rank = ty.getRank();
-  } else if (auto ty = op.getType().template dyn_cast<RankedTensorType>()) {
-    rank = ty.getRank();
-  } else {
-    return success();
-  }
-
-  int64_t dim = op.getDimension();
-  if (dim < 0 || dim >= rank)
-    return op.emitOpError() << "requires dimension attribute in range [0, "
-                            << rank << "); found (" << dim << ")";
-  return success();
-}
-
-// Common shape function helper for RngNormal and RngUniform.
-static LogicalResult rngInferReturnTypeComponents(
-    MLIRContext* context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
-    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
-  if (operands.size() != 3)
-    return emitOptionalError(location, "expected 3 operands");
-
-  SmallVector<int64_t> shapeVector;
-  Value shapeOperand = operands[2];
-  auto shapeOperandType = shapeOperand.getType().cast<ShapedType>();
-  Type elementType = getElementTypeOrSelf(operands[1]);
-
-  // Operand `shape` (1D by ODS) may be a constant or not, if `shape` is:
-  // 1, not constant and have dynimic dim (tensor<?x>): infer tensor<*x>.
-  // 2. not constant nor dynimic (e.g. tensor<3xi64>): infer tensor<?x?x?x>.
-  // 3. constant (e.g. dense<[2, 3, 5]>): infer tensor<2x3x5x>.
-
-  // Match to check whether the `shape` operand is a constant.
-  DenseIntElementsAttr shape;
-  if (!matchPattern(shapeOperand, m_Constant(&shape))) {
-    int size = shapeOperandType.getDimSize(0);
-    if (hlo::isDynamicDimSize(size)) {
-      inferredReturnShapes.emplace_back(elementType);
-      return success();
-    }
-    shapeVector.resize(size, ShapedType::kDynamic);
-    inferredReturnShapes.emplace_back(shapeVector, elementType);
-    return success();
-  }
-
-  // `shape` operand is a constant.
-  shapeVector.reserve(shape.size());
-  for (const APInt& fp : shape.getValues<APInt>())
-    shapeVector.push_back(fp.getSExtValue());
-  inferredReturnShapes.emplace_back(shapeVector, elementType);
+LogicalResult verifyDimInBounds(Location loc, ShapedType type, int64_t dim) {
+  if (dim < 0)
+    return emitOptionalError(
+        loc, "requires non-negative dimension attribute; found (", dim, ")");
+  if (type.hasRank() && dim >= type.getRank())
+    return emitOptionalError(loc, "requires dimension attribute in range [0, ",
+                             type.getRank(), "); found (", dim, ")");
   return success();
 }
 
@@ -723,7 +673,7 @@ LogicalResult reifyGatherShape(Op* op, OpBuilder& builder, ValueRange operands,
 
   Location loc = op->getLoc();
   int resultRank = resultTy.getRank();
-  Type shapeElTy = startIndices.getType().cast<ShapedType>().getElementType();
+  Type shapeElTy = builder.getIndexType();
   auto toShapeElType = [&](Value v) {
     return maybeCastTo(builder, loc, v, shapeElTy);
   };
@@ -804,7 +754,11 @@ LogicalResult DynamicGatherOp::inferReturnTypeComponents(
 // GetDimensionSizeOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult GetDimensionSizeOp::verify() { return verifyDimAttr(*this); }
+LogicalResult GetDimensionSizeOp::verify() {
+  auto operandTy = getOperand().getType().cast<ShapedType>();
+  int64_t dim = getDimension();
+  return verifyDimInBounds(getLoc(), operandTy, dim);
+}
 
 LogicalResult GetDimensionSizeOp::inferReturnTypes(
     MLIRContext* context, std::optional<Location> location, ValueRange,
@@ -1186,7 +1140,7 @@ LogicalResult ConcatenateOp::inferReturnTypes(
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type>& inferredReturnTypes) {
   ConcatenateOp::Adaptor adaptor(operands, attributes, regions);
-  return hlo::inferConcatenateOp(location, adaptor.getInputs(),
+  return hlo::inferConcatenateOp(location, adaptor.getInputs().getTypes(),
                                  adaptor.getDimension(), inferredReturnTypes);
 }
 
@@ -1270,9 +1224,10 @@ LogicalResult DynamicSliceOp::inferReturnTypeComponents(
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
   DynamicSliceOp::Adaptor adaptor(operands, attributes, regions);
-  return hlo::inferDynamicSliceOp(
-      location, adaptor.getOperand(), adaptor.getStartIndices(),
-      adaptor.getSliceSizes(), inferredReturnShapes);
+  return hlo::inferDynamicSliceOp(location, adaptor.getOperand().getType(),
+                                  adaptor.getStartIndices().getTypes(),
+                                  adaptor.getSliceSizes(),
+                                  inferredReturnShapes);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1413,6 +1368,71 @@ LogicalResult ReduceWindowOp::verify() {
                                    getWindowDimensions(), getWindowStrides(),
                                    getBaseDilations(), getWindowDilations(),
                                    getPadding(), getBody());
+}
+
+// Builder that takes a constructor for its region and infers result types
+void ReduceWindowOp::build(
+    OpBuilder& odsBuilder, OperationState& odsState, ValueRange inputs,
+    ValueRange init_values, DenseIntElementsAttr window_dimensions,
+    /*optional*/ DenseIntElementsAttr window_strides,
+    /*optional*/ DenseIntElementsAttr base_dilations,
+    /*optional*/ DenseIntElementsAttr window_dilations,
+    /*optional*/ DenseIntElementsAttr padding,
+    function_ref<void(OpBuilder&, Location, ValueRange)> bodyBuilder) {
+  odsState.addOperands(inputs);
+  odsState.addOperands(init_values);
+  odsState.addAttribute(getWindowDimensionsAttrName(odsState.name),
+                        window_dimensions);
+  if (window_strides) {
+    odsState.addAttribute(getWindowStridesAttrName(odsState.name),
+                          window_strides);
+  }
+  if (base_dilations) {
+    odsState.addAttribute(getBaseDilationsAttrName(odsState.name),
+                          base_dilations);
+  }
+  if (window_dilations) {
+    odsState.addAttribute(getWindowDilationsAttrName(odsState.name),
+                          window_dilations);
+  }
+  if (padding) {
+    odsState.addAttribute(getPaddingAttrName(odsState.name), padding);
+  }
+  Region* region = odsState.addRegion();
+
+  llvm::SmallVector<Type> blockArgTypes;
+  llvm::SmallVector<Location> locs;
+  auto numValues = inputs.size() + init_values.size();
+  blockArgTypes.reserve(numValues);
+  locs.reserve(numValues);
+  for (auto i : inputs) {
+    auto iType = i.getType().cast<ShapedType>();
+    blockArgTypes.push_back(iType.cloneWith(
+        llvm::ArrayRef<int64_t>(std::nullopt), iType.getElementType()));
+    locs.push_back(i.getLoc());
+  }
+  for (auto i : init_values) {
+    auto iType = i.getType().cast<ShapedType>();
+    blockArgTypes.push_back(iType.cloneWith(
+        llvm::ArrayRef<int64_t>(std::nullopt), iType.getElementType()));
+    locs.push_back(i.getLoc());
+  }
+
+  {
+    OpBuilder::InsertionGuard g(odsBuilder);
+    Block* body =
+        odsBuilder.createBlock(region, /*insertPt=*/{}, blockArgTypes, locs);
+    bodyBuilder(odsBuilder, odsState.location, body->getArguments());
+  }
+
+  llvm::SmallVector<mlir::Type, 2> inferredReturnTypes;
+  if (mlir::succeeded(ReduceWindowOp::inferReturnTypes(
+          odsBuilder.getContext(), odsState.location, odsState.operands,
+          odsState.attributes.getDictionary(odsState.getContext()),
+          odsState.regions, inferredReturnTypes)))
+    odsState.addTypes(inferredReturnTypes);
+  else
+    llvm::report_fatal_error("Failed to infer result type(s).");
 }
 
 //===----------------------------------------------------------------------===//
@@ -1743,9 +1763,9 @@ LogicalResult ReduceOp::inferReturnTypeComponents(
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
   ReduceOp::Adaptor adaptor(operands, attributes, regions);
-  return hlo::inferReduceOp(location, adaptor.getInputs(),
-                            adaptor.getInitValues(), adaptor.getDimensions(),
-                            inferredReturnShapes);
+  return hlo::inferReduceOp(location, adaptor.getInputs().getTypes(),
+                            adaptor.getInitValues().getTypes(),
+                            adaptor.getDimensions(), inferredReturnShapes);
 }
 
 LogicalResult ReduceOp::verify() {
@@ -1809,17 +1829,6 @@ LogicalResult OptimizationBarrierOp::inferReturnTypes(
 }
 
 //===----------------------------------------------------------------------===//
-// ReturnOp
-//===----------------------------------------------------------------------===//
-LogicalResult ReturnOp::inferReturnTypes(
-    MLIRContext*, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange,
-    SmallVectorImpl<Type>& inferredReturnTypes) {
-  ReturnOp::Adaptor adaptor(operands, attributes);
-  return hlo::inferReturnOp(location, inferredReturnTypes);
-}
-
-//===----------------------------------------------------------------------===//
 // ReverseOp
 //===----------------------------------------------------------------------===//
 LogicalResult ReverseOp::verify() {
@@ -1840,17 +1849,15 @@ LogicalResult RngBitGeneratorOp::verify() {
 // RngOp
 //===----------------------------------------------------------------------===//
 
-LogicalResult RngOp::verify() {
-  return hlo::verifyRngOp(getLoc(), getA(), getB(),
-                          getRngDistribution() == RngDistribution::UNIFORM);
-}
-
 LogicalResult RngOp::inferReturnTypeComponents(
     MLIRContext* context, std::optional<Location> location,
     ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
-  return rngInferReturnTypeComponents(context, location, operands, attributes,
-                                      regions, inferredReturnShapes);
+  RngOp::Adaptor adaptor(operands, attributes, regions);
+  return hlo::inferRngOp(
+      location, adaptor.getA(), adaptor.getB(), adaptor.getShape(),
+      adaptor.getRngDistribution() == RngDistribution::UNIFORM,
+      inferredReturnShapes);
 }
 
 LogicalResult RngOp::reifyReturnTypeShapes(
@@ -1892,8 +1899,9 @@ LogicalResult SetDimensionSizeOp::verify() {
     if (size.getRank() != 0)
       return emitOpError() << "size operand should be of rank-0";
   }
-
-  return verifyDimAttr(*this);
+  auto operandTy = getOperand().getType().cast<ShapedType>();
+  int64_t dim = getDimension();
+  return verifyDimInBounds(getLoc(), operandTy, dim);
 }
 
 // TODO(b/238903565): Switch to inferReturnTypeComponents after adding support
@@ -2162,7 +2170,7 @@ LogicalResult SliceOp::inferReturnTypes(
     DictionaryAttr attributes, RegionRange regions,
     SmallVectorImpl<Type>& inferredReturnTypes) {
   SliceOpAdaptor adaptor(operands, attributes);
-  return hlo::inferSliceOp(location, adaptor.getOperand(),
+  return hlo::inferSliceOp(location, adaptor.getOperand().getType(),
                            adaptor.getStartIndices(), adaptor.getLimitIndices(),
                            adaptor.getStrides(), inferredReturnTypes);
 }
