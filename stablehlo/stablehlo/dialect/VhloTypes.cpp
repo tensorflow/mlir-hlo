@@ -70,6 +70,20 @@ void VhloTypeConverter::addBuiltinToVhloConversions() {
       [&](Float32Type type) { return Float32V1Type::get(type.getContext()); });
   addConversion(
       [&](Float64Type type) { return Float64V1Type::get(type.getContext()); });
+  addConversion([&](Float8E4M3FNType type) {
+    return Float8E4M3FNV1Type::get(type.getContext());
+  });
+  addConversion([&](Float8E5M2Type type) {
+    return Float8E5M2V1Type::get(type.getContext());
+  });
+  addConversion([&](FunctionType type) -> Type {
+    SmallVector<Type> convertedInputs;
+    SmallVector<Type> convertedResults;
+    if (failed(convertTypes(type.getInputs(), convertedInputs))) return {};
+    if (failed(convertTypes(type.getResults(), convertedResults))) return {};
+    return FunctionV1Type::get(type.getContext(), convertedInputs,
+                               convertedResults);
+  });
   addConversion(
       [&](IndexType type) { return IndexV1Type::get(type.getContext()); });
   addConversion(
@@ -119,6 +133,20 @@ void VhloTypeConverter::addVhloToBuiltinConversions() {
       [&](Float32V1Type type) { return Float32Type::get(type.getContext()); });
   addConversion(
       [&](Float64V1Type type) { return Float64Type::get(type.getContext()); });
+  addConversion([&](Float8E4M3FNV1Type type) {
+    return Float8E4M3FNType::get(type.getContext());
+  });
+  addConversion([&](Float8E5M2V1Type type) {
+    return Float8E5M2Type::get(type.getContext());
+  });
+  addConversion([&](FunctionV1Type type) -> Type {
+    SmallVector<Type> convertedInputs;
+    SmallVector<Type> convertedResults;
+    if (failed(convertTypes(type.getInputs(), convertedInputs))) return {};
+    if (failed(convertTypes(type.getResults(), convertedResults))) return {};
+    return FunctionType::get(type.getContext(), convertedInputs,
+                             convertedResults);
+  });
   addConversion(
       [&](IndexV1Type type) { return IndexType::get(type.getContext()); });
   addConversion([&](IntegerI1V1Type type) {
@@ -222,6 +250,26 @@ void printShape(AsmPrinter& os, ArrayRef<int64_t> dimSizes) {
 
 ParseResult parseShape(AsmParser& parser, SmallVector<int64_t>& dimSizes) {
   if (failed(parser.parseDimensionList(dimSizes))) {
+    return failure();
+  }
+  return success();
+}
+
+// Print types in parentheses: (!vhlo.type, !vhlo.type)
+static void printTypeArray(AsmPrinter& os, ArrayRef<Type> typeArray) {
+  if (typeArray.empty()) os << "()";
+  os << typeArray;
+}
+
+// Parse types in parentheses: (!vhlo.type, !vhlo.type)
+ParseResult parseTypeArray(AsmParser& parser, SmallVector<Type>& typeArray) {
+  if (succeeded(parser.parseOptionalLParen()) &&
+      succeeded(parser.parseOptionalRParen())) {
+    return success();
+  }
+
+  auto parseEle = [&]() { return parser.parseType(typeArray.emplace_back()); };
+  if (failed(parser.parseCommaSeparatedList(parseEle))) {
     return failure();
   }
   return success();

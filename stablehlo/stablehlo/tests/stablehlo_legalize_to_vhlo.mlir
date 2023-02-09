@@ -1,5 +1,5 @@
 // RUN: stablehlo-opt --stablehlo-legalize-to-vhlo --mlir-print-op-generic --split-input-file %s | FileCheck %s
-// RUN: diff <(stablehlo-opt --stablehlo-legalize-to-vhlo %s | stablehlo-opt --vhlo-legalize-to-stablehlo) <(stablehlo-opt %s)
+// RUN: diff <(stablehlo-opt --stablehlo-legalize-to-vhlo -vhlo-to-version='target=current' %s | stablehlo-opt --vhlo-legalize-to-stablehlo) <(stablehlo-opt %s)
 // RUN: stablehlo-opt --stablehlo-legalize-to-vhlo -emit-bytecode -debug-only=vhlo-bytecode %s 2>&1 | (! grep 'Not Implemented')
 // RUN: stablehlo-opt --stablehlo-legalize-to-vhlo -emit-bytecode %s | stablehlo-opt -debug-only=vhlo-bytecode 2>&1 | (! grep 'Not Implemented')
 
@@ -310,7 +310,7 @@ func.func @attr_transpose_adjoint(%arg0: tensor<16x16xf32>, %arg1: tensor<16x16x
 func.func @attr_type_extensions_bounds(
     %arg0: tensor<?x?xf32, #stablehlo.type_extensions<bounds = [16, ?]>>)
     -> tensor<?x?xf32, #stablehlo.type_extensions<bounds = [16, ?]>> {
-  // CHECK: "func.return"(%arg0) : (!vhlo.tensor<?x?x!vhlo.f32, #vhlo.type_extensions<bounds = [16, ?]>>) -> ()
+  // CHECK: "vhlo.return"(%arg0) : (!vhlo.tensor<?x?x!vhlo.f32, #vhlo.type_extensions<bounds = [16, ?]>>) -> ()
   func.return %arg0 : tensor<?x?xf32, #stablehlo.type_extensions<bounds = [16, ?]>>
 }
 
@@ -888,6 +888,17 @@ func.func @op_floor(%arg0: tensor<f32>) -> tensor<f32> {
   func.return %0 : tensor<f32>
 }
 // CHECK-LABEL: "op_floor"
+
+func.func @op_func(%arg0: tensor<f32> {stablehlo.self = unit}) -> (tensor<f32> {stablehlo.self = unit}) {
+  // CHECK:      "vhlo.func"() ({
+  // CHECK-NEXT: ^bb0(%arg0: !vhlo.tensor<!vhlo.f32>):
+  // CHECK-NEXT:   "vhlo.return"(%arg0) : (!vhlo.tensor<!vhlo.f32>) -> ()
+  // CHECK-NEXT: arg_attrs = #vhlo.array<[#vhlo.dict<{#vhlo.string<"stablehlo.self"> = #vhlo.unit}>]>
+  // CHECK-SAME: function_type = #vhlo.type<!vhlo.func<(!vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>>>
+  // CHECK-SAME: res_attrs = #vhlo.array<[#vhlo.dict<{#vhlo.string<"stablehlo.self"> = #vhlo.unit}>]>
+  func.return %arg0 : tensor<f32>
+}
+// CHECK-LABEL: "op_func"
 
 func.func @op_gather(%arg0 : tensor<2x4x9xf32>, %arg1 : tensor<1x5x2xi32>) -> tensor<1x5x1xf32> {
   //      CHECK: "vhlo.gather"(%arg0, %arg1) {
@@ -1689,6 +1700,20 @@ func.func @type_ui64(%arg0: tensor<ui64>, %arg1: tensor<ui64>) -> tensor<ui64> {
 }
 // CHECK-LABEL: "type_ui64"
 
+func.func @type_f8E4M3FN(%arg0: tensor<f8E4M3FN>, %arg1: tensor<f8E4M3FN>) -> tensor<f8E4M3FN> {
+  // CHECK: "vhlo.add"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.f8E4M3FN>, !vhlo.tensor<!vhlo.f8E4M3FN>) -> !vhlo.tensor<!vhlo.f8E4M3FN>
+  %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<f8E4M3FN>, tensor<f8E4M3FN>) -> tensor<f8E4M3FN>
+  func.return %0 : tensor<f8E4M3FN>
+}
+// CHECK-LABEL: "type_f8E4M3FN"
+
+func.func @type_f8E5M2(%arg0: tensor<f8E5M2>, %arg1: tensor<f8E5M2>) -> tensor<f8E5M2> {
+  // CHECK: "vhlo.add"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.f8E5M2>, !vhlo.tensor<!vhlo.f8E5M2>) -> !vhlo.tensor<!vhlo.f8E5M2>
+  %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<f8E5M2>, tensor<f8E5M2>) -> tensor<f8E5M2>
+  func.return %0 : tensor<f8E5M2>
+}
+// CHECK-LABEL: "type_f8E5M2"
+
 func.func @type_bf16(%arg0: tensor<bf16>, %arg1: tensor<bf16>) -> tensor<bf16> {
   // CHECK: "vhlo.add"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.bf16>, !vhlo.tensor<!vhlo.bf16>) -> !vhlo.tensor<!vhlo.bf16>
   %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<bf16>, tensor<bf16>) -> tensor<bf16>
@@ -1753,18 +1778,19 @@ func.func @type_quantization(%arg0: tensor<!quant.uniform<i8:f32, 34.0:16>>, %ar
 // CHECK-LABEL: "type_quantization"
 
 func.func @type_token_callee(%arg0: !stablehlo.token) -> !stablehlo.token {
-  // CHECK: "func.return"(%arg0) : (!vhlo.token) -> ()
+  // CHECK: "vhlo.return"(%arg0) : (!vhlo.token) -> ()
   return %arg0 : !stablehlo.token
 }
-//       CHECK: function_type = (!vhlo.token) -> !vhlo.token
+//       CHECK: function_type = #vhlo.type<!vhlo.func<(!vhlo.token) -> !vhlo.token>>
 // CHECK-LABEL: "type_token_callee"
 
 func.func @type_token_caller(%arg0: !stablehlo.token) -> !stablehlo.token {
-  // CHECK: "func.call"(%arg0) {callee = @type_token_callee} : (!vhlo.token) -> !vhlo.token
+  // CHECK:      "vhlo.call"(%arg0) {callee = #vhlo.sym<#vhlo.string<"type_token_callee">>}
+  // CHECK-SAME: (!vhlo.token) -> !vhlo.token
   %0 = func.call @type_token_callee(%arg0) : (!stablehlo.token) -> !stablehlo.token
   return %0 : !stablehlo.token
 }
-//       CHECK: function_type = (!vhlo.token) -> !vhlo.token
+//       CHECK: function_type = #vhlo.type<!vhlo.func<(!vhlo.token) -> !vhlo.token>>
 // CHECK-LABEL: "type_token_caller"
 
 func.func @type_tuple(%arg0: tuple<tensor<f32>>) -> tuple<!stablehlo.token> {
