@@ -55,7 +55,7 @@ one of the following tracking labels.
 | batch_norm_training      | yes           | revisit      | yes            | no              | no          |
 | bitcast_convert          | yes           | yes          | infeasible     | yes             | no          |
 | broadcast                | no            | yes\*        | yes\*          | yes             | no          |
-| broadcast_in_dim         | yes           | yes          | infeasible     | yes             | no          |
+| broadcast_in_dim         | yes           | yes          | infeasible     | yes             | yes         |
 | case                     | yes           | revisit      | yes            | no              | no          |
 | cbrt                     | yes           | yes          | yes            | yes             | no          |
 | ceil                     | yes           | yes          | yes            | yes             | yes         |
@@ -85,7 +85,7 @@ one of the following tracking labels.
 | dynamic_pad              | no            | revisit      | no             | yes             | no          |
 | dynamic_reshape          | no            | revisit      | infeasible     | yes             | no          |
 | dynamic_slice            | yes           | yes          | yes            | yes             | no          |
-| dynamic_update_slice     | yes           | yes          | yes            | yes             | no          |
+| dynamic_update_slice     | yes           | yes          | yes            | yes             | yes         |
 | einsum                   | no            | revisit      | no             | yes             | no          |
 | exponential              | yes           | yes          | yes            | yes             | no          |
 | exponential_minus_one    | yes           | yes          | yes            | yes             | no          |
@@ -111,7 +111,7 @@ one of the following tracking labels.
 | optimization_barrier     | yes           | yes          | yes            | yes             | no          |
 | or                       | yes           | yes          | yes            | yes             | yes         |
 | outfeed                  | yes           | yes          | yes            | no              | no          |
-| pad                      | yes           | yes          | yes            | yes             | no          |
+| pad                      | yes           | yes          | yes            | yes             | yes         |
 | partition_id             | yes           | yes          | yes            | yes             | no          |
 | popcnt                   | yes           | yes          | yes            | yes             | no          |
 | power                    | yes           | yes          | yes            | yes             | no          |

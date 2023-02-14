@@ -2065,7 +2065,7 @@ LogicalResult inferDynamicUpdateSliceOp(
   auto operandType = operand.getType().cast<ShapedType>();
   auto updateType = update.getType().cast<ShapedType>();
 
-  // (C3)
+  // dynamic_update_slice_c3
   if (updateType.hasRank() && operandType.hasRank() &&
       updateType.getRank() != operandType.getRank())
     return emitOptionalError(
@@ -2073,20 +2073,20 @@ LogicalResult inferDynamicUpdateSliceOp(
         "update rank does not match operand rank: ", updateType.getRank(),
         " vs ", operandType.getRank(), ".");
 
-  // (C4)
+  // dynamic_update_slice_c4
   if (operandType.hasRank() &&
       (int64_t)startIndices.size() != operandType.getRank())
     return emitOptionalError(
         location, "expects number of start_indices to match operand rank: ",
         startIndices.size(), " vs ", operandType.getRank(), ".");
 
-  // (C5)
+  // dynamic_update_slice_c5
   if (!tensorsHaveSameElType(startIndices.getTypes()))
     return emitOptionalError(location,
                              "start indices must have same element type");
 
-  // (C6)
-  if (operandType.hasRank() && updateType.hasRank()) {
+  // dynamic_update_slice_c6
+  if (operandType.hasRank() && updateType.hasRank())
     for (auto [index, dims] : llvm::enumerate(
              llvm::zip(operandType.getShape(), updateType.getShape()))) {
       auto [operandDim, updateDim] = dims;
@@ -2103,8 +2103,8 @@ LogicalResult inferDynamicUpdateSliceOp(
               " of update to be non-negative. Got: ", updateDim, ".");
       }
     }
-  }
-  // (C1)
+
+  // dynamic_update_slice_c1
   if (operandType.hasRank())
     inferredReturnShapes.emplace_back(
         operandType.getShape(), operandType.getElementType(),
@@ -2429,26 +2429,24 @@ LogicalResult inferPadOp(std::optional<Location> location, Value operand,
   auto inputType = operand.getType().cast<RankedTensorType>();
   auto padType = paddingValue.getType().cast<RankedTensorType>();
 
+  // pad_i2
   if (padType.getRank() != 0)
     return emitOptionalError(location,
                              "padding value type should be a rank-0 "
                              "tensor, is rank ",
                              padType.getRank());
 
+  // pad_i3
+  if (edgePaddingLow.getType().getRank() != 1)
+    return emitOptionalError(location, "edge_padding_low has rank ",
+                             edgePaddingLow.getType().getRank(),
+                             " instead of required rank 1");
+
   int64_t rank = inputType.getRank();
+  // pad_c2
   if (edgePaddingLow.getType().getNumElements() != rank)
     return emitOptionalError(location, "edge_padding_low length (",
                              edgePaddingLow.getType().getNumElements(),
-                             ") must match operand rank (", rank, ")");
-
-  if (edgePaddingHigh.getType().getNumElements() != rank)
-    return emitOptionalError(location, "edge_padding_high length (",
-                             edgePaddingHigh.getType().getNumElements(),
-                             ") must match operand rank (", rank, ")");
-
-  if (interiorPadding.getType().getNumElements() != rank)
-    return emitOptionalError(location, "interior_padding length (",
-                             interiorPadding.getType().getNumElements(),
                              ") must match operand rank (", rank, ")");
 
   auto inputShape = inputType.getShape();
@@ -2462,6 +2460,7 @@ LogicalResult inferPadOp(std::optional<Location> location, Value operand,
         edgePaddingHigh.getValues<APInt>()[i].getSExtValue();
     int64_t paddingInteriorVal =
         interiorPadding.getValues<APInt>()[i].getSExtValue();
+    // pad_c3
     if (paddingInteriorVal < 0)
       return emitOptionalError(
           location,
@@ -2476,6 +2475,7 @@ LogicalResult inferPadOp(std::optional<Location> location, Value operand,
           operandSizeOrBound + paddingLowVal + paddingHighVal +
           std::max<int64_t>(operandSizeOrBound - 1, 0LL) * paddingInteriorVal;
 
+      // pad_c4
       if (resultSizeOrBound < 0) {
         auto sizeOrBound = isStaticDim ? "size" : "bound";
         return emitOptionalError(location, "Padding result in negative ",
@@ -2484,6 +2484,8 @@ LogicalResult inferPadOp(std::optional<Location> location, Value operand,
       (isStaticDim ? resultShape : resultBounds)[i] = resultSizeOrBound;
     }
   }
+
+  // pad_c1
   inferredReturnTypes.push_back(RankedTensorType::get(
       resultShape, inputType.getElementType(),
       boundsToEncoding(inputType.getEncoding(), resultBounds)));
@@ -3080,28 +3082,22 @@ LogicalResult verifyBroadcastInDimOp(std::optional<Location> location,
     return success();
   }
 
-  auto operandRank = operandType.getRank();
-  if (!broadcastDimensions) {
-    if (operandRank == 0) return success();
-    return emitOptionalError(location,
-                             "broadcast_dimensions is absent, but required "
-                             "because operand has non-zero rank (",
-                             operandRank, ")");
-  }
-
   auto dimensionsType = broadcastDimensions.getType();
   auto dimensionsRank = dimensionsType.getRank();
+  // broadcast_in_dim_i2
   if (dimensionsRank != 1)
     return emitOptionalError(location, "broadcast_dimensions has rank ",
                              dimensionsRank, " instead of rank 1");
-
+  // broadcast_in_dim_c2
   auto dimensionsSize = dimensionsType.getNumElements();
+  auto operandRank = operandType.getRank();
   if (dimensionsSize != operandRank)
     return emitOptionalError(location, "broadcast_dimensions size (",
                              dimensionsSize, ") does not match operand rank (",
                              operandRank, ")");
 
   auto dimensions = llvm::to_vector(broadcastDimensions.getValues<int64_t>());
+  // broadcast_in_dim_c4
   if (hasDuplicates(dimensions))
     return emitOptionalError(location,
                              "broadcast_dimensions should not have duplicates");
@@ -3110,7 +3106,8 @@ LogicalResult verifyBroadcastInDimOp(std::optional<Location> location,
   auto resultRank = resultType.getRank();
   for (int i = 0; i != dimensionsSize; ++i) {
     auto dimIndex = dimensions[i];
-    if (dimIndex >= resultRank)
+    // broadcast_in_dim_c3
+    if (dimIndex < 0 || dimIndex >= resultRank)
       return emitOptionalError(location,
                                "broadcast_dimensions contains invalid value ",
                                dimIndex, " for result with rank ", resultRank);
@@ -3118,6 +3115,7 @@ LogicalResult verifyBroadcastInDimOp(std::optional<Location> location,
     if (!operandType.isDynamicDim(i)) {
       auto dimSize = operandType.getDimSize(i);
       auto resultDimSize = resultType.getDimSize(dimIndex);
+      // broadcast_in_dim_c5
       if (dimSize != 1 && dimSize != resultDimSize)
         return emitOptionalError(
             location, "size of operand dimension ", i, " (", dimSize,

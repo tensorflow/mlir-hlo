@@ -1305,6 +1305,8 @@ dimensions `k` in `operand`.
 //          ]
 ```
 
+&nbsp;[More Examples](../stablehlo/tests/interpret_broadcast_in_dim.mlir)
+
 ### case
 
 #### Semantics
@@ -2417,6 +2419,8 @@ More formally, `result[i0, ..., iR-1]` is defined as:
 //           [1, 1, 1, 1]
 //          ]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_dynamic_update_slice.mlir)
 
 ### exponential
 
@@ -3591,6 +3595,8 @@ and `di = dim(operand, i)`.
 //           [0, 0, 0, 0, 0, 0, 0, 0, 0]
 //          ]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_pad.mlir)
 
 ### partition_id
 
@@ -5703,13 +5709,20 @@ For example, for `flattened_id_groups = [[0, 1, 2, 3], [4, 5, 6, 7]]`,
 `num_replicas = 4` and `num_partitions = 2`, `flattened_ids` will produce
 `[[(0, 0), (0, 1), (1, 0), (1, 1)], [(2, 0), (2, 1), (3, 0), (3, 1)]]`.
 
+### Accuracy
+
+At the moment, StableHLO does not provide guarantees about numerical accuracy,
+but this may change in the future
+([#1156](https://github.com/openxla/stablehlo/issues/1156)).
+
 ### Errors
 
 StableHLO programs are validated through an extensive set of constraints for
 individual ops, which rules out many classes of errors prior to run time.
 However, error conditions are still possible, e.g. through integer overflows,
 out-of-bounds accesses, etc. Unless explicitly called out, all these errors
-result in implementation-defined behavior.
+result in implementation-defined behavior, but this may change in the
+future ([#1157](https://github.com/openxla/stablehlo/issues/1157)).
 
 As an exception to this rule, floating-point exceptions in StableHLO programs
 have well-defined behavior. Operations which result in exceptions defined by the

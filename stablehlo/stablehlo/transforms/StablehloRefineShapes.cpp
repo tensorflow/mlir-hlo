@@ -172,8 +172,8 @@ struct EvalConcatenateOpPattern : public OpRewritePattern<ConcatenateOp> {
   LogicalResult matchAndRewrite(ConcatenateOp op,
                                 PatternRewriter& rewriter) const override {
     auto resultType = op.getResult().getType().dyn_cast<RankedTensorType>();
-    if (!resultType || resultType.getRank() != 1)
-      return rewriter.notifyMatchFailure(op, "expected 1-dimensional type");
+    if (!resultType || op.getDimension() != 0)
+      return rewriter.notifyMatchFailure(op, "expected dimension = 0");
 
     SmallVector<APInt> result;
     for (Value operand : op->getOperands()) {
@@ -212,6 +212,18 @@ struct EvalConvertOpPattern : public OpRewritePattern<ConvertOp> {
     rewriter.replaceOpWithNewOp<ConstantOp>(
         op, DenseIntElementsAttr::get(resultType, result));
     return success();
+  }
+};
+
+struct EvalDivOpPattern : public OpRewritePattern<DivOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(DivOp op,
+                                PatternRewriter& rewriter) const override {
+    auto resultType = op.getResult().getType().cast<ShapedType>();
+    auto isResultUnsigned = resultType.getElementType().isUnsignedInteger();
+    return evalBinary(rewriter, op, [&](APInt lhs, APInt rhs) {
+      return isResultUnsigned ? lhs.udiv(rhs) : lhs.sdiv(rhs);
+    });
   }
 };
 
@@ -573,6 +585,32 @@ struct RefineConvolutionOpPattern : public OpRewritePattern<ConvolutionOp> {
   }
 };
 
+struct RefineCustomCallOpPattern : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp op,
+                                PatternRewriter& rewriter) const override {
+    auto operandIndicesAttr = op->getAttr("indices_of_shape_operands")
+                                  .dyn_cast_or_null<DenseIntElementsAttr>();
+    if (!operandIndicesAttr)
+      return rewriter.notifyMatchFailure(
+          op, "expected an indices_of_shape_operands attribute");
+
+    SmallVector<ShapedTypeComponents> refinements;
+    for (auto operandIndexElt : operandIndicesAttr.getValues<APInt>()) {
+      int64_t operandIndex = operandIndexElt.getSExtValue();
+      if (operandIndex < 0 || operandIndex >= op->getNumOperands())
+        return rewriter.notifyMatchFailure(op, "expected valid operand index");
+      SmallVector<int64_t> refinement;
+      if (failed(matchInts(op->getOperand(operandIndex), refinement)))
+        return rewriter.notifyMatchFailure(op, "expected constant operand");
+      if (llvm::any_of(refinement, [&](int64_t x) { return x < 0; }))
+        return rewriter.notifyMatchFailure(op, "expected non-negative sizes");
+      refinements.emplace_back(refinement);
+    }
+    return refineReturnTypes(rewriter, op, refinements);
+  }
+};
+
 struct RefineDotGeneralOpPattern : public OpRewritePattern<DotGeneralOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(DotGeneralOp op,
@@ -596,6 +634,40 @@ struct RefineDynamicBroadcastInDimOpPattern
   LogicalResult matchAndRewrite(DynamicBroadcastInDimOp op,
                                 PatternRewriter& rewriter) const override {
     return refineReturnShape(rewriter, op, op.getOutputDimensions());
+  }
+};
+
+struct RefineDynamicConvOpPattern : public OpRewritePattern<DynamicConvOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(DynamicConvOp op,
+                                PatternRewriter& rewriter) const override {
+    SmallVector<int64_t> padding;
+    if (failed(matchInts(op.getDPadding(), padding)))
+      return rewriter.notifyMatchFailure(op, "expected constant d_padding");
+    if (op.getPadding().has_value())
+      return rewriter.notifyMatchFailure(op, "expected empty padding");
+    auto paddingType = RankedTensorType::get(
+        op.getDPadding().getType().getShape(), rewriter.getIntegerType(64));
+    auto paddingAttr = DenseIntElementsAttr::get(paddingType, padding);
+
+    SmallVector<ShapedTypeComponents> inferredReturnShapes;
+    if (failed(hlo::inferConvolutionOp(
+            /*location=*/{}, op.getLhs(), op.getRhs(), op.getWindowStrides(),
+            paddingAttr, op.getLhsDilation(), op.getRhsDilation(),
+            op.getWindowReversal(),
+            op.getDimensionNumbers().getInputBatchDimension(),
+            op.getDimensionNumbers().getInputFeatureDimension(),
+            op.getDimensionNumbers().getInputSpatialDimensions(),
+            op.getDimensionNumbers().getKernelInputFeatureDimension(),
+            op.getDimensionNumbers().getKernelOutputFeatureDimension(),
+            op.getDimensionNumbers().getKernelSpatialDimensions(),
+            op.getDimensionNumbers().getOutputBatchDimension(),
+            op.getDimensionNumbers().getOutputFeatureDimension(),
+            op.getDimensionNumbers().getOutputSpatialDimensions(),
+            op.getFeatureGroupCount(), op.getBatchGroupCount(),
+            op.getPrecisionConfig(), inferredReturnShapes)))
+      return rewriter.notifyMatchFailure(op, "inferConvolutionOp failed");
+    return refineReturnTypes(rewriter, op, inferredReturnShapes);
   }
 };
 
@@ -904,6 +976,7 @@ struct StablehloRefineShapesPass
     patterns.add<EvalCompareOpPattern>(&getContext());
     patterns.add<EvalConcatenateOpPattern>(&getContext());
     patterns.add<EvalConvertOpPattern>(&getContext());
+    patterns.add<EvalDivOpPattern>(&getContext());
     patterns.add<EvalGetDimensionSizeOpPattern>(&getContext());
     patterns.add<EvalMaxOpPattern>(&getContext());
     patterns.add<EvalMulOpPattern>(&getContext());
@@ -915,8 +988,10 @@ struct StablehloRefineShapesPass
     patterns.add<RefineBitcastConvertOpPattern>(&getContext());
     patterns.add<RefineConvertOpPattern>(&getContext());
     patterns.add<RefineConvolutionOpPattern>(&getContext());
+    patterns.add<RefineCustomCallOpPattern>(&getContext());
     patterns.add<RefineDotGeneralOpPattern>(&getContext());
     patterns.add<RefineDynamicBroadcastInDimOpPattern>(&getContext());
+    patterns.add<RefineDynamicConvOpPattern>(&getContext());
     patterns.add<RefineDynamicIotaOpPattern>(&getContext());
     patterns.add<RefineDynamicPadOpPattern>(&getContext());
     patterns.add<RefineDynamicReshapeOpPattern>(&getContext());

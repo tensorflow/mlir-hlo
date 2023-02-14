@@ -825,22 +825,6 @@ func.func @broadcast_bad_second_part_result_shape(%arg0: tensor<3xi32>) -> tenso
 
 // -----
 
-// CHECK-LABEL: func @broadcast_in_dim
-func.func @broadcast_in_dim(%arg0: tensor<1x2xi32>) -> tensor<1x2x2xi32> {
-  %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[1, 2]> : tensor<2xi64>} : (tensor<1x2xi32>) -> tensor<1x2x2xi32>
-  func.return %0 : tensor<1x2x2xi32>
-}
-
-// -----
-
-// CHECK-LABEL: func @broadcast_in_dim_zero_rank
-func.func @broadcast_in_dim_zero_rank(%arg0: tensor<i32>) -> tensor<1x2x3xi32> {
-  %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[]> : tensor<0xi64>} : (tensor<i32>) -> tensor<1x2x3xi32>
-  func.return %0 : tensor<1x2x3xi32>
-}
-
-// -----
-
 // CHECK-LABEL: func @dynamic_broadcast_in_dim
 func.func @dynamic_broadcast_in_dim(%arg0: tensor<?x?xi32>, %shape: tensor<3xi64>) -> tensor<?x?x?xi32> {
   %0 = "stablehlo.dynamic_broadcast_in_dim"(%arg0, %shape) {broadcast_dimensions = dense<[1, 2]> : tensor<2xi64>} : (tensor<?x?xi32>, tensor<3xi64>) -> tensor<?x?x?xi32>
@@ -873,15 +857,15 @@ func.func @dynamic_broadcast_in_dim_shape_mismatch(%arg0: tensor<32xf32>, %shape
 
 // -----
 
-func.func @broadcast_in_dim_bad_dimension_rank(%arg0: tensor<1x2xi32>) -> tensor<1x2x3xi32> {
-  // expected-error@+1 {{broadcast_dimensions has rank 2 instead of rank 1}}
-  %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[[1,1],[1,1]]> : tensor<2x2xi64>} : (tensor<1x2xi32>) -> tensor<1x2x3xi32>
-  func.return %0 : tensor<1x2x3xi32>
+// CHECK-LABEL: func @broadcast_in_dim
+func.func @broadcast_in_dim(%arg0: tensor<1x2xi32>) -> tensor<1x2x2xi32> {
+  %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[1, 2]> : tensor<2xi64>} : (tensor<1x2xi32>) -> tensor<1x2x2xi32>
+  func.return %0 : tensor<1x2x2xi32>
 }
 
 // -----
 
-func.func @broadcast_in_dim_bad_dimension_size(%arg0: tensor<1x2xi32>) -> tensor<1x2x3xi32> {
+func.func @broadcast_in_dim_c2(%arg0: tensor<1x2xi32>) -> tensor<1x2x3xi32> {
   // expected-error@+1 {{broadcast_dimensions size (1) does not match operand rank (2)}}
   %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[1]> : tensor<1xi64>} : (tensor<1x2xi32>) -> tensor<1x2x3xi32>
   func.return %0 : tensor<1x2x3xi32>
@@ -889,7 +873,15 @@ func.func @broadcast_in_dim_bad_dimension_size(%arg0: tensor<1x2xi32>) -> tensor
 
 // -----
 
-func.func @broadcast_in_dim_bad_rank_decrease(%arg0: tensor<1x2x3xi32>) -> tensor<3xi32> {
+func.func @broadcast_in_dim_c3(%arg0: tensor<1x2xi32>) -> tensor<1x2x2xi32> {
+  // expected-error@+1 {{broadcast_dimensions contains invalid value -1 for result with rank 3}}
+  %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[-1, 2]> : tensor<2xi64>} : (tensor<1x2xi32>) -> tensor<1x2x2xi32>
+  func.return %0 : tensor<1x2x2xi32>
+}
+
+// -----
+
+func.func @broadcast_in_dim_c3(%arg0: tensor<1x2x3xi32>) -> tensor<3xi32> {
   // expected-error@+1 {{broadcast_dimensions contains invalid value 1 for result with rank 1}}
   %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[0,1,2]> : tensor<3xi64>} : (tensor<1x2x3xi32>) -> tensor<3xi32>
   func.return %0 : tensor<3xi32>
@@ -897,7 +889,7 @@ func.func @broadcast_in_dim_bad_rank_decrease(%arg0: tensor<1x2x3xi32>) -> tenso
 
 // -----
 
-func.func @broadcast_in_dim_duplicate_bcast_dimensions(%arg0: tensor<1x1x3xi32>) -> tensor<1x2x3xi32> {
+func.func @broadcast_in_dim_c4(%arg0: tensor<1x1x3xi32>) -> tensor<1x2x3xi32> {
   // expected-error@+1 {{broadcast_dimensions should not have duplicates}}
   %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[0,0,2]> : tensor<3xi64>} : (tensor<1x1x3xi32>) -> tensor<1x2x3xi32>
   func.return %0 : tensor<1x2x3xi32>
@@ -905,17 +897,17 @@ func.func @broadcast_in_dim_duplicate_bcast_dimensions(%arg0: tensor<1x1x3xi32>)
 
 // -----
 
-func.func @broadcast_in_dim_dimension_values_too_large(%arg0: tensor<1x2xi32>) -> tensor<1x2x3xi32> {
-  // expected-error@+1 {{broadcast_dimensions contains invalid value 9 for result with rank 3}}
-  %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[9, 2]> : tensor<2xi64>} : (tensor<1x2xi32>) -> tensor<1x2x3xi32>
+func.func @broadcast_in_dim_c5(%arg0: tensor<3xi32>) -> tensor<1x2x3xi32> {
+  // expected-error@+1 {{size of operand dimension 0 (3) is not equal to 1 or size of result dimension 1 (2)}}
+  %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[1]> : tensor<1xi64>} : (tensor<3xi32>) -> tensor<1x2x3xi32>
   func.return %0 : tensor<1x2x3xi32>
 }
 
 // -----
 
-func.func @broadcast_in_dim_bad_shape_mismatch(%arg0: tensor<3xi32>) -> tensor<1x2x3xi32> {
-  // expected-error@+1 {{size of operand dimension 0 (3) is not equal to 1 or size of result dimension 1 (2)}}
-  %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[1]> : tensor<1xi64>} : (tensor<3xi32>) -> tensor<1x2x3xi32>
+func.func @broadcast_in_dim_i2(%arg0: tensor<1x2xi32>) -> tensor<1x2x3xi32> {
+  // expected-error@+1 {{broadcast_dimensions has rank 2 instead of rank 1}}
+  %0 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[[1,1],[1,1]]> : tensor<2x2xi64>} : (tensor<1x2xi32>) -> tensor<1x2x3xi32>
   func.return %0 : tensor<1x2x3xi32>
 }
 
@@ -2376,80 +2368,80 @@ func.func @dynamic_slice_slice_size_too_large(%arg0: tensor<3x4xi32>, %arg1: ten
 // -----
 
 // CHECK-LABEL: @dynamic_update_slice
-func.func @dynamic_update_slice(%input: tensor<3x4xi64>, %update: tensor<1x4xi64>, %start1: tensor<i64>, %start2: tensor<i64>) -> tensor<3x4xi64> {
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start1, %start2) : (tensor<3x4xi64>, tensor<1x4xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
+func.func @dynamic_update_slice(%operand: tensor<3x4xi64>, %update: tensor<1x4xi64>, %start_indices0: tensor<i64>, %start_indices1: tensor<i64>) -> tensor<3x4xi64> {
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1) : (tensor<3x4xi64>, tensor<1x4xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
+  func.return %0 : tensor<3x4xi64>
+}
+
+// -----
+
+func.func @dynamic_update_slice_c1(%operand: tensor<3x4xi64>, %update: tensor<1x4xi64>, %start_indices0: tensor<i64>, %start_indices1: tensor<i64>) -> tensor<3x5xi64> {
+  // expected-error@+1 {{op inferred type(s) 'tensor<3x4xi64>' are incompatible with return type(s) of operation 'tensor<3x5xi64>'}}
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1) : (tensor<3x4xi64>, tensor<1x4xi64>, tensor<i64>, tensor<i64>) -> tensor<3x5xi64>
+  func.return %0 : tensor<3x5xi64>
+}
+
+// -----
+
+func.func @dynamic_update_slice_c3(%operand: tensor<3x4xi64>, %update: tensor<2xi64>, %start_indices0: tensor<i64>, %start_indices1: tensor<i64>) -> tensor<3x4xi64> {
+  // expected-error@+1 {{update rank does not match operand rank: 1 vs 2.}}
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1) : (tensor<3x4xi64>, tensor<2xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
+  func.return %0 : tensor<3x4xi64>
+}
+
+// -----
+
+func.func @dynamic_update_slice_c4(%operand: tensor<3x4xi64>, %update: tensor<1x2xi64>, %start_indices0: tensor<i64>) -> tensor<3x4xi64> {
+  // expected-error@+1 {{expects number of start_indices to match operand rank: 1 vs 2.}}
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0) : (tensor<3x4xi64>, tensor<1x2xi64>, tensor<i64>) -> tensor<3x4xi64>
+  func.return %0 : tensor<3x4xi64>
+}
+
+// -----
+
+func.func @dynamic_update_slice_c5(%operand: tensor<11x3x4xi32>, %update: tensor<1x3x4xi32>, %start_indices0: tensor<i32>, %start_indices1: tensor<i64>, %start_indices2: tensor<i64>) -> tensor<11x3x4xi32> {
+  // expected-error@+1 {{start indices must have same element type}}
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1, %start_indices2) : (tensor<11x3x4xi32>, tensor<1x3x4xi32>, tensor<i32>, tensor<i64>, tensor<i64>) -> tensor<11x3x4xi32>
+  func.return %0 : tensor<11x3x4xi32>
+}
+
+// -----
+
+func.func @dynamic_update_slice_c6(%operand: tensor<3x4xi64>, %update: tensor<1x5xi64>, %start_indices0: tensor<i64>, %start_indices1: tensor<i64>) -> tensor<3x4xi64> {
+  // expected-error@+1 {{expects size at dimension 1 of update to be in range [0, 4]. Got: 5.}}
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1) : (tensor<3x4xi64>, tensor<1x5xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
   func.return %0 : tensor<3x4xi64>
 }
 
 // -----
 
 // CHECK-LABEL: @dynamic_update_slice_dynamic_dim
-func.func @dynamic_update_slice_dynamic_dim(%input: tensor<?x4xi64>, %update: tensor<1x4xi64>, %start1: tensor<i64>, %start2: tensor<i64>) -> tensor<3x4xi64> {
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start1, %start2) : (tensor<?x4xi64>, tensor<1x4xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
+func.func @dynamic_update_slice_dynamic_dim(%operand: tensor<?x4xi64>, %update: tensor<1x4xi64>, %start_indices0: tensor<i64>, %start_indices1: tensor<i64>) -> tensor<3x4xi64> {
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1) : (tensor<?x4xi64>, tensor<1x4xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
   func.return %0 : tensor<3x4xi64>
 }
 
 // -----
 
-func.func @dynamic_update_slice_invalid_start(%input: tensor<3x4xi64>, %update: tensor<1x2xi64>, %start: tensor<2xi64>) -> tensor<3x4xi64> {
-  // expected-error@+1 {{operand #2 must be 0D tensor of 4/8/16/32/64-bit signless integer or 4/8/16/32/64-bit unsigned integer values, but got 'tensor<2xi64>'}}
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start) : (tensor<3x4xi64>, tensor<1x2xi64>, tensor<2xi64>) -> tensor<3x4xi64>
-  func.return %0 : tensor<3x4xi64>
-}
-
-// -----
-
-func.func @dynamic_update_slice_invalid_update(%input: tensor<3x4xi64>, %update: tensor<2xi64>, %start1: tensor<i64>, %start2: tensor<i64>) -> tensor<3x4xi64> {
-  // expected-error@+1 {{update rank does not match operand rank: 1 vs 2.}}
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start1, %start2) : (tensor<3x4xi64>, tensor<2xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
-  func.return %0 : tensor<3x4xi64>
-}
-
-// -----
-
-func.func @dynamic_update_slice_invalid_start_size(%input: tensor<3x4xi64>, %update: tensor<1x2xi64>, %start: tensor<i64>) -> tensor<3x4xi64> {
-  // expected-error@+1 {{expects number of start_indices to match operand rank: 1 vs 2.}}
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start) : (tensor<3x4xi64>, tensor<1x2xi64>, tensor<i64>) -> tensor<3x4xi64>
-  func.return %0 : tensor<3x4xi64>
-}
-
-// -----
-
-func.func @dynamic_update_slice_mismatched_start(%input: tensor<11x3x4xi32>, %update: tensor<1x3x4xi32>, %start1: tensor<i32>, %start2: tensor<i64>, %start3: tensor<i64>) -> tensor<11x3x4xi32> {
-  // expected-error@+1 {{start indices must have same element type}}
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start1, %start2, %start3) : (tensor<11x3x4xi32>, tensor<1x3x4xi32>, tensor<i32>, tensor<i64>, tensor<i64>) -> tensor<11x3x4xi32>
-  func.return %0 : tensor<11x3x4xi32>
-}
-
-// -----
-
-func.func @dynamic_update_slice_invalid_update_size(%input: tensor<3x4xi64>, %update: tensor<1x5xi64>, %start1: tensor<i64>, %start2: tensor<i64>) -> tensor<3x4xi64> {
-  // expected-error@+1 {{expects size at dimension 1 of update to be in range [0, 4]. Got: 5.}}
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start1, %start2) : (tensor<3x4xi64>, tensor<1x5xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
-  func.return %0 : tensor<3x4xi64>
-}
-
-// -----
-
-// CHECK-LABEL: func @dynamic_update_slice_dynamic_rank_input
-func.func @dynamic_update_slice_dynamic_rank_input(%input: tensor<*xi64>, %update: tensor<1x4xi64>, %start1: tensor<i64>, %start2: tensor<i64>) -> tensor<*xi64> {
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start1, %start2) : (tensor<*xi64>, tensor<1x4xi64>, tensor<i64>, tensor<i64>) -> tensor<*xi64>
+// CHECK-LABEL: func @dynamic_update_slice_dynamic_rank_operand
+func.func @dynamic_update_slice_dynamic_rank_operand(%operand: tensor<*xi64>, %update: tensor<1x4xi64>, %start_indices0: tensor<i64>, %start_indices1: tensor<i64>) -> tensor<*xi64> {
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1) : (tensor<*xi64>, tensor<1x4xi64>, tensor<i64>, tensor<i64>) -> tensor<*xi64>
   func.return %0 : tensor<*xi64>
 }
 
 // -----
 
 // CHECK-LABEL: func @dynamic_update_slice_dynamic_rank_update
-func.func @dynamic_update_slice_dynamic_rank_update(%input: tensor<3x4xi64>, %update: tensor<*xi64>, %start1: tensor<i64>, %start2: tensor<i64>) -> tensor<3x4xi64> {
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start1, %start2) : (tensor<3x4xi64>, tensor<*xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
+func.func @dynamic_update_slice_dynamic_rank_update(%operand: tensor<3x4xi64>, %update: tensor<*xi64>, %start_indices0: tensor<i64>, %start_indices1: tensor<i64>) -> tensor<3x4xi64> {
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1) : (tensor<3x4xi64>, tensor<*xi64>, tensor<i64>, tensor<i64>) -> tensor<3x4xi64>
   func.return %0 : tensor<3x4xi64>
 }
 
 // -----
 
 // CHECK-LABEL: func @dynamic_update_slice_dynamic_sizes
-func.func @dynamic_update_slice_dynamic_sizes(%input: tensor<?x4xi64>, %update: tensor<1x?xi64>, %start1: tensor<i64>, %start2: tensor<i64>) -> tensor<?x4xi64> {
-  %0 = "stablehlo.dynamic_update_slice"(%input, %update, %start1, %start2) : (tensor<?x4xi64>, tensor<1x?xi64>, tensor<i64>, tensor<i64>) -> tensor<?x4xi64>
+func.func @dynamic_update_slice_dynamic_sizes(%operand: tensor<?x4xi64>, %update: tensor<1x?xi64>, %start_indices0: tensor<i64>, %start_indices1: tensor<i64>) -> tensor<?x4xi64> {
+  %0 = "stablehlo.dynamic_update_slice"(%operand, %update, %start_indices0, %start_indices1) : (tensor<?x4xi64>, tensor<1x?xi64>, tensor<i64>, tensor<i64>) -> tensor<?x4xi64>
   func.return %0 : tensor<?x4xi64>
 }
 
@@ -5339,84 +5331,24 @@ func.func @conv_i4(%arg0: tensor<64x8x8x8xi4>, %arg1: tensor<4x4x8x32xi4>) -> te
 
 // -----
 
-// CHECK-LABEL: func @static_pad
-func.func @static_pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16> {
+// CHECK-LABEL: func @pad
+func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16> {
   %0 = "stablehlo.pad"(%arg0, %arg1) {
-    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
     edge_padding_low = dense<[0, 1, 2]> : tensor<3xi64>,
+    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
     interior_padding = dense<[0, 0, 1]> : tensor<3xi64>
   } : (tensor<1x2x3xf16>, tensor<f16>) -> tensor<2x4x7xf16>
   func.return %0 : tensor<2x4x7xf16>
 }
 
-// -----
-
-// CHECK-LABEL: func @dynamic_pad
-func.func @dynamic_pad(%arg0: tensor<?x48x48x32xf32>) -> tensor<?x48x48x48xf32> {
-  %0 = "stablehlo.constant"() {value = dense<0.000000e+00> : tensor<f32>} : () -> tensor<f32>
-  %1 = "stablehlo.pad"(%arg0, %0) {
-    edge_padding_high = dense<[0, 0, 0, 16]> : tensor<4xi64>,
-    edge_padding_low = dense<0> : tensor<4xi64>,
-    interior_padding = dense<0> : tensor<4xi64>
-  } : (tensor<?x48x48x32xf32>, tensor<f32>) -> tensor<?x48x48x48xf32>
-  func.return %1 : tensor<?x48x48x48xf32>
-}
 
 // -----
 
-func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<i64>) -> tensor<2x4x7xf16> {
-  // expected-error@+1 {{'stablehlo.pad' op requires the same element type for all operands and results}}
-  %0 = "stablehlo.pad"(%arg0, %arg1) {
-    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
-    edge_padding_low = dense<[0, 1, 2]> : tensor<3xi64>,
-    interior_padding = dense<[0, 0, 1]> : tensor<3xi64>
-  } : (tensor<1x2x3xf16>, tensor<i64>) -> tensor<2x4x7xf16>
-  func.return %0 : tensor<2x4x7xf16>
-}
-
-// -----
-
-func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<2xf16>) -> tensor<2x4x7xf16> {
-  // expected-error@+1 {{padding value type should be a rank-0 tensor, is rank 1}}
-  %0 = "stablehlo.pad"(%arg0, %arg1) {
-    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
-    edge_padding_low = dense<[0, 1, 2]> : tensor<3xi64>,
-    interior_padding = dense<[0, 0, 1]> : tensor<3xi64>
-  } : (tensor<1x2x3xf16>, tensor<2xf16>) -> tensor<2x4x7xf16>
-  func.return %0 : tensor<2x4x7xf16>
-}
-
-// -----
-
-func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16> {
+func.func @pad_c2(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16> {
   // expected-error@+1 {{edge_padding_low length (2) must match operand rank (3)}}
   %0 = "stablehlo.pad"(%arg0, %arg1) {
-    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
     edge_padding_low = dense<[0, 1]> : tensor<2xi64>,
-    interior_padding = dense<[0, 0, 1]> : tensor<3xi64>
-  } : (tensor<1x2x3xf16>, tensor<f16>) -> tensor<2x4x7xf16>
-  func.return %0 : tensor<2x4x7xf16>
-}
-
-// -----
-
-func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16> {
-  // expected-error@+1 {{edge_padding_high length (2) must match operand rank (3)}}
-  %0 = "stablehlo.pad"(%arg0, %arg1) {
     edge_padding_high = dense<[1, 1]> : tensor<2xi64>,
-    edge_padding_low = dense<[0, 1, 2]> : tensor<3xi64>,
-    interior_padding = dense<[0, 0, 1]> : tensor<3xi64>
-  } : (tensor<1x2x3xf16>, tensor<f16>) -> tensor<2x4x7xf16>
-  func.return %0 : tensor<2x4x7xf16>
-}
-
-// -----
-
-func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16> {
-  // expected-error@+1 {{interior_padding length (2) must match operand rank (3)}}
-  %0 = "stablehlo.pad"(%arg0, %arg1) {
-    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
-    edge_padding_low = dense<[0, 1, 2]> : tensor<3xi64>,
     interior_padding = dense<[0, 0]> : tensor<2xi64>
   } : (tensor<1x2x3xf16>, tensor<f16>) -> tensor<2x4x7xf16>
   func.return %0 : tensor<2x4x7xf16>
@@ -5424,23 +5356,11 @@ func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16
 
 // -----
 
-func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<8x8x8xf16> {
-  // expected-error@+1 {{'stablehlo.pad' op inferred type(s) 'tensor<2x4x7xf16>' are incompatible with return type(s) of operation 'tensor<8x8x8xf16>'}}
-  %0 = "stablehlo.pad"(%arg0, %arg1) {
-    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
-    edge_padding_low = dense<[0, 1, 2]> : tensor<3xi64>,
-    interior_padding = dense<[0, 0, 1]> : tensor<3xi64>
-  } : (tensor<1x2x3xf16>, tensor<f16>) -> tensor<8x8x8xf16>
-  func.return %0 : tensor<8x8x8xf16>
-}
-
-// -----
-
-func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x3xf16> {
+func.func @pad_c3(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x3xf16> {
   // expected-error@+1 {{Interior padding cannot be negative: -1}}
   %0 = "stablehlo.pad"(%arg0, %arg1) {
-    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
     edge_padding_low = dense<[0, 1, 2]> : tensor<3xi64>,
+    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
     interior_padding = dense<[0, 0, -1]> : tensor<3xi64>
   } : (tensor<1x2x3xf16>, tensor<f16>) -> tensor<2x4x3xf16>
   func.return %0 : tensor<2x4x3xf16>
@@ -5448,12 +5368,61 @@ func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x3xf16
 
 // -----
 
-func.func @pad(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16> {
+func.func @pad_c4(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16> {
   // expected-error@+1 {{Padding result in negative size for dimension 2}}
   %0 = "stablehlo.pad"(%arg0, %arg1) {
-    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
     edge_padding_low = dense<[0, 1, -4]> : tensor<3xi64>,
+    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
     interior_padding = dense<[0, 0, 0]> : tensor<3xi64>
+  } : (tensor<1x2x3xf16>, tensor<f16>) -> tensor<2x4x7xf16>
+  func.return %0 : tensor<2x4x7xf16>
+}
+
+// -----
+
+func.func @pad_c4(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<8x8x8xf16> {
+  // expected-error@+1 {{'stablehlo.pad' op inferred type(s) 'tensor<2x4x7xf16>' are incompatible with return type(s) of operation 'tensor<8x8x8xf16>'}}
+  %0 = "stablehlo.pad"(%arg0, %arg1) {
+    edge_padding_low = dense<[0, 1, 2]> : tensor<3xi64>,
+    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
+    interior_padding = dense<[0, 0, 1]> : tensor<3xi64>
+  } : (tensor<1x2x3xf16>, tensor<f16>) -> tensor<8x8x8xf16>
+  func.return %0 : tensor<8x8x8xf16>
+}
+
+// -----
+
+// CHECK-LABEL: func @pad_dynamic
+func.func @pad_dynamic(%arg0: tensor<?x48x48x32xf32>) -> tensor<?x48x48x48xf32> {
+  %0 = "stablehlo.constant"() {value = dense<0.000000e+00> : tensor<f32>} : () -> tensor<f32>
+  %1 = "stablehlo.pad"(%arg0, %0) {
+    edge_padding_low = dense<0> : tensor<4xi64>,
+    edge_padding_high = dense<[0, 0, 0, 16]> : tensor<4xi64>,
+    interior_padding = dense<0> : tensor<4xi64>
+  } : (tensor<?x48x48x32xf32>, tensor<f32>) -> tensor<?x48x48x48xf32>
+  func.return %1 : tensor<?x48x48x48xf32>
+}
+
+// -----
+
+func.func @pad_i2(%arg0: tensor<1x2x3xf16>, %arg1: tensor<2xf16>) -> tensor<2x4x7xf16> {
+  // expected-error@+1 {{padding value type should be a rank-0 tensor, is rank 1}}
+  %0 = "stablehlo.pad"(%arg0, %arg1) {
+    edge_padding_low = dense<[0, 1, 2]> : tensor<3xi64>,
+    edge_padding_high = dense<[1, 1, 0]> : tensor<3xi64>,
+    interior_padding = dense<[0, 0, 1]> : tensor<3xi64>
+  } : (tensor<1x2x3xf16>, tensor<2xf16>) -> tensor<2x4x7xf16>
+  func.return %0 : tensor<2x4x7xf16>
+}
+
+// -----
+
+func.func @pad_i3(%arg0: tensor<1x2x3xf16>, %arg1: tensor<f16>) -> tensor<2x4x7xf16> {
+  // expected-error@+1 {{edge_padding_low has rank 0 instead of required rank 1}}
+  %0 = "stablehlo.pad"(%arg0, %arg1) {
+    edge_padding_low = dense<1> : tensor<i64>,
+    edge_padding_high = dense<1> : tensor<i64>,
+    interior_padding = dense<1> : tensor<i64>
   } : (tensor<1x2x3xf16>, tensor<f16>) -> tensor<2x4x7xf16>
   func.return %0 : tensor<2x4x7xf16>
 }
