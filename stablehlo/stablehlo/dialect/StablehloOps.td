@@ -1169,7 +1169,7 @@ def StableHLO_IfOp: StableHLO_Op<"if", [
     RecursiveMemoryEffects,
     SingleBlockImplicitTerminator<"ReturnOp">,
     DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
-  let summary = "If operator";
+  let summary = "If operation";
 
   let description = [{
     Produces the output from executing exactly one branch from `true_branch` or
@@ -1187,11 +1187,11 @@ def StableHLO_IfOp: StableHLO_Op<"if", [
   }];
 
   let arguments = (ins
-    HLO_PredTensor:$pred
+    HLO_PredTensor:$pred /*if_i1*/
   );
 
-  let regions = (region SizedRegion<1>:$true_branch,
-                        SizedRegion<1>:$false_branch);
+  let regions = (region SizedRegion<1>:$true_branch /*if_i2*/,
+                        SizedRegion<1>:$false_branch /*if_i3*/);
 
   let results = (outs Variadic<HLO_TensorOrToken>);
 }
@@ -1611,9 +1611,9 @@ def StableHLO_SliceOp: StableHLO_Op<
 }
 
 def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
-      [Pure, AllElementTypesMatch<["operand", "result"]>,
+      [Pure, AllElementTypesMatch<["operand", "result"]> /*dynamic_slice_c1*/,
        InferTensorType]> {
-  let summary = "Dynamic Slice operator";
+  let summary = "DynamicSlice operation";
   let description = [{
     Extracts a slice from the `operand` using dynamically-computed starting
     indices and produces a `result` tensor.
@@ -1628,9 +1628,9 @@ def StableHLO_DynamicSliceOp: StableHLO_Op<"dynamic_slice",
     ```
   }];
   let arguments = (ins
-    HLO_Tensor:$operand,
-    Variadic<HLO_ScalarIntTensor>:$start_indices,
-    I64ElementsAttr:$slice_sizes
+    HLO_Tensor:$operand /*dynamic_slice_i1*/,
+    Variadic<HLO_ScalarIntTensor>:$start_indices /*dynamic_slice_i2*/,
+    I64ElementsAttr:$slice_sizes /*dynamic_slice_i3*/
   );
 
   let results = (outs HLO_Tensor:$result);

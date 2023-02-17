@@ -1301,9 +1301,15 @@ static LogicalResult inferGatherReturnTypeComponents(
 }
 
 // Used by IfOp and CaseOp
-LogicalResult inferConditionalOp(Optional<Location> location,
+LogicalResult inferConditionalOp(Optional<Location> location, Value operand,
                                  RegionRange branches,
                                  SmallVectorImpl<Type>& inferredReturnTypes) {
+  // if_i1
+  auto operandRankedTy = operand.getType().dyn_cast<RankedTensorType>();
+  if (operandRankedTy && operandRankedTy.getRank() != 0)
+    return emitOptionalError(location,
+                             "operand should be rank 0 tensor but got rank ",
+                             operandRankedTy.getRank());
   if (branches.empty())
     return emitOptionalError(location, "expect at least one branch");
   for (auto region : branches)
@@ -1314,11 +1320,12 @@ LogicalResult inferConditionalOp(Optional<Location> location,
   for (unsigned i = 0; i < branches.size(); ++i) {
     Twine branchName = "branch " + Twine(i);
     Region* region = branches[i];
+    // if_c1
     if (region->getNumArguments() != 0)
       return emitOptionalError(location, branchName,
                                " must have 0 arguments, but found ",
                                region->getNumArguments());
-
+    // if_c2
     auto branchResultTypes = region->front().getTerminator()->getOperandTypes();
     if (!hlo::isCompatibleForHloTypeInference(branch0ResultTypes,
                                               branchResultTypes))
@@ -1326,7 +1333,7 @@ LogicalResult inferConditionalOp(Optional<Location> location,
                                " have mismatched return types: ",
                                branch0ResultTypes, " vs ", branchResultTypes);
   }
-
+  // if_c3
   for (unsigned i = 0; i < branch0ResultTypes.size(); ++i) {
     SmallVector<Type> inputTypes;
     for (auto branch : branches)
@@ -1489,9 +1496,10 @@ LogicalResult inferBroadcastOp(
   return success();
 }
 
-LogicalResult inferCaseOp(Optional<Location> location, RegionRange branches,
+LogicalResult inferCaseOp(Optional<Location> location, Value index,
+                          RegionRange branches,
                           SmallVectorImpl<Type>& inferredReturnTypes) {
-  return inferConditionalOp(location, branches, inferredReturnTypes);
+  return inferConditionalOp(location, index, branches, inferredReturnTypes);
 }
 
 // The following properties are already enforced by the ODS:
@@ -2017,7 +2025,12 @@ LogicalResult inferDynamicSliceOp(
     std::optional<Location> location, Type operandType,
     TypeRange startIndicesTypes, DenseIntElementsAttr sliceSizes,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
-  // (C2)
+  // dynamic_slice_i3
+  if (sliceSizes.getType().getRank() != 1)
+    return emitOptionalError(location,
+                             "slice_sizes should be rank 1, but got rank ",
+                             sliceSizes.getType().getRank(), ".");
+  // dynamic_slice_c2
   int numSliceSizes = sliceSizes.getNumElements();
   int numStartIndices = startIndicesTypes.size();
   if (numStartIndices != numSliceSizes)
@@ -2026,18 +2039,18 @@ LogicalResult inferDynamicSliceOp(
                              numStartIndices, ")");
   auto rankedOperandType = operandType.dyn_cast<RankedTensorType>();
   if (!rankedOperandType) return failure();
-
+  // dynamic_slice_c2
   if (rankedOperandType.getRank() != numStartIndices)
     return emitOptionalError(
         location, "has mismatched number of start indices (", numStartIndices,
         ") and the rank of operand (", rankedOperandType.getRank(), ")");
 
-  // (C3)
+  // dynamic_slice_c3
   if (!tensorsHaveSameElType(startIndicesTypes))
     return emitOptionalError(location,
                              "start indices must have same element type");
 
-  // (C4)
+  // dynamic_slice_c4
   for (int i = 0; i < numSliceSizes; ++i) {
     int64_t sliceSize = sliceSizes.getValues<int64_t>()[i];
     if (sliceSize < 0)
@@ -2052,7 +2065,7 @@ LogicalResult inferDynamicSliceOp(
     }
   }
 
-  // (C5)
+  // dynamic_slice_c5
   inferredReturnShapes.emplace_back(sliceSizes.getValues<int64_t>(),
                                     rankedOperandType.getElementType());
   return success();
@@ -2307,9 +2320,10 @@ LogicalResult inferIsFiniteOp(MLIRContext* context, std::optional<Location>,
   return success();
 }
 
-LogicalResult inferIfOp(std::optional<Location> location, RegionRange branches,
+LogicalResult inferIfOp(std::optional<Location> location, Value pred,
+                        RegionRange branches,
                         SmallVectorImpl<Type>& inferredReturnTypes) {
-  return inferConditionalOp(location, branches, inferredReturnTypes);
+  return inferConditionalOp(location, pred, branches, inferredReturnTypes);
 }
 
 LogicalResult inferMapOp(

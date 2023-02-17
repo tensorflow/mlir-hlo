@@ -2333,7 +2333,7 @@ More formally, `result[i0, ..., iR-1] = operand[j0, ..., jR-1]` where:
 * (C1) `operand` and `result` have the same element type.
 * (C2) size(`start_indices`) $=$ size(`slice_sizes`) $=$ rank(`operand`).
 * (C3) All `start_indices` have the same type.
-* (C4) `slice_sizes[k]` $\in$ [0, dim(`operand`, `k`)) for all `k` $\in$ [0,
+* (C4) `slice_sizes[k]` $\in$ [0, dim(`operand`, `k`)] for all `k` $\in$ [0,
   rank(`operand`)).
 * (C5) shape(`result`) $=$ `slice_sizes`.
 
@@ -2356,6 +2356,8 @@ More formally, `result[i0, ..., iR-1] = operand[j0, ..., jR-1]` where:
 //           [1, 1]
 //          ]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_dynamic_slice.mlir)
 
 ### dynamic_update_slice
 
@@ -2851,7 +2853,7 @@ output of `true_branch` is returned, else if pred is `false`, output of
 
 | Label | Name           | Type                                       | Constraints |
 |-------|----------------|--------------------------------------------|-------------|
-| (I1)  | `pred`         | 1-dimensional tensor constant of type `i1` |             |
+| (I1)  | `pred`         | 0-dimensional tensor constant of type `i1` |             |
 | (I2)  | `true_branch`  | function                                   | (C1-C3)     |
 | (I3)  | `false_branch` | function                                   | (C1), (C2)  |
 
@@ -2880,6 +2882,8 @@ output of `true_branch` is returned, else if pred is `false`, output of
 }) : (tensor<i1>) -> tensor<i32>
 // %result: 10
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_if.mlir)
 
 ### imag
 

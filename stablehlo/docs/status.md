@@ -84,7 +84,7 @@ one of the following tracking labels.
 | dynamic_iota             | no            | revisit      | infeasible     | yes             | no          |
 | dynamic_pad              | no            | revisit      | no             | yes             | no          |
 | dynamic_reshape          | no            | revisit      | infeasible     | yes             | no          |
-| dynamic_slice            | yes           | yes          | yes            | yes             | no          |
+| dynamic_slice            | yes           | yes          | yes            | yes             | yes         |
 | dynamic_update_slice     | yes           | yes          | yes            | yes             | yes         |
 | einsum                   | no            | revisit      | no             | yes             | no          |
 | exponential              | yes           | yes          | yes            | yes             | no          |
@@ -94,7 +94,7 @@ one of the following tracking labels.
 | gather                   | yes           | yes          | yes            | no              | no          |
 | get_dimension_size       | yes           | yes          | yes            | yes             | no          |
 | get_tuple_element        | yes           | yes          | yes            | yes             | no          |
-| if                       | yes           | revisit      | yes            | no              | no          |
+| if                       | yes           | revisit      | yes            | no              | yes         |
 | imag                     | yes           | yes          | yes            | yes             | no          |
 | infeed                   | yes           | revisit      | infeasible     | no              | no          |
 | iota                     | yes           | yes          | infeasible     | yes             | yes         |
