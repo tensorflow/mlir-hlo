@@ -5,7 +5,7 @@
 // RUN: --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \
 // RUN: --hlo-one-shot-bufferize --canonicalize -cse \
-// RUN: --convert-bufferization-to-memref \
+// RUN: --convert-bufferization-to-memref --convert-linalg-to-loops \
 // RUN: --gml-st-to-scf --buffer-results-to-out-params --convert-scf-to-cf \
 // RUN: --generic-host-to-llvm -cse --canonicalize |\
 // RUN: mlir-cpu-runner \
