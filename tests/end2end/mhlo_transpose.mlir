@@ -1,7 +1,7 @@
 // RUN: mlir-hlo-opt %s \
 // RUN: --hlo-canonicalize-scatter --legalize-mhlo-to-thlo \
 // RUN: --hlo-legalize-to-linalg \
-// RUN: --gml-tiling="tile-sizes=1,1 distribute=false op-name=linalg.generic" \
+// RUN: --gml-tiling="tile-sizes=1,1 op-name=linalg.generic" \
 // RUN: --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \
 // RUN: --empty-tensor-to-alloc-tensor \
