@@ -48,6 +48,13 @@ SmallVector<int64_t> addIndices(ArrayRef<int64_t> lhs, ArrayRef<int64_t> rhs) {
 
 }  // namespace
 
+Tensor evalAbsOp(const Tensor &operand, Type resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it)
+    result.set(*it, abs(operand.get(*it)));
+  return result;
+}
+
 Tensor evalAddOp(const Tensor &lhs, const Tensor &rhs, Type resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
@@ -82,6 +89,20 @@ Tensor evalCeilOp(const Tensor &operand, Type resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
     result.set(*it, ceil(operand.get(*it)));
+  return result;
+}
+
+Tensor evalClampOp(const Tensor &min, const Tensor &operand, const Tensor &max,
+                   Type resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it) {
+    Element minElement =
+        min.getType().getRank() != 0 ? min.get(*it) : min.get({});
+    Element maxElement =
+        max.getType().getRank() != 0 ? max.get(*it) : max.get({});
+    result.set(*it, stablehlo::min(stablehlo::max(operand.get(*it), minElement),
+                                   maxElement));
+  }
   return result;
 }
 
@@ -141,6 +162,13 @@ Tensor evalDynamicUpdateSliceOp(const Tensor &operand, const Tensor &update,
        ++updateIt)
     result.set(addIndices(*updateIt, adjustedStartIndices),
                update.get(*updateIt));
+  return result;
+}
+
+Tensor evalExponentialOp(const Tensor &operand, Type resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it)
+    result.set(*it, exponential(operand.get(*it)));
   return result;
 }
 
@@ -276,6 +304,18 @@ Tensor evalReverseOp(const Tensor &operand, ArrayRef<int64_t> dimensions,
   return result;
 }
 
+Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
+                    const Tensor &onFalse, Type resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it) {
+    Element predValue =
+        pred.getType().getRank() != 0 ? pred.get(*it) : pred.get({});
+    result.set(
+        *it, predValue.getBooleanValue() ? onTrue.get(*it) : onFalse.get(*it));
+  }
+  return result;
+}
+
 Tensor evalSineOp(const Tensor &operand, Type resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
@@ -357,7 +397,11 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
   scope.add(block.getArguments(), args);
 
   for (Operation &op : block) {
-    if (auto addOp = dyn_cast<AddOp>(op)) {
+    if (auto absOp = dyn_cast<AbsOp>(op)) {
+      Tensor runtimeOperand = scope.find(absOp.getOperand());
+      Tensor runtimeResult = evalAbsOp(runtimeOperand, absOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
+    } else if (auto addOp = dyn_cast<AddOp>(op)) {
       Tensor runtimeLhs = scope.find(addOp.getLhs());
       Tensor runtimeRhs = scope.find(addOp.getRhs());
       Tensor runtimeResult = evalAddOp(runtimeLhs, runtimeRhs, addOp.getType());
@@ -377,6 +421,13 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
     } else if (auto ceilOp = dyn_cast<CeilOp>(op)) {
       Tensor runtimeOperand = scope.find(ceilOp.getOperand());
       Tensor runtimeResult = evalCeilOp(runtimeOperand, ceilOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
+    } else if (auto clampOp = dyn_cast<ClampOp>(op)) {
+      Tensor runtimeMin = scope.find(clampOp.getMin());
+      Tensor runtimeOperand = scope.find(clampOp.getOperand());
+      Tensor runtimeMax = scope.find(clampOp.getMax());
+      Tensor runtimeResult = evalClampOp(runtimeMin, runtimeOperand, runtimeMax,
+                                         clampOp.getType());
       scope.add(op.getResults(), {runtimeResult});
     } else if (auto constantOp = dyn_cast<ConstantOp>(op)) {
       Tensor runtimeResult = evalConstantOp(constantOp.getValue());
@@ -406,6 +457,10 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
       Tensor runtimeResult = evalDynamicUpdateSliceOp(
           runtimeOperand, runtimeUpdate, runtimeStartIndices,
           dynamicUpdateSliceOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
+    } else if (auto expOp = dyn_cast<ExpOp>(op)) {
+      Tensor runtimeOperand = scope.find(expOp.getOperand());
+      Tensor runtimeResult = evalExponentialOp(runtimeOperand, expOp.getType());
       scope.add(op.getResults(), {runtimeResult});
     } else if (auto floorOp = dyn_cast<FloorOp>(op)) {
       Tensor runtimeOperand = scope.find(floorOp.getOperand());
@@ -482,6 +537,11 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
       return scope.find(returnOp.getOperands());
     } else if (auto returnOp = dyn_cast<ReturnOp>(op)) {
       return scope.find(returnOp.getResults());
+    } else if (auto selectOp = dyn_cast<SelectOp>(op)) {
+      Tensor runtimeResult = evalSelectOp(
+          scope.find(selectOp.getPred()), scope.find(selectOp.getOnTrue()),
+          scope.find(selectOp.getOnFalse()), selectOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
     } else if (auto sineOp = dyn_cast<SineOp>(op)) {
       Tensor runtimeOperand = scope.find(sineOp.getOperand());
       Tensor runtimeResult = evalSineOp(runtimeOperand, sineOp.getType());

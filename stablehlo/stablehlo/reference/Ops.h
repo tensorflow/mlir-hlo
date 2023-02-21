@@ -25,12 +25,15 @@ namespace mlir {
 namespace stablehlo {
 
 // Evaluators for StableHLO ops.
+Tensor evalAbsOp(const Tensor &operand, Type resultType);
 Tensor evalAddOp(const Tensor &lhs, const Tensor &rhs, Type resultType);
 Tensor evalAndOp(const Tensor &lhs, const Tensor &rhs, Type resultType);
 Tensor evalBroadcastInDimOp(const Tensor &operand,
                             ArrayRef<int64_t> broadcastDimensions,
                             Type resultType);
 Tensor evalCeilOp(const Tensor &operand, Type resultType);
+Tensor evalClampOp(const Tensor &min, const Tensor &operand, const Tensor &max,
+                   Type resultType);
 Tensor evalConstantOp(ElementsAttr value);
 Tensor evalConvertOp(const Tensor &operand, Type resultType);
 Tensor evalCosineOp(const Tensor &operand, Type resultType);
@@ -38,6 +41,7 @@ Tensor evalDynamicSliceOp(const Tensor &operand, ArrayRef<Tensor> startIndices,
                           ArrayRef<int64_t> sliceSizes, Type resultType);
 Tensor evalDynamicUpdateSliceOp(const Tensor &operand, const Tensor &update,
                                 ArrayRef<Tensor> startIndices, Type resultType);
+Tensor evalExponentialOp(const Tensor &operand, Type resultType);
 Tensor evalFloorOp(const Tensor &operand, Type resultType);
 SmallVector<Tensor> evalIfOp(const Tensor &pred, Region &trueBranch,
                              Region &falseBranch, Scope &scope);
@@ -54,6 +58,8 @@ Tensor evalPadOp(const Tensor &operand, const Tensor &paddingValue,
 Tensor evalReshapeOp(const Tensor &operand, Type resultType);
 Tensor evalReverseOp(const Tensor &operand, ArrayRef<int64_t> dimensions,
                      Type resultType);
+Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
+                    const Tensor &onFalse, Type resultType);
 Tensor evalSineOp(const Tensor &operand, Type resultType);
 Tensor evalSliceOp(const Tensor &operand, ArrayRef<int64_t> startIndices,
                    ArrayRef<int64_t> strides, Type resultType);

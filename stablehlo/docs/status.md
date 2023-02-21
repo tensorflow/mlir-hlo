@@ -42,7 +42,7 @@ one of the following tracking labels.
 
 | StableHLO Op             | Specification | Verification | Type Inference | Pretty Printing | Interpreter |
 |:-------------------------|:--------------|:-------------|:---------------|:----------------|:------------|
-| abs                      | yes           | yes          | yes            | yes             | no          |
+| abs                      | yes           | yes          | yes            | yes             | yes         |
 | add                      | yes           | yes          | yes            | yes             | yes         |
 | after_all                | yes           | yes          | yes            | yes             | no          |
 | all_gather               | yes           | revisit      | no             | no              | no          |
@@ -60,7 +60,7 @@ one of the following tracking labels.
 | cbrt                     | yes           | yes          | yes            | yes             | no          |
 | ceil                     | yes           | yes          | yes            | yes             | yes         |
 | cholesky                 | yes           | yes          | yes            | yes             | no          |
-| clamp                    | yes           | revisit      | yes            | yes             | no          |
+| clamp                    | yes           | revisit      | yes            | yes             | yes         |
 | collective_permute       | yes           | revisit      | yes            | no              | no          |
 | compare                  | yes           | yes          | yes            | yes             | no          |
 | complex                  | yes           | yes          | yes            | yes             | no          |
@@ -87,7 +87,7 @@ one of the following tracking labels.
 | dynamic_slice            | yes           | yes          | yes            | yes             | yes         |
 | dynamic_update_slice     | yes           | yes          | yes            | yes             | yes         |
 | einsum                   | no            | revisit      | no             | yes             | no          |
-| exponential              | yes           | yes          | yes            | yes             | no          |
+| exponential              | yes           | yes          | yes            | yes             | yes         |
 | exponential_minus_one    | yes           | yes          | yes            | yes             | no          |
 | fft                      | yes           | revisit      | yes            | yes             | no          |
 | floor                    | yes           | yes          | yes            | yes             | yes         |
@@ -133,7 +133,7 @@ one of the following tracking labels.
 | round_nearest_even       | yes           | yes          | yes            | yes             | no          |
 | rsqrt                    | yes           | yes          | yes            | yes             | no          |
 | scatter                  | yes           | revisit      | yes            | no              | no          |
-| select                   | yes           | yes          | yes            | yes             | no          |
+| select                   | yes           | yes          | yes            | yes             | yes         |
 | select_and_scatter       | yes           | revisit      | yes            | no              | no          |
 | send                     | yes           | revisit      | yes            | no              | no          |
 | set_dimension_size       | no            | yes\*        | yes\*          | yes             | no          |

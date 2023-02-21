@@ -1376,12 +1376,6 @@ func.func @clamp(%arg0: tensor<1xi32>) -> tensor<1xi32> {
 
 // -----
 
-// CHECK-LABEL: func @clamp_scalar
-func.func @clamp_scalar(%arg0: tensor<1xi32>, %arg1: tensor<i32>) -> tensor<1xi32> {
-  %0 = "stablehlo.clamp"(%arg1, %arg0, %arg1) : (tensor<i32>, tensor<1xi32>, tensor<i32>) -> tensor<1xi32>
-  func.return %0: tensor<1xi32>
-}
-
 // CHECK-LABEL: func @clamp_compatible_dynamic
 func.func @clamp_compatible_dynamic(%arg0: tensor<?xi32>, %arg1: tensor<i32>, %arg2: tensor<3xi32>) -> tensor<?xi32> {
   %0 = "stablehlo.clamp"(%arg1, %arg0, %arg2) : (tensor<i32>, tensor<?xi32>, tensor<3xi32>) -> tensor<?xi32>
@@ -1396,15 +1390,7 @@ func.func @clamp_compatible_dynamic_match_static(%arg0: tensor<?xi32>, %arg1: te
 
 // -----
 
-func.func @clamp_invalid_clamp_element_type(%arg0: tensor<1xi32>, %arg1: tensor<1xf32>) -> tensor<1xi32> {
-  // expected-error@+1 {{'stablehlo.clamp' op requires the same element type for all operands and results}}
-  %0 = "stablehlo.clamp"(%arg1, %arg0, %arg0) : (tensor<1xf32>, tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
-  func.return %0: tensor<1xi32>
-}
-
-// -----
-
-func.func @clamp_invalid_clamp_min_shape(%arg0: tensor<1xi32>, %arg1: tensor<2xi32>) -> tensor<1xi32> {
+func.func @clamp_c1(%arg0: tensor<1xi32>, %arg1: tensor<2xi32>) -> tensor<1xi32> {
   // expected-error@+1 {{min shape [2] is not scalar and is not compatible to operand shape [1]}}
   %0 = "stablehlo.clamp"(%arg1, %arg0, %arg0) : (tensor<2xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<1xi32>
   func.return %0: tensor<1xi32>
@@ -1412,7 +1398,7 @@ func.func @clamp_invalid_clamp_min_shape(%arg0: tensor<1xi32>, %arg1: tensor<2xi
 
 // -----
 
-func.func @clamp_invalid_clamp_max_shape(%arg0: tensor<1xi32>, %arg1: tensor<2xi32>) -> tensor<1xi32> {
+func.func @clamp_c2(%arg0: tensor<1xi32>, %arg1: tensor<2xi32>) -> tensor<1xi32> {
   // expected-error@+1 {{max shape [2] is not scalar and is not compatible to operand shape [1]}}
   %0 = "stablehlo.clamp"(%arg0, %arg0, %arg1) : (tensor<1xi32>, tensor<1xi32>, tensor<2xi32>) -> tensor<1xi32>
   func.return %0: tensor<1xi32>
@@ -1420,10 +1406,18 @@ func.func @clamp_invalid_clamp_max_shape(%arg0: tensor<1xi32>, %arg1: tensor<2xi
 
 // -----
 
-func.func @clamp(%arg0: tensor<1xi32>) -> tensor<1x2xi32> {
+func.func @clamp_c4(%arg0: tensor<1xi32>) -> tensor<1x2xi32> {
   // // expected-error@+1{{inferred type(s) 'tensor<1xi32>' are incompatible with return type(s) of operation 'tensor<1x2xi32>'}}
   %0 = "stablehlo.clamp"(%arg0, %arg0, %arg0) : (tensor<1xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<1x2xi32>
   func.return %0: tensor<1x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @clamp_scalar
+func.func @clamp_scalar(%arg0: tensor<1xi32>, %arg1: tensor<i32>) -> tensor<1xi32> {
+  %0 = "stablehlo.clamp"(%arg1, %arg0, %arg1) : (tensor<i32>, tensor<1xi32>, tensor<i32>) -> tensor<1xi32>
+  func.return %0: tensor<1xi32>
 }
 
 // -----
@@ -2116,15 +2110,7 @@ func.func @select_scalar_x_y(%arg0: tensor<i1>, %arg1: tensor<i32>, %arg2: tenso
 
 // -----
 
-func.func @select_bad_pred_type(%arg0: tensor<i32>, %arg1: tensor<2x3xi32>, %arg2: tensor<2x3xi32>) -> tensor<2x3xi32> {
-  // expected-error@+1 {{must be tensor of pred (AKA boolean or 1-bit integer) values}}
-  %0 = "stablehlo.select"(%arg0, %arg1, %arg2) : (tensor<i32>, tensor<2x3xi32>, tensor<2x3xi32>) -> tensor<2x3xi32>
-  func.return %0 : tensor<2x3xi32>
-}
-
-// -----
-
-func.func @select_bad_pred_shape(%arg0: tensor<3xi1>, %arg1: tensor<2x3xi32>, %arg2: tensor<2x3xi32>) -> tensor<2x3xi32> {
+func.func @select_c1(%arg0: tensor<3xi1>, %arg1: tensor<2x3xi32>, %arg2: tensor<2x3xi32>) -> tensor<2x3xi32> {
   // expected-error@+1 {{requires the same shape for all operands}}
   %0 = "stablehlo.select"(%arg0, %arg1, %arg2) : (tensor<3xi1>, tensor<2x3xi32>, tensor<2x3xi32>) -> tensor<2x3xi32>
   func.return %0 : tensor<2x3xi32>
@@ -2132,7 +2118,7 @@ func.func @select_bad_pred_shape(%arg0: tensor<3xi1>, %arg1: tensor<2x3xi32>, %a
 
 // -----
 
-func.func @select_bad_shape_mismatch(%arg0: tensor<3xi1>, %arg1: tensor<2x4xi32>, %arg2: tensor<2x3xi32>) -> tensor<2x3xi32> {
+func.func @select_c2(%arg0: tensor<3xi1>, %arg1: tensor<2x4xi32>, %arg2: tensor<2x3xi32>) -> tensor<2x3xi32> {
   // expected-error@+1 {{requires compatible types for non-predicate operands}}
   %0 = "stablehlo.select"(%arg0, %arg1, %arg2) : (tensor<3xi1>, tensor<2x4xi32>, tensor<2x3xi32>) -> tensor<2x3xi32>
   func.return %0 : tensor<2x3xi32>
@@ -2140,25 +2126,10 @@ func.func @select_bad_shape_mismatch(%arg0: tensor<3xi1>, %arg1: tensor<2x4xi32>
 
 // -----
 
-func.func @select_when_pred_is_scalar(%arg0: tensor<i1>, %arg1: tensor<2x3xi32>, %arg2: tensor<2x3xi32>) -> tensor<2x3xi32> {
-  %0 = "stablehlo.select"(%arg0, %arg1, %arg2) : (tensor<i1>, tensor<2x3xi32>, tensor<2x3xi32>) -> tensor<2x3xi32>
+func.func @select_c2(%arg0: tensor<i1>, %arg1: tensor<2x3xf32>, %arg2: tensor<2x3xf32>) -> tensor<2x3xi32> {
+  // expected-error@+1 {{inferred type(s) 'tensor<2x3xf32>' are incompatible with return type(s) of operation 'tensor<2x3xi32>'}}
+  %0 = "stablehlo.select"(%arg0, %arg1, %arg2) : (tensor<i1>, tensor<2x3xf32>, tensor<2x3xf32>) -> tensor<2x3xi32>
   func.return %0 : tensor<2x3xi32>
-}
-
-// -----
-
-func.func @select_element_type_mismatch(%arg0: tensor<i1>, %arg1: tensor<2x3xf32>, %arg2: tensor<2x3xi32>) -> tensor<2x3xi32> {
-  // expected-error@+1 {{requires compatible types for non-predicate operands}}
-  %0 = "stablehlo.select"(%arg0, %arg1, %arg2) : (tensor<i1>, tensor<2x3xf32>, tensor<2x3xi32>) -> tensor<2x3xi32>
-  func.return %0 : tensor<2x3xi32>
-}
-
-// -----
-
-func.func @select_element_type_mismatch(%arg0: tensor<i1>, %arg1: tensor<2x3xf32>, %arg2: tensor<2x3xf64>) -> tensor<2x3xf64> {
-  // expected-error@+1 {{requires compatible types for non-predicate operands}}
-  %0 = "stablehlo.select"(%arg0, %arg1, %arg2) : (tensor<i1>, tensor<2x3xf32>, tensor<2x3xf64>) -> tensor<2x3xf64>
-  func.return %0 : tensor<2x3xf64>
 }
 
 // -----
@@ -5620,18 +5591,26 @@ func.func @abs_complex(%arg0: tensor<1x2xcomplex<f32>>) -> tensor<1x2xf32> {
 
 // -----
 
-// CHECK-LABEL: func @round_even
-func.func @round_even(%arg0: tensor<2xf32>) -> tensor<2xf32> {
-  %0 = "stablehlo.round_nearest_even"(%arg0) {} : (tensor<2xf32>) -> tensor<2xf32>
-  func.return %0 : tensor<2xf32>
+func.func @abs_c2(%arg0: tensor<1x2xf32>) -> tensor<1x2xf64> {
+  // expected-error@+1 {{'stablehlo.abs' op inferred type(s) 'tensor<1x2xf32>' are incompatible with return type(s) of operation 'tensor<1x2xf64>'}}
+  %0 = "stablehlo.abs"(%arg0) {} : (tensor<1x2xf32>) -> tensor<1x2xf64>
+  func.return %0 : tensor<1x2xf64>
 }
 
 // -----
 
-func.func @abs_mismatch_element_type(%arg0: tensor<1x2xcomplex<f32>>) -> tensor<1x2xf64> {
+func.func @abs_c2(%arg0: tensor<1x2xcomplex<f32>>) -> tensor<1x2xf64> {
 // expected-error@+1 {{'stablehlo.abs' op inferred type(s) 'tensor<1x2xf32>' are incompatible with return type(s) of operation 'tensor<1x2xf64>'}}
   %0 = "stablehlo.abs"(%arg0) {} : (tensor<1x2xcomplex<f32>>) -> tensor<1x2xf64>
   func.return %0 : tensor<1x2xf64>
+}
+
+// -----
+
+// CHECK-LABEL: func @round_even
+func.func @round_even(%arg0: tensor<2xf32>) -> tensor<2xf32> {
+  %0 = "stablehlo.round_nearest_even"(%arg0) {} : (tensor<2xf32>) -> tensor<2xf32>
+  func.return %0 : tensor<2xf32>
 }
 
 // -----

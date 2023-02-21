@@ -1346,6 +1346,17 @@ LogicalResult inferConditionalOp(Optional<Location> location, Value operand,
   return success();
 }
 
+LogicalResult verifyDimInBounds(std::optional<Location> loc, ShapedType type,
+                                int64_t dim) {
+  if (dim < 0)
+    return emitOptionalError(
+        loc, "requires non-negative dimension attribute; found (", dim, ")");
+  if (type.hasRank() && dim >= type.getRank())
+    return emitOptionalError(loc, "requires dimension attribute in range [0, ",
+                             type.getRank(), "); found (", dim, ")");
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // Shape functions for ops.
 //===----------------------------------------------------------------------===//
@@ -1353,11 +1364,13 @@ LogicalResult inferConditionalOp(Optional<Location> location, Value operand,
 LogicalResult inferAbsOp(std::optional<Location>, Value operand,
                          SmallVectorImpl<Type>& inferredReturnTypes) {
   auto operandTy = operand.getType().cast<ShapedType>();
+  // abs_c2
   Type elementTy = operandTy.getElementType();
   if (auto complexTy = elementTy.dyn_cast<ComplexType>())
     elementTy = complexTy.getElementType();
 
   Type resultTy;
+  // abs_c1
   if (auto rankedOperandTy = operandTy.dyn_cast<RankedTensorType>()) {
     resultTy = RankedTensorType::get(operandTy.getShape(), elementTy,
                                      rankedOperandTy.getEncoding());
@@ -1541,6 +1554,8 @@ LogicalResult inferClampOp(
   auto operandType = operand.getType().cast<RankedTensorType>();
   auto operandShape = operandType.getShape();
   auto minType = min.getType().cast<RankedTensorType>();
+
+  // clamp_c1
   auto minShape = minType.getShape();
   if (failed(verifyCompatibleShape(minType, operandType)) &&
       minType.getRank() != 0)
@@ -1550,6 +1565,7 @@ LogicalResult inferClampOp(
         "] is not scalar and is not compatible to operand shape [",
         llvm::make_range(operandShape.begin(), operandShape.end()), "]");
 
+  // clamp_c2
   auto maxType = max.getType().cast<RankedTensorType>();
   auto maxShape = maxType.getShape();
   if (failed(verifyCompatibleShape(maxType, operandType)) &&
@@ -1560,6 +1576,7 @@ LogicalResult inferClampOp(
         "] is not scalar and is not compatible to operand shape [",
         llvm::make_range(operandShape.begin(), operandShape.end()), "]");
 
+  // clamp_c4
   inferredReturnShapes.emplace_back(operandType.cast<ShapedType>());
   return success();
 }
@@ -2283,10 +2300,13 @@ LogicalResult inferGatherOp(
 }
 
 LogicalResult inferGetDimensionSizeOp(
-    MLIRContext* context, std::optional<Location> location,
-    SmallVectorImpl<Type>& inferredReturnTypes) {
-  inferredReturnTypes.push_back(
-      RankedTensorType::get({}, IntegerType::get(context, 32)));
+    std::optional<Location> location, Type operandType, int64_t dimension,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  if (failed(verifyDimInBounds(location, operandType.cast<ShapedType>(),
+                               dimension)))
+    return failure();
+  inferredReturnShapes.emplace_back(
+      ArrayRef<int64_t>{}, IntegerType::get(operandType.getContext(), 32));
   return success();
 }
 
@@ -2657,24 +2677,19 @@ LogicalResult inferSelectOp(
   auto trueType = onTrue.getType().cast<ShapedType>();
   auto falseType = onFalse.getType().cast<ShapedType>();
 
-  // The operands `onTrue` and `onFalse` should have compatible types, i.e.,
-  //   (a) have the same element type, and
-  //   (b) have compatible shapes (i.e. the same shape and/or at least one
-  //       dynamic shape)
+  // select_c2
   if (!compatibleShapeAndElementType(trueType, falseType))
     return emitOptionalError(
         location, "requires compatible types for non-predicate operands");
 
-  // The predicate, if not-scalar, should have the same shape as the remaining
-  // operands.
+  // select_c1
   bool predCannotBeScalar = predType.hasRank() && predType.getRank() != 0;
   if (predCannotBeScalar)
     if (failed(verifyCompatibleShape(predType, trueType)))
       return emitOptionalError(location,
                                "requires the same shape for all operands");
 
-  // The output shape should be derived from the most specific parts of the
-  // `onTrue` and `onFalse` (see documentation for details).
+  // select_c2
   SmallVector<Type> inferredReturnTypes;
   return inferMostSpecificTypeComponents(location, {trueType, falseType},
                                          inferredReturnShapes);
@@ -2690,6 +2705,56 @@ LogicalResult inferSendOp(Dialect* dialect, std::optional<Location> location,
                           SmallVectorImpl<Type>& inferredReturnTypes) {
   auto hloDialect = cast<HloDialectInterface>(dialect);
   inferredReturnTypes.push_back(hloDialect->createTokenType());
+  return success();
+}
+
+LogicalResult inferSetDimensionSizeOp(
+    Dialect* dialect, std::optional<Location> location, Type operandType,
+    Value size, int64_t dimension,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  auto sizeType = size.getType().dyn_cast<RankedTensorType>();
+  if (sizeType && sizeType.getRank() != 0)
+    return emitOptionalError(location, "size operand should be of rank-0");
+  if (failed(verifyDimInBounds(location, operandType.cast<ShapedType>(),
+                               dimension)))
+    return failure();
+
+  auto inputType = operandType.dyn_cast<RankedTensorType>();
+  if (!inputType) {
+    inferredReturnShapes.emplace_back(
+        operandType.cast<TensorType>().getElementType());
+    return success();
+  }
+  int64_t rank = inputType.getRank();
+  if (dimension < 0 || dimension >= rank)
+    return emitOptionalError(location, "expects dimension to be in range [0, ",
+                             rank, "); got: [", dimension, "].");
+
+  auto shape = llvm::to_vector<4>(inputType.getShape());
+  llvm::SmallVector<int64_t, 4> bounds(rank, ShapedType::kDynamic);
+  ArrayRef<int64_t> inputBounds = encodingToBounds(inputType.getEncoding());
+  if (!inputBounds.empty()) bounds = llvm::to_vector<4>(inputBounds);
+
+  if (!hlo::isDynamicDimSize(shape[dimension]))
+    bounds[dimension] = shape[dimension];
+  shape[dimension] = ShapedType::kDynamic;
+
+  DenseIntElementsAttr sizeAttr;
+  if (matchPattern(size, m_Constant(&sizeAttr))) {
+    int64_t splat =
+        sizeAttr.getSplatValue<IntegerAttr>().getValue().getSExtValue();
+    if (splat == bounds[dimension]) {
+      shape[dimension] = splat;
+      bounds[dimension] = ShapedType::kDynamic;
+    }
+  }
+
+  if (llvm::all_of(bounds, [&](auto b) { return isDynamicDimSize(b); }))
+    inferredReturnShapes.emplace_back(shape, inputType.getElementType());
+  else
+    inferredReturnShapes.emplace_back(
+        shape, inputType.getElementType(),
+        cast<HloDialectInterface>(dialect)->createTypeExtensions(bounds));
   return success();
 }
 

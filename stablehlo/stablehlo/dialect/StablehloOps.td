@@ -201,10 +201,10 @@ class StableHLO_UnaryElementwiseOp<string mnemonic, list<Trait> traits,
 
 // Abs supports complex to real, so element type is not guaranteed to match.
 def StableHLO_AbsOp: StableHLO_UnaryElementwiseOp<"abs",
-    [Pure,
-     DeclareOpInterfaceMethods<InferTypeOpInterface>],
-     TensorOf<[HLO_SInt, HLO_Float, HLO_Complex]>> {
-  let summary = "Absolute value operator";
+    [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>],
+     TensorOf<[HLO_SInt, HLO_Float, HLO_Complex] /* abs_i1 */>,
+     TensorOf<[HLO_SInt, HLO_Float]>> {
+  let summary = "Abs operation";
   let description = [{
     Performs element-wise abs operation on `operand` tensor and produces a
     `result` tensor.
@@ -306,8 +306,9 @@ def StableHLO_CosineOp: StableHLO_UnaryElementwiseOp<"cosine",
 }
 
 def StableHLO_ExpOp: StableHLO_UnaryElementwiseOp<"exponential",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
-  let summary = "Exponential operator";
+    [Pure, HLO_CompatibleOperandsAndResultType /*exponential_c1*/],
+     HLO_FpOrComplexTensor /*exponential_i1*/> {
+  let summary = "Exponential operation";
   let description = [{
     Performs element-wise exponential operation on `operand` tensor and produces
     a `result` tensor.
@@ -317,7 +318,7 @@ def StableHLO_ExpOp: StableHLO_UnaryElementwiseOp<"exponential",
 
     Example:
     ```mlir
-    %result = stablehlo.exponential %operand : tensor<2xf32>
+    %result = stablehlo.exponential %operand : tensor<2x2xf64>
     ```
   }];
 }
@@ -1941,9 +1942,9 @@ def StableHLO_CholeskyOp : StableHLO_Op<"cholesky",
 }
 
 def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [Pure,
-  SameOperandsAndResultElementType, HLO_BroadcastingElementwise,
+  SameOperandsAndResultElementType /* clamp_c3 */, HLO_BroadcastingElementwise,
   InferTensorType]> {
-  let summary = "Clamp operator";
+  let summary = "Clamp operation";
   let description = [{
     Clamps every element of the `operand` tensor between a minimum and maximum
     value and produces a `result` tensor.
@@ -1958,9 +1959,9 @@ def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [Pure,
   }];
 
   let arguments = (ins
-    HLO_Tensor:$min,
-    HLO_Tensor:$operand,
-    HLO_Tensor:$max
+    HLO_Tensor:$min, /*clamp_i1*/
+    HLO_Tensor:$operand, /*clamp_c3, clamp_i2*/
+    HLO_Tensor:$max /*clamp_i3*/
   );
   let results = (outs HLO_Tensor:$result);
 
@@ -2354,8 +2355,8 @@ def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify, Pure]>
   let results = (outs HLO_Tensor);
 }
 
-def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size", [Pure,
-    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size",
+      [Pure, InferTensorType]> {
   let summary = "GetDimensionSize operator";
   let description = [{
     Produces the size of the given `dimension` of the `operand`.
@@ -2377,8 +2378,6 @@ def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size", [Pure,
   // XLA semantics is available. This limitation is because of the current XLA
   // implementation.
   let results = (outs I32Tensor);
-
-  let hasVerifier = 1;
 
   let assemblyFormat = [{
     $operand `,` `dim` `=` $dimension attr-dict `:` functional-type(operands, results)
@@ -2512,7 +2511,7 @@ def StableHLO_ScatterOp: StableHLO_Op<"scatter",
 
 def StableHLO_SelectOp: StableHLO_Op<"select", [Pure, HLO_BroadcastingElementwise,
     InferTensorTypeWithReify]> {
-  let summary = "Select operator";
+  let summary = "Select operation";
   let description = [{
     Produces a `result` tensor where each element is selected from `on_true` or
     `on_false` tensor based on the value of the corresponding element of `pred`.
@@ -2526,9 +2525,9 @@ def StableHLO_SelectOp: StableHLO_Op<"select", [Pure, HLO_BroadcastingElementwis
     ```
   }];
   let arguments = (ins
-    HLO_PredTensor:$pred,
-    HLO_Tensor:$on_true,
-    HLO_Tensor:$on_false
+    HLO_PredTensor:$pred, /*select_i1*/
+    HLO_Tensor:$on_true, /*select_i2*/
+    HLO_Tensor:$on_false /*select_i3*/
   );
 
   let results = (outs HLO_Tensor:$result);
@@ -2586,7 +2585,7 @@ def StableHLO_SelectAndScatterOp: StableHLO_Op<"select_and_scatter",
 }
 
 def StableHLO_SetDimensionSizeOp: StableHLO_Op<"set_dimension_size", [Pure,
-    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+      InferTensorType]> {
   let summary = "SetDimensionSize operation";
   let description = [{
     This operation is a work in progress, so it is not yet included in
@@ -2607,8 +2606,6 @@ def StableHLO_SetDimensionSizeOp: StableHLO_Op<"set_dimension_size", [Pure,
     I64Attr:$dimension
   );
   let results = (outs HLO_Tensor);
-
-  let hasVerifier = 1;
 
   let assemblyFormat = [{
     $operand `,` $size  `,` `dim` `=` $dimension attr-dict

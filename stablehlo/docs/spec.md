@@ -474,9 +474,9 @@ tensor. Depending on the element type, does the following:
 
 #### Outputs
 
-| Name     | Type                                                      | Constraints |
-|----------|-----------------------------------------------------------|-------------|
-| `result` | tensor of signed integer, floating-point, or complex type | (C1), (C2)  |
+| Name     | Type                                            | Constraints |
+|----------|-------------------------------------------------|-------------|
+| `result` | tensor of signed integer or floating-point type | (C1), (C2)  |
 
 #### Constraints
 
@@ -493,6 +493,8 @@ tensor. Depending on the element type, does the following:
 %result = "stablehlo.abs"(%operand) : (tensor<3xi32>) -> tensor<3xi32>
 // %result: [2, 0, 2]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_abs.mlir)
 
 ### add
 
@@ -1516,6 +1518,8 @@ for this operation ([#560](https://github.com/openxla/stablehlo/issues/560)).
 // %result: [5, 13, 20]
 ```
 
+&nbsp;[More Examples](../stablehlo/tests/interpret_clamp.mlir)
+
 ### collective_permute
 
 #### Semantics
@@ -2454,13 +2458,11 @@ Performs element-wise exponential operation on `operand` tensor and produces a
 
 ```mlir
 // %operand: [[0.0, 1.0], [2.0, 3.0]]
-%result = "stablehlo.exponential"(%operand) : (tensor<2x2xf32>) -> tensor<2x2xf32>
-// %result: [[1.0, 2.71828183], [7.38905610, 20.08553692]]
-
-// %operand: (1.0, 2.0)
-%result = "stablehlo.exponential"(%operand) : (tensor<complex<f32>>) -> tensor<complex<f32>>
-// %result: (-1.13120438, 2.47172667)
+%result = "stablehlo.exponential"(%operand) : (tensor<2x2xf64>) -> tensor<2x2xf64>
+// %result: [[1.0, 2.7182818284590451], [7.3890560989306504, 20.085536923187668]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_exponential.mlir)
 
 ### exponential_minus_one
 
@@ -4649,6 +4651,8 @@ where `pred_val = rank(pred) == 0 ? pred : pred[i0, ..., iR-1]`.
 %result = "stablehlo.select"(%pred, %on_true, %on_false) : (tensor<2x2xi1>, tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
 // %result: [[5, 2], [3, 8]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_select.mlir)
 
 ### select_and_scatter
 
