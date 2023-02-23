@@ -71,6 +71,9 @@ class Element {
   /// Overloaded add operator.
   Element operator+(const Element &other) const;
 
+  /// Overloaded divide operator.
+  Element operator/(const Element &other) const;
+
   /// Overloaded multiply operator.
   Element operator*(const Element &other) const;
 
@@ -109,11 +112,14 @@ Element ceil(const Element &e);
 /// Returns cosine of Element object.
 Element cosine(const Element &e);
 
-/// Returns element-wise exponential of Element object.
+/// Returns exponential of Element object.
 Element exponential(const Element &el);
 
 /// Returns floor of Element object.
 Element floor(const Element &e);
+
+/// Returns log of Element object.
+Element log(const Element &el);
 
 /// Returns the maximum between two Element objects.
 Element max(const Element &e1, const Element &e2);
@@ -121,8 +127,14 @@ Element max(const Element &e1, const Element &e2);
 /// Returns the minimum between two Element objects.
 Element min(const Element &e1, const Element &e2);
 
+/// Returns reverse square root of Element object.
+Element rsqrt(const Element &e);
+
 /// Returns sine of Element object.
 Element sine(const Element &e);
+
+/// Returns square root of Element object.
+Element sqrt(const Element &e);
 
 /// Returns tanh of Element object.
 Element tanh(const Element &e);

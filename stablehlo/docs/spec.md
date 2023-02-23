@@ -1906,27 +1906,27 @@ If `batch_group_count > 1`:
 
 #### Inputs
 
-| Label | Name                              | Type                                                        | Constraints                                  |
-|-------|-----------------------------------|-------------------------------------------------------------|----------------------------------------------|
-| (I1)  | `lhs`                             | tensor                                                      | (C1), (C2), (C11), (C12), (C15) (C26), (C27) |
-| (I2)  | `rhs`                             | tensor                                                      | (C1), (C2), (C15-C17), (C26)                 |
-| (I3)  | `window_strides`                  | 1-dimensional tensor constant of type `si64`                | (C3), (C4), (C26)                            |
-| (I4)  | `padding`                         | 2-dimensional tensor constant of type `si64`                | (C5), (C26)                                  |
-| (I5)  | `lhs_dilation`                    | 1-dimensional tensor constant of type `si64`                | (C6), (C7), (C26)                            |
-| (I6)  | `rhs_dilation`                    | 1-dimensional tensor constant of type `si64`                | (C8), (C9), (C26)                            |
-| (I7)  | `window_reversal`                 | 1-dimensional tensor constant of type `i1`                  | (C10)                                        |
-| (I8)  | `input_batch_dimension`           | constant of type `si64`                                     | (C11), (C14), (C26)                          |
-| (I9)  | `input_feature_dimension`         | constant of type `si64`                                     | (C12), (C14), (C15)                          |
-| (I10) | `input_spatial_dimensions`        | 1-dimensional tensor constant of type `si64`                | (C13), (C14), (C26)                          |
-| (I11) | `kernel_input_feature_dimension`  | constant of type `si64`                                     | (C15), (C19)                                 |
-| (I12) | `kernel_output_feature_dimension` | constant of type `si64`                                     | (C16), (C17), (C19), (C26)                   |
-| (I13) | `kernel_spatial_dimensions`       | 1-dimensional tensor constant of type `si64`                | (C18), (C19), (C26)                          |
-| (I14) | `output_batch_dimension`          | constant of type `si64`                                     | (C21), (C26)                                 |
-| (I15) | `output_feature_dimension`        | constant of type `si64`                                     | (C21), (C26)                                 |
-| (I16) | `output_spatial_dimensions`       | 1-dimensional tensor constant of type `si64`                | (C20), (C21), (C26)                          |
-| (I17) | `feature_group_count`             | constant of type `si64`                                     | (C12), (C15), (C17), (C22), (C24)            |
-| (I18) | `batch_group_count`               | constant of type `si64`                                     | (C11), (C16), (C23), (C24), (C26)            |
-| (I19) | `precision_config`                | variadic number of enum of `DEFAULT`, `HIGH`, and `HIGHEST` | (C25)                                        |
+| Label | Name                              | Type                                                         | Constraints                                  |
+|-------|-----------------------------------|--------------------------------------------------------------|----------------------------------------------|
+| (I1)  | `lhs`                             | tensor                                                       | (C1), (C2), (C11), (C12), (C15) (C26), (C27) |
+| (I2)  | `rhs`                             | tensor                                                       | (C1), (C2), (C15-C17), (C26)                 |
+| (I3)  | `window_strides`                  | 1-dimensional tensor constant of type `si64`                 | (C3), (C4), (C26)                            |
+| (I4)  | `padding`                         | 2-dimensional tensor constant of type `si64`                 | (C5), (C26)                                  |
+| (I5)  | `lhs_dilation`                    | 1-dimensional tensor constant of type `si64`                 | (C6), (C7), (C26)                            |
+| (I6)  | `rhs_dilation`                    | 1-dimensional tensor constant of type `si64`                 | (C8), (C9), (C26)                            |
+| (I7)  | `window_reversal`                 | 1-dimensional tensor constant of type `i1`                   | (C10)                                        |
+| (I8)  | `input_batch_dimension`           | constant of type `si64`                                      | (C11), (C14), (C26)                          |
+| (I9)  | `input_feature_dimension`         | constant of type `si64`                                      | (C12), (C14), (C15)                          |
+| (I10) | `input_spatial_dimensions`        | 1-dimensional tensor constant of type `si64`                 | (C13), (C14), (C26)                          |
+| (I11) | `kernel_input_feature_dimension`  | constant of type `si64`                                      | (C15), (C19)                                 |
+| (I12) | `kernel_output_feature_dimension` | constant of type `si64`                                      | (C16), (C17), (C19), (C26)                   |
+| (I13) | `kernel_spatial_dimensions`       | 1-dimensional tensor constant of type `si64`                 | (C18), (C19), (C26)                          |
+| (I14) | `output_batch_dimension`          | constant of type `si64`                                      | (C21), (C26)                                 |
+| (I15) | `output_feature_dimension`        | constant of type `si64`                                      | (C21), (C26)                                 |
+| (I16) | `output_spatial_dimensions`       | 1-dimensional tensor constant of type `si64`                 | (C20), (C21), (C26)                          |
+| (I17) | `feature_group_count`             | constant of type `si64`                                      | (C12), (C15), (C17), (C22), (C24)            |
+| (I18) | `batch_group_count`               | constant of type `si64`                                      | (C11), (C16), (C23), (C24), (C26)            |
+| (I19) | `precision_config`                | variadic number of enums of `DEFAULT`, `HIGH`, and `HIGHEST` | (C25)                                        |
 
 #### Outputs
 
@@ -2112,14 +2112,14 @@ implementation-defined metadata.
 
 #### Inputs
 
-| Label | Name                  | Type                         |
-|-------|-----------------------|------------------------------|
-| (I1)  | `inputs`              | variadic number of values    |
-| (I2)  | `call_target_name`    | constant of type `string`    |
-| (I3)  | `has_side_effect`     | constant of type `i1`        |
-| (I4)  | `backend_config`      | constant of type `string`    |
-| (I5)  | `api_version`         | constant of type `si32`      |
-| (I6)  | `called_computations` | variadic number of functions |
+| Label | Name                  | Type                                          |
+|-------|-----------------------|-----------------------------------------------|
+| (I1)  | `inputs`              | variadic number of values                     |
+| (I2)  | `call_target_name`    | constant of type `string`                     |
+| (I3)  | `has_side_effect`     | constant of type `i1`                         |
+| (I4)  | `backend_config`      | constant of type `string`                     |
+| (I5)  | `api_version`         | constant of type `si32`                       |
+| (I6)  | `called_computations` | variadic number of constants of type `string` |
 
 #### Outputs
 
@@ -2174,12 +2174,9 @@ produces a `result` tensor. Depending on the element type, does the following:
 // %rhs: [3.0, 3.0, -3.0, -3.0]
 %result = "stablehlo.divide"(%lhs, %rhs) : (tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32>
 // %result: [5.66666651, -5.66666651, -5.66666651, 5.66666651]
-
-// %lhs: [17, -17, 17, -17]
-// %rhs: [3, 3, -3, -3]
-%result = "stablehlo.divide"(%lhs, %rhs) : (tensor<4xi32>, tensor<4xi32>) -> tensor<4xi32>
-// %result: [5, -5, -5, 5]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_divide.mlir)
 
 ### dot_general
 
@@ -2225,15 +2222,15 @@ planning to address this in
 
 #### Inputs
 
-| Label | Name                         | Type                                                        | Constraints                           |
-|-------|------------------------------|-------------------------------------------------------------|---------------------------------------|
-| (I1)  | `lhs`                        | tensor                                                      | (C1), (C6), (C7), (C10), (C11), (C13) |
-| (I2)  | `rhs`                        | tensor                                                      | (C1), (C8), (C9), (C10), (C11), (C13) |
-| (I3)  | `lhs_batching_dimensions`    | 1-dimensional tensor constant of type `si64`                | (C2), (C4), (C6), (C10), (C13)        |
-| (I4)  | `rhs_batching_dimensions`    | 1-dimensional tensor constant of type `si64`                | (C2), (C5), (C8), (C10)               |
-| (I5)  | `lhs_contracting_dimensions` | 1-dimensional tensor constant of type `si64`                | (C3), (C4), (C7), (C11)               |
-| (I6)  | `rhs_contracting_dimensions` | 1-dimensional tensor constant of type `si64`                | (C3), (C5), (C9), (C11)               |
-| (I7)  | `precision_config`           | variadic number of enum of `DEFAULT`, `HIGH`, and `HIGHEST` | (C12)                                 |
+| Label | Name                         | Type                                                         | Constraints                           |
+|-------|------------------------------|--------------------------------------------------------------|---------------------------------------|
+| (I1)  | `lhs`                        | tensor                                                       | (C1), (C6), (C7), (C10), (C11), (C13) |
+| (I2)  | `rhs`                        | tensor                                                       | (C1), (C8), (C9), (C10), (C11), (C13) |
+| (I3)  | `lhs_batching_dimensions`    | 1-dimensional tensor constant of type `si64`                 | (C2), (C4), (C6), (C10), (C13)        |
+| (I4)  | `rhs_batching_dimensions`    | 1-dimensional tensor constant of type `si64`                 | (C2), (C5), (C8), (C10)               |
+| (I5)  | `lhs_contracting_dimensions` | 1-dimensional tensor constant of type `si64`                 | (C3), (C4), (C7), (C11)               |
+| (I6)  | `rhs_contracting_dimensions` | 1-dimensional tensor constant of type `si64`                 | (C3), (C5), (C9), (C11)               |
+| (I7)  | `precision_config`           | variadic number of enums of `DEFAULT`, `HIGH`, and `HIGHEST` | (C12)                                 |
 
 #### Outputs
 
@@ -3075,13 +3072,11 @@ Performs element-wise logarithm operation on `operand` tensor and produces a
 
 ```mlir
 // %operand: [[1.0, 2.0], [3.0, 4.0]]
-%result = "stablehlo.log"(%operand) : (tensor<2x2xf32>) -> tensor<2x2xf32>
-// %result: [[0.0, 0.69314718], [1.09861229, 1.38629436]]
-
-// %operand: (1.0, 2.0)
-%result = "stablehlo.log"(%operand) : (tensor<complex<f32>>) -> tensor<complex<f32>>
-// %result: (0.80471896, 1.10714871)
+%result = "stablehlo.log"(%operand) : (tensor<2x2xf64>) -> tensor<2x2xf64>
+// %result: [[0.0, 0.69314718055994529], [1.0986122886681098, 1.3862943611198906]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_log.mlir)
 
 ### log_plus_one
 
@@ -3855,7 +3850,7 @@ sizes of `inputs[k]` corresponding to `dimensions` are not included.
 
 Performs element-wise conversion of `operand` to another floating-point type
 that uses `exponent_bits` and `mantissa_bits` and back to the original
-floating-point type and produces a `result` tensor.
+floating-point type and produces an `output` tensor.
 
 More formally:
 
@@ -3881,11 +3876,11 @@ More formally:
 
 | Name     | Type                          | Constraints |
 |----------|-------------------------------|-------------|
-| `result` | tensor of floating-point type | (C1)        |
+| `output` | tensor of floating-point type | (C1)        |
 
 #### Constraints
 
-* (C1) `operand` and `result` have the same type.
+* (C1) `operand` and `output` have the same type.
 * (C2) `exponent_bits` $\ge$ 1.
 * (C3) `mantissa_bits` $\ge$ 0.
 
@@ -3894,12 +3889,12 @@ More formally:
 ```mlir
 // Logical values: -Inf, +Inf, NaN, ...
 // %operand: [0xFF800000, 0x7F800000, 0x7FFFFFFF, 0.0, 1000.0, 1000000.0]
-%result = "stablehlo.reduce_precision"(%operand) {
+%output = "stablehlo.reduce_precision"(%operand) {
   exponent_bits = 5 : i32,
   mantissa_bits = 2 : i32
 } : (tensor<6xf32>) -> tensor<6xf32>
 // Logical values: -Inf, +Inf, NaN, NaN, 0.0, 1024.0, +Inf
-// %result: [0xFF800000, 0x7F800000, 0x7FFFFFFF, 0.0, 1024.0, 0x7F800000]
+// %output: [0xFF800000, 0x7F800000, 0x7FFFFFFF, 0.0, 1024.0, 0x7F800000]
 ```
 
 ### reduce_scatter
@@ -4305,8 +4300,8 @@ hidden state.
 #### Semantics
 
 Returns an `output` filled with uniform random bits and an updated output state
-`output_state` given an initial state `initial_state` using the pseudorandom
-number generator algorithm `rng_algorithm`. The output is guaranteed to be
+`output_state` using the pseudorandom number generator algorithm `rng_algorithm`
+given an initial state `initial_state`. The output is guaranteed to be
 deterministic function of `initial_state`, but it is not guaranteed to be
 deterministic between implementations.
 
@@ -4323,8 +4318,8 @@ deterministic between implementations.
 
 | Label | Name            | Type                                         | Constraints |
 |-------|-----------------|----------------------------------------------|-------------|
-| (I1)  | `initial_state` | 1-dimensional tensor of type `ui64`          | (C1), (C2)  |
-| (I2)  | `rng_algorithm` | enum of `DEFAULT`, `THREE_FRY`, and `PHILOX` | (C2)        |
+| (I1)  | `rng_algorithm` | enum of `DEFAULT`, `THREE_FRY`, and `PHILOX` | (C2)        |
+| (I2)  | `initial_state` | 1-dimensional tensor of type `ui64`          | (C1), (C2)  |
 
 #### Outputs
 
@@ -4452,11 +4447,9 @@ produces a `result` tensor. Depending on the element type, does the following:
 // %operand: [[1.0, 4.0], [9.0, 25.0]]
 %result = "stablehlo.rsqrt"(%operand) : (tensor<2x2xf32>) -> tensor<2x2xf32>
 // %result: [[1.0, 0.5], [0.33333343, 0.2]]
-
-// %operand: [(1.0, 2.0)]
-%result = "stablehlo.rsqrt"(%operand) : (tensor<complex<f32>>) -> tensor<complex<f32>>
-// %result: [(0.56886448, -0.35157758)]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_rsqrt.mlir)
 
 ### scatter
 
@@ -5175,11 +5168,9 @@ Performs element-wise square root operation on `operand` tensor and produces a
 // %operand: [[0.0, 1.0], [4.0, 9.0]]
 %result = "stablehlo.sqrt"(%operand) : (tensor<2x2xf32>) -> tensor<2x2xf32>
 // %result: [[0.0, 1.0], [2.0, 3.0]]
-
-// %operand: [(1.0, 2.0)]
-%result = "stablehlo.sqrt"(%operand) : (tensor<complex<f32>>) -> tensor<complex<f32>>
-// %result: [(1.27201965, 0.78615138)]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_sqrt.mlir)
 
 ### subtract
 
@@ -5420,7 +5411,7 @@ Produces the output from executing `body` function 0 or more times while the
 using Python-like syntax as follows:
 
 ```python
-internal_state = operands
+internal_state = operand
 while cond(internal_state) == True:
   internal_state = body(internal_state)
 results = internal_state
@@ -5433,7 +5424,7 @@ The behavior of an infinite loop is TBD
 
 | Label | Name       | Type                                 | Constraints |
 |-------|------------|--------------------------------------|-------------|
-| (I1)  | `operands` | variadic number of tensors or tokens | (C1-C3)     |
+| (I1)  | `operand`  | variadic number of tensors or tokens | (C1-C3)     |
 | (I2)  | `cond`     | function                             | (C1)        |
 | (I3)  | `body`     | function                             | (C2)        |
 
@@ -5446,18 +5437,18 @@ The behavior of an infinite loop is TBD
 #### Constraints
 
 * (C1) `cond` has type `(T0, ..., TN-1) -> tensor<i1>`, where
-       `Ti` = `type(operands[i])`.
+       `Ti` = `type(operand[i])`.
 * (C2) `body` has type `(T0, ..., TN-1) -> (T0, ..., TN-1)`, where
-       `Ti` = `type(operands[i])`.
-* (C3) For all `i`, `type(results[i])` = `type(operands[i])`.
+       `Ti` = `type(operand[i])`.
+* (C3) For all `i`, `type(results[i])` = `type(operand[i])`.
 
 #### Examples
 
 ```mlir
 // %constant0: 1
-// %input0: 0
-// %input1: 10
-%results0, %results1 = "stablehlo.while"(%input0, %input1) ({
+// %operand0: 0
+// %operand1: 10
+%results0, %results1 = "stablehlo.while"(%operand0, %operand1) ({
   ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
     %0 = "stablehlo.compare"(%arg0, %arg1) {
       comparison_direction = #stablehlo<comparison_direction LT>

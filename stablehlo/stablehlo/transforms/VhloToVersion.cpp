@@ -122,8 +122,6 @@ LogicalResult isLegalAttribute(const Attribute& attr, Version targetVersion) {
     return success(llvm::all_of(arrAttr.getValue(), [&](Attribute ele) {
       return succeeded(isLegalAttribute(ele, targetVersion));
     }));
-  if (auto elementsAttr = attr.dyn_cast<DenseIntOrFPElementsV1Attr>())
-    return isLegalType(elementsAttr.getType(), targetVersion);
   if (auto arrAttr = attr.dyn_cast<DictionaryV1Attr>()) {
     return success(llvm::all_of(
         arrAttr.getValue(), [&](std::pair<Attribute, Attribute> entry) {
@@ -131,12 +129,12 @@ LogicalResult isLegalAttribute(const Attribute& attr, Version targetVersion) {
                  succeeded(isLegalAttribute(entry.second, targetVersion));
         }));
   }
-  if (auto flatSymAttr = attr.dyn_cast<FlatSymbolRefV1Attr>())
-    return isLegalAttribute(flatSymAttr.getRootReference(), targetVersion);
   if (auto floatAttr = attr.dyn_cast<FloatV1Attr>())
     return isLegalType(floatAttr.getType(), targetVersion);
   if (auto intAttr = attr.dyn_cast<IntegerV1Attr>())
     return isLegalType(intAttr.getType(), targetVersion);
+  if (auto tensorAttr = attr.dyn_cast<TensorV1Attr>())
+    return isLegalType(tensorAttr.getType(), targetVersion);
   if (auto typeAttr = attr.dyn_cast<TypeV1Attr>())
     return isLegalType(typeAttr.getValue(), targetVersion);
 
@@ -161,7 +159,7 @@ LogicalResult isLegalType(Type type, const Version& targetVersion) {
       return succeeded(isLegalType(ele, targetVersion));
     };
     return success(llvm::all_of(func.getInputs(), validateType) &&
-                   llvm::all_of(func.getResults(), validateType));
+                   llvm::all_of(func.getOutputs(), validateType));
   }
   if (auto ranked = type.dyn_cast<RankedTensorV1Type>()) {
     auto encoding = ranked.getEncoding();
@@ -337,9 +335,8 @@ struct CollectivePermuteOpV2ToV1
                                       CollectivePermuteOpV1> {
   using VersionConversionPattern::VersionConversionPattern;
   LogicalResult prepareOpForConversion(CollectivePermuteOpV2 op) const final {
-    if (op.getChannelHandle().has_value())
-      return emitDowngradeError(op,
-                                "op has a non-empty channel_handle attribute");
+    if (op.getChannelId().has_value())
+      return emitDowngradeError(op, "op has a non-empty channel_id attribute");
     return success();
   }
 };
@@ -379,9 +376,8 @@ struct AllToAllOpV2ToV1
     : public VersionConversionPattern<AllToAllOpV2, AllToAllOpV1> {
   using VersionConversionPattern::VersionConversionPattern;
   LogicalResult prepareOpForConversion(AllToAllOpV2 op) const final {
-    if (op.getChannelHandle().has_value())
-      return emitDowngradeError(op,
-                                "op has a non-empty channel_handle attribute");
+    if (op.getChannelId().has_value())
+      return emitDowngradeError(op, "op has a non-empty channel_id attribute");
     return success();
   }
 };

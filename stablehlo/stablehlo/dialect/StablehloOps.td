@@ -398,8 +398,9 @@ def StableHLO_IsFiniteOp: StableHLO_UnaryElementwiseOp<"is_finite", [Pure,
 }
 
 def StableHLO_LogOp: StableHLO_UnaryElementwiseOp<"log",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
-  let summary = "Logarithm operator";
+    [Pure, HLO_CompatibleOperandsAndResultType /*log_c1*/],
+     HLO_FpOrComplexTensor /*log_i1*/> {
+  let summary = "Log operation";
   let description = [{
     Performs element-wise logarithm operation on `operand` tensor and produces a
     `result` tensor.
@@ -409,7 +410,7 @@ def StableHLO_LogOp: StableHLO_UnaryElementwiseOp<"log",
 
     Example:
     ```mlir
-    %result = stablehlo.log %operand : tensor<2xf32>
+    %result = stablehlo.log %operand : tensor<2x2xf64>
     ```
   }];
 }
@@ -553,9 +554,10 @@ def StableHLO_RoundNearestEvenOp: StableHLO_UnaryElementwiseOp<"round_nearest_ev
   }];
 }
 
-def StableHLO_RsqrtOp: StableHLO_UnaryElementwiseOp<"rsqrt",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
-  let summary = "Reciprocal Square-root operator";
+def StableHLO_RsqrtOp: StableHLO_UnaryElementwiseOp<"rsqrt", [Pure,
+    HLO_CompatibleOperandsAndResultType /* rsqrt_c1 */],
+    HLO_FpOrComplexTensor /* rsqrt_i1 */> {
+  let summary = "Rsqrt operation";
   let description = [{
     Performs element-wise reciprocal square root operation on `operand` tensor
     and produces a `result` tensor, implementing the `rSqrt` operation from the
@@ -566,7 +568,7 @@ def StableHLO_RsqrtOp: StableHLO_UnaryElementwiseOp<"rsqrt",
 
     Example:
     ```mlir
-    %result = stablehlo.rsqrt %operand : tensor<2xf32>
+    %result = stablehlo.rsqrt %operand : tensor<2x2xf32>
     ```
   }];
 }
@@ -606,9 +608,10 @@ def StableHLO_SineOp: StableHLO_UnaryElementwiseOp<"sine",
   }];
 }
 
-def StableHLO_SqrtOp: StableHLO_UnaryElementwiseOp<"sqrt",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
-  let summary = "Square-root operator";
+def StableHLO_SqrtOp: StableHLO_UnaryElementwiseOp<"sqrt", [Pure,
+    HLO_CompatibleOperandsAndResultType /* sqrt_c1 */],
+    HLO_FpOrComplexTensor /* sqrt_i1 */> {
+  let summary = "Sqrt operation";
   let description = [{
     Performs element-wise square root operation on `operand` tensor and produces
     a `result` tensor.
@@ -618,7 +621,7 @@ def StableHLO_SqrtOp: StableHLO_UnaryElementwiseOp<"sqrt",
 
     Example:
     ```mlir
-    %result = stablehlo.sqrt %operand : tensor<2xf32>
+    %result = stablehlo.sqrt %operand : tensor<2x2xf32>
     ```
   }];
 }
@@ -735,9 +738,10 @@ def StableHLO_ComplexOp: StableHLO_BinaryElementwiseOp<"complex", [Pure,
   }];
 }
 
-def StableHLO_DivOp : StableHLO_BinaryElementwiseOp<"divide",
-      [Pure, HLO_CompatibleOperandsAndResultType], HLO_IntFpOrComplexTensor> {
-  let summary = "Division operator";
+def StableHLO_DivOp : StableHLO_BinaryElementwiseOp<"divide", [Pure,
+    HLO_CompatibleOperandsAndResultType /* div_c1 */],
+    HLO_IntFpOrComplexTensor /* div_i1, div_i2 */> {
+  let summary = "Divide operation";
   let description = [{
     Performs element-wise division of dividend `lhs` and divisor `rhs` tensors
     and produces a `result` tensor.
@@ -747,7 +751,7 @@ def StableHLO_DivOp : StableHLO_BinaryElementwiseOp<"divide",
 
     Example:
     ```mlir
-    %result = stablehlo.divide %lhs, %rhs : tensor<2xi32>
+    %result = stablehlo.divide %lhs, %rhs : tensor<4xf32>
     ```
   }];
 }
@@ -1247,7 +1251,7 @@ def StableHLO_WhileOp: StableHLO_Op<"while", [
     https://github.com/openxla/stablehlo/blob/main/docs/spec.md#while
 
     Example:
-    %results:2 = "stablehlo.while"(%input0, %input1) ({
+    %results0, %results1 = "stablehlo.while"(%operand0, %operand1) ({
       ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
         %0 = "stablehlo.compare"(%arg0, %arg1) {
           comparison_direction = #stablehlo<comparison_direction LT>
@@ -3097,14 +3101,14 @@ def StableHLO_ReducePrecisionOp :
   let description = [{
     Performs element-wise conversion of `operand` to another floating-point type
     that uses `exponent_bits` and `mantissa_bits` and back to the original
-    floating-point type and produces a `result` tensor.
+    floating-point type and produces an `output` tensor.
 
     See:
     https://github.com/openxla/stablehlo/blob/main/docs/spec.md#reduce_precision
 
     Example:
     ```mlir
-    %result = stablehlo.reduce_precision %operand, format = e5m2 : tensor<6xf32>
+    %output = stablehlo.reduce_precision %operand, format = e5m2 : tensor<6xf32>
     ```
   }];
   let arguments = (ins

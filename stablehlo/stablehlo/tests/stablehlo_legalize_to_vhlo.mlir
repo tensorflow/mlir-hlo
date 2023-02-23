@@ -342,9 +342,9 @@ func.func @op_after_all(%arg0: !stablehlo.token) -> !stablehlo.token {
 func.func @op_all_gather(%arg0: tensor<16x8xf32>) -> tensor<16x16xf32> {
   //               CHECK: "vhlo.all_gather_v2"(%arg0) {
   //          CHECK-SAME:   all_gather_dim = #vhlo.integer<1 : i64>
-  //          CHECK-SAME:   channel_handle = #vhlo.channel_handle<handle = 0, type = 0>,
-  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.dense<dense<[[0], [1]]> : tensor<2x1xi64>>,
-  //          CHECK-SAME:   use_global_device_ids = #vhlo.unit
+  //          CHECK-SAME:   channel_id = #vhlo.integer<0 : i64>,
+  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.tensor<dense<[[0], [1]]> : tensor<2x1xi64>>,
+  //          CHECK-SAME:   use_global_device_ids = #vhlo.bool<true>
   //          CHECK-SAME: } : (!vhlo.tensor<16x8x!vhlo.f32>) -> !vhlo.tensor<16x16x!vhlo.f32>
   %0 = "stablehlo.all_gather"(%arg0) {
     all_gather_dim = 1 : i64,
@@ -362,9 +362,9 @@ func.func @op_all_reduce(%arg0: tensor<f32>) -> tensor<f32> {
   //          CHECK-NEXT:     %[[VAL1:.*]] = "vhlo.add"(%[[ARG1]], %[[ARG2]]) : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   //          CHECK-NEXT:     "vhlo.return"(%[[VAL1]]) : (!vhlo.tensor<!vhlo.f32>) -> ()
   //          CHECK-NEXT: }) {
-  //          CHECK-SAME:   channel_handle = #vhlo.channel_handle<handle = 0, type = 0>,
-  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.dense<dense<[[0], [1]]> : tensor<2x1xi64>>,
-  //          CHECK-SAME:   use_global_device_ids = #vhlo.unit
+  //          CHECK-SAME:   channel_id = #vhlo.integer<0 : i64>,
+  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.tensor<dense<[[0], [1]]> : tensor<2x1xi64>>,
+  //          CHECK-SAME:   use_global_device_ids = #vhlo.bool<true>
   //          CHECK-SAME: } : (!vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   %0 = "stablehlo.all_reduce"(%arg0) ({
     ^bb0(%arg1: tensor<f32>, %arg2: tensor<f32>):
@@ -381,9 +381,9 @@ func.func @op_all_reduce(%arg0: tensor<f32>) -> tensor<f32> {
 
 func.func @op_all_to_all(%arg0: tensor<4x16xf32>) -> tensor<16x4xf32> {
   //               CHECK: "vhlo.all_to_all_v2"(%arg0) {
-  //          CHECK-SAME:   channel_handle = #vhlo.channel_handle<handle = 1, type = 0>,
+  //          CHECK-SAME:   channel_id = #vhlo.integer<1 : i64>,
   //          CHECK-SAME:   concat_dimension = #vhlo.integer<0 : i64>,
-  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.dense<dense<[[0, 1, 2, 3]]> : tensor<1x4xi64>>,
+  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.tensor<dense<[[0, 1, 2, 3]]> : tensor<1x4xi64>>,
   //          CHECK-SAME:   split_count = #vhlo.integer<4 : i64>
   //          CHECK-SAME:   split_dimension = #vhlo.integer<1 : i64>
   //          CHECK-SAME: } : (!vhlo.tensor<4x16x!vhlo.f32>) -> !vhlo.tensor<16x4x!vhlo.f32>
@@ -399,7 +399,7 @@ func.func @op_all_to_all(%arg0: tensor<4x16xf32>) -> tensor<16x4xf32> {
 // CHECK-LABEL: "op_all_to_all"
 
 func.func @op_and(%arg0: tensor<i1>, %arg1: tensor<i1>) -> tensor<i1> {
-  // CHECK: "vhlo.and"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.i1>, !vhlo.tensor<!vhlo.i1>) -> !vhlo.tensor<!vhlo.i1>
+  // CHECK: "vhlo.and"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.bool>, !vhlo.tensor<!vhlo.bool>) -> !vhlo.tensor<!vhlo.bool>
   %0 = "stablehlo.and"(%arg0, %arg1) : (tensor<i1>, tensor<i1>) -> tensor<i1>
   func.return %0 : tensor<i1>
 }
@@ -460,7 +460,7 @@ func.func @op_bitcast_convert(%arg0: tensor<i32>) -> tensor<f32> {
 
 func.func @op_broadcast_in_dim(%arg0: tensor<16xf32>) -> tensor<16x16xf32> {
   //      CHECK: "vhlo.broadcast_in_dim"(%arg0) {
-  // CHECK-SAME:   broadcast_dimensions = #vhlo.dense<dense<1> : tensor<1xi64>>
+  // CHECK-SAME:   broadcast_dimensions = #vhlo.tensor<dense<1> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<16x!vhlo.f32>) -> !vhlo.tensor<16x16x!vhlo.f32>
   %0 = "stablehlo.broadcast_in_dim"(%arg0) {
     broadcast_dimensions = dense<1> : tensor<1xi64>
@@ -471,7 +471,7 @@ func.func @op_broadcast_in_dim(%arg0: tensor<16xf32>) -> tensor<16x16xf32> {
 
 func.func @op_broadcast(%arg0: tensor<16xf32>) -> tensor<16x16xf32> {
   //      CHECK: "vhlo.broadcast"(%arg0) {
-  // CHECK-SAME:   broadcast_sizes = #vhlo.dense<dense<16> : tensor<1xi64>>
+  // CHECK-SAME:   broadcast_sizes = #vhlo.tensor<dense<16> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<16x!vhlo.f32>) -> !vhlo.tensor<16x16x!vhlo.f32>
   %0 = "stablehlo.broadcast"(%arg0) {
     broadcast_sizes = dense<16> : tensor<1xi64>
@@ -507,7 +507,7 @@ func.func @op_ceil(%arg0: tensor<f32>) -> tensor<f32> {
 
 func.func @op_cholesky(%arg0: tensor<1x16x16xf32>) -> tensor<1x16x16xf32> {
   //      CHECK: "vhlo.cholesky"(%arg0) {
-  // CHECK-SAME:   lower = #vhlo.integer<true>
+  // CHECK-SAME:   lower = #vhlo.bool<true>
   // CHECK-SAME: } : (!vhlo.tensor<1x16x16x!vhlo.f32>) -> !vhlo.tensor<1x16x16x!vhlo.f32>
   %0 = "stablehlo.cholesky"(%arg0) {
     lower = true
@@ -532,8 +532,8 @@ func.func @op_count_leading_zeros(%arg0: tensor<i32>) -> tensor<i32> {
 
 func.func @op_collective_permute(%arg0: tensor<16x8xf32>) -> tensor<16x8xf32> {
   //               CHECK: "vhlo.collective_permute_v2"(%arg0) {
-  //          CHECK-SAME:   channel_handle = #vhlo.channel_handle<handle = 0, type = 0>,
-  // CHECK-SAME{LITERAL}:   source_target_pairs = #vhlo.dense<dense<[[0, 1], [1, 2], [2, 3]]> : tensor<3x2xi64>>
+  //          CHECK-SAME:   channel_id = #vhlo.integer<0 : i64>,
+  // CHECK-SAME{LITERAL}:   source_target_pairs = #vhlo.tensor<dense<[[0, 1], [1, 2], [2, 3]]> : tensor<3x2xi64>>
   //          CHECK-SAME: } : (!vhlo.tensor<16x8x!vhlo.f32>) -> !vhlo.tensor<16x8x!vhlo.f32>
   %0 = "stablehlo.collective_permute"(%arg0) {
     source_target_pairs = dense<[[0, 1], [1, 2], [2, 3]]> : tensor<3x2xi64>,
@@ -547,7 +547,7 @@ func.func @op_compare(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<i1> {
   //      CHECK: "vhlo.compare"(%arg0, %arg1) {
   // CHECK-SAME:   compare_type = #vhlo<comparison_type TOTALORDER>,
   // CHECK-SAME:   comparison_direction = #vhlo<comparison_direction EQ>
-  // CHECK-SAME: } : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.i1>
+  // CHECK-SAME: } : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.bool>
   %0 = "stablehlo.compare"(%arg0, %arg1) {
     comparison_direction = #stablehlo<comparison_direction EQ>,
     compare_type = #stablehlo<comparison_type TOTALORDER>
@@ -583,7 +583,7 @@ func.func @op_concatenate(%arg0: tensor<8xf32>, %arg1: tensor<8xf32>) -> tensor<
 
 func.func @op_constant(%arg0: tensor<f32>) -> tensor<f32> {
   //      CHECK: "vhlo.constant"() {
-  // CHECK-SAME:   value = #vhlo.dense<dense<0.000000e+00> : tensor<f32>>
+  // CHECK-SAME:   value = #vhlo.tensor<dense<0.000000e+00> : tensor<f32>>
   // CHECK-SAME: } : () -> !vhlo.tensor<!vhlo.f32>
   %0 = "stablehlo.constant"() {
     value = dense<0.0> : tensor<f32>
@@ -601,15 +601,23 @@ func.func @op_convert(%arg0: tensor<i32>) -> tensor<f32> {
 
 func.func @op_convolution(%arg0: tensor<1x8x8x207xf32>, %arg1: tensor<3x3x207x16xf32>) -> tensor<1x8x8x16xf32> {
   //      CHECK: "vhlo.convolution"(%arg0, %arg1) {
-  // CHECK-SAME:   batch_group_count = #vhlo.integer<1 : i64>
-  // CHECK-SAME:   dimension_numbers = #vhlo.conv<inputBatchDimension = 0, inputFeatureDimension = 3, inputSpatialDimensions = [1, 2], kernelInputFeatureDimension = 2, kernelOutputFeatureDimension = 3, kernelSpatialDimensions = [0, 1], outputBatchDimension = 0, outputFeatureDimension = 3, outputSpatialDimensions = [1, 2]>,
-  // CHECK-SAME:   feature_group_count = #vhlo.integer<1 : i64>
-  // CHECK-SAME:   lhs_dilation = #vhlo.dense<dense<1> : tensor<2xi64>>,
-  // CHECK-SAME:   padding = #vhlo.dense<dense<1> : tensor<2x2xi64>>,
+  // CHECK-SAME:   batch_group_count = #vhlo.integer<1 : i64>,
+  // CHECK-SAME:   feature_group_count = #vhlo.integer<1 : i64>,
+  // CHECK-SAME:   input_batch_dimension = #vhlo.integer<0 : i64>,
+  // CHECK-SAME:   input_feature_dimension = #vhlo.integer<3 : i64>,
+  // CHECK-SAME:   input_spatial_dimensions = #vhlo.tensor<dense<[1, 2]> : tensor<2xi64>>,
+  // CHECK-SAME:   kernel_input_feature_dimension = #vhlo.integer<2 : i64>,
+  // CHECK-SAME:   kernel_output_feature_dimension = #vhlo.integer<3 : i64>,
+  // CHECK-SAME:   kernel_spatial_dimensions = #vhlo.tensor<dense<[0, 1]> : tensor<2xi64>>,
+  // CHECK-SAME:   lhs_dilation = #vhlo.tensor<dense<1> : tensor<2xi64>>,
+  // CHECK-SAME:   output_batch_dimension = #vhlo.integer<0 : i64>,
+  // CHECK-SAME:   output_feature_dimension = #vhlo.integer<3 : i64>,
+  // CHECK-SAME:   output_spatial_dimensions = #vhlo.tensor<dense<[1, 2]> : tensor<2xi64>>,
+  // CHECK-SAME:   padding = #vhlo.tensor<dense<1> : tensor<2x2xi64>>,
   // CHECK-SAME:   precision_config = #vhlo.array<[#vhlo<precision DEFAULT>, #vhlo<precision DEFAULT>]>,
-  // CHECK-SAME:   rhs_dilation = #vhlo.dense<dense<1> : tensor<2xi64>>,
-  // CHECK-SAME:   window_reversal = #vhlo.dense<dense<false> : tensor<2xi1>>,
-  // CHECK-SAME:   window_strides = #vhlo.dense<dense<1> : tensor<2xi64>>
+  // CHECK-SAME:   rhs_dilation = #vhlo.tensor<dense<1> : tensor<2xi64>>,
+  // CHECK-SAME:   window_reversal = #vhlo.tensor<dense<false> : tensor<2xi1>>,
+  // CHECK-SAME:   window_strides = #vhlo.tensor<dense<1> : tensor<2xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<1x8x8x207x!vhlo.f32>, !vhlo.tensor<3x3x207x16x!vhlo.f32>) -> !vhlo.tensor<1x8x8x16x!vhlo.f32>
   %0 = "stablehlo.convolution"(%arg0, %arg1) {
     window_strides = dense<1> : tensor<2xi64>,
@@ -642,7 +650,7 @@ func.func @op_create_token() -> !stablehlo.token {
 
 func.func @op_cross_replica_sum(%arg0: tensor<f32>) -> tensor<f32> {
   //               CHECK: "vhlo.cross-replica-sum"(%arg0) {
-  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.dense<dense<[[0], [1]]> : tensor<2x1xi64>>
+  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.tensor<dense<[[0], [1]]> : tensor<2x1xi64>>
   //          CHECK-SAME: } : (!vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   %0 = "stablehlo.cross-replica-sum"(%arg0) {
     replica_groups = dense<[[0], [1]]> : tensor<2x1xi64>
@@ -658,22 +666,20 @@ func.func @op_cstr_reshapable(%arg0: index, %arg1: tensor<1xindex>) -> !shape.wi
 }
 // CHECK-LABEL: "op_cstr_reshapable"
 
-func.func @called_computation() { func.return }
-
 func.func @op_custom_call(%arg0: tensor<f32>) -> tensor<f32> {
   //      CHECK: "vhlo.custom_call_v2"(%arg0) {
   // CHECK-SAME:   api_version = #vhlo<api_version API_VERSION_ORIGINAL>,
   // CHECK-SAME:   backend_config = #vhlo.string<"\08\03\1A\02">,
   // CHECK-SAME:   call_target_name = #vhlo.string<"foo">,
-  // CHECK-SAME:   called_computations = #vhlo.array<[#vhlo.sym<#vhlo.string<"foo">>]>,
-  // CHECK-SAME:   has_side_effect = #vhlo.integer<false>,
-  // CHECK-SAME:   operand_layouts = #vhlo.array<[#vhlo.dense<dense<> : tensor<0xindex>>]>,
+  // CHECK-SAME:   called_computations = #vhlo.array<[#vhlo.string<"foo">]>,
+  // CHECK-SAME:   has_side_effect = #vhlo.bool<false>,
+  // CHECK-SAME:   operand_layouts = #vhlo.array<[#vhlo.tensor<dense<> : tensor<0xindex>>]>,
   // CHECK-SAME:   output_operand_aliases = #vhlo.array<[
   // CHECK-SAME:     #vhlo.output_operand_alias<
   // CHECK-SAME:       outputTupleIndices = [],
   // CHECK-SAME:       operandIndex = 0,
   // CHECK-SAME:       operandTupleIndices = []>]>
-  // CHECK-SAME:   result_layouts = #vhlo.array<[#vhlo.dense<dense<> : tensor<0xindex>>]>
+  // CHECK-SAME:   result_layouts = #vhlo.array<[#vhlo.tensor<dense<> : tensor<0xindex>>]>
   // CHECK-SAME: } : (!vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   %0 = "stablehlo.custom_call"(%arg0) {
     call_target_name = "foo",
@@ -701,13 +707,11 @@ func.func @op_divide(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
 
 func.func @op_dot_general(%arg0: tensor<8x8x16xf32>, %arg1: tensor<8x16x8xf32>) -> tensor<8x8x8xf32> {
   //      CHECK: "vhlo.dot_general"(%arg0, %arg1) {
-  // CHECK-SAME:   dot_dimension_numbers = #vhlo.dot<
-  // CHECK-SAME:     lhsBatchingDimensions = [0],
-  // CHECK-SAME:     rhsBatchingDimensions = [0],
-  // CHECK-SAME:     lhsContractingDimensions = [2],
-  // CHECK-SAME:     rhsContractingDimensions = [1]
-  // CHECK-SAME:   >,
-  // CHECK-SAME:   precision_config = #vhlo.array<[]>
+  // CHECK-SAME:   lhs_batching_dimensions = #vhlo.tensor<dense<0> : tensor<1xi64>>,
+  // CHECK-SAME:   lhs_contracting_dimensions = #vhlo.tensor<dense<2> : tensor<1xi64>>,
+  // CHECK-SAME:   precision_config = #vhlo.array<[]>,
+  // CHECK-SAME:   rhs_batching_dimensions = #vhlo.tensor<dense<0> : tensor<1xi64>>,
+  // CHECK-SAME:   rhs_contracting_dimensions = #vhlo.tensor<dense<1> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<8x8x16x!vhlo.f32>, !vhlo.tensor<8x16x8x!vhlo.f32>) -> !vhlo.tensor<8x8x8x!vhlo.f32>
   %0 = "stablehlo.dot_general"(%arg0, %arg1) {
     dot_dimension_numbers = #stablehlo.dot<
@@ -738,9 +742,9 @@ func.func @op_dot(%arg0: tensor<8x16xf32>, %arg1: tensor<16x8xf32>) -> tensor<8x
 
 func.func @op_dynamic_broadcast_in_dim(%arg0: tensor<?xf32>, %arg1: tensor<2xindex>) -> tensor<?x?xf32> {
   //      CHECK: "vhlo.dynamic_broadcast_in_dim"(%arg0, %arg1) {
-  // CHECK-SAME:   broadcast_dimensions = #vhlo.dense<dense<1> : tensor<1xi64>>,
-  // CHECK-SAME:   known_expanding_dimensions = #vhlo.dense<dense<> : tensor<0xi64>>,
-  // CHECK-SAME:   known_nonexpanding_dimensions = #vhlo.dense<dense<0> : tensor<1xi64>>
+  // CHECK-SAME:   broadcast_dimensions = #vhlo.tensor<dense<1> : tensor<1xi64>>,
+  // CHECK-SAME:   known_expanding_dimensions = #vhlo.tensor<dense<> : tensor<0xi64>>,
+  // CHECK-SAME:   known_nonexpanding_dimensions = #vhlo.tensor<dense<0> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<?x!vhlo.f32>, !vhlo.tensor<2x!vhlo.index>) -> !vhlo.tensor<?x?x!vhlo.f32>
   %0 = "stablehlo.dynamic_broadcast_in_dim"(%arg0, %arg1) {
     broadcast_dimensions = dense<1> : tensor<1xi64>,
@@ -753,15 +757,23 @@ func.func @op_dynamic_broadcast_in_dim(%arg0: tensor<?xf32>, %arg1: tensor<2xind
 
 func.func @op_dynamic_conv(%arg0: tensor<1x8x8x207xf32>, %arg1: tensor<3x3x207x16xf32>, %arg2: tensor<4xi32>) -> tensor<1x?x?x16xf32> {
   //      CHECK: "vhlo.dynamic_conv"(%arg0, %arg1, %arg2) {
-  // CHECK-SAME:   batch_group_count = #vhlo.integer<1 : i64>
-  // CHECK-SAME:   dimension_numbers = #vhlo.conv<inputBatchDimension = 0, inputFeatureDimension = 3, inputSpatialDimensions = [1, 2], kernelInputFeatureDimension = 2, kernelOutputFeatureDimension = 3, kernelSpatialDimensions = [0, 1], outputBatchDimension = 0, outputFeatureDimension = 3, outputSpatialDimensions = [1, 2]>,
-  // CHECK-SAME:   feature_group_count = #vhlo.integer<1 : i64>
-  // CHECK-SAME:   lhs_dilation = #vhlo.dense<dense<1> : tensor<2xi64>>,
-  // CHECK-SAME:   padding = #vhlo.dense<dense<1> : tensor<2x2xi64>>,
+  // CHECK-SAME:   batch_group_count = #vhlo.integer<1 : i64>,
+  // CHECK-SAME:   feature_group_count = #vhlo.integer<1 : i64>,
+  // CHECK-SAME:   input_batch_dimension = #vhlo.integer<0 : i64>,
+  // CHECK-SAME:   input_feature_dimension = #vhlo.integer<3 : i64>,
+  // CHECK-SAME:   input_spatial_dimensions = #vhlo.tensor<dense<[1, 2]> : tensor<2xi64>>,
+  // CHECK-SAME:   kernel_input_feature_dimension = #vhlo.integer<2 : i64>,
+  // CHECK-SAME:   kernel_output_feature_dimension = #vhlo.integer<3 : i64>,
+  // CHECK-SAME:   kernel_spatial_dimensions = #vhlo.tensor<dense<[0, 1]> : tensor<2xi64>>,
+  // CHECK-SAME:   lhs_dilation = #vhlo.tensor<dense<1> : tensor<2xi64>>,
+  // CHECK-SAME:   output_batch_dimension = #vhlo.integer<0 : i64>,
+  // CHECK-SAME:   output_feature_dimension = #vhlo.integer<3 : i64>,
+  // CHECK-SAME:   output_spatial_dimensions = #vhlo.tensor<dense<[1, 2]> : tensor<2xi64>>,
+  // CHECK-SAME:   padding = #vhlo.tensor<dense<1> : tensor<2x2xi64>>,
   // CHECK-SAME:   precision_config = #vhlo.array<[#vhlo<precision DEFAULT>, #vhlo<precision DEFAULT>]>,
-  // CHECK-SAME:   rhs_dilation = #vhlo.dense<dense<1> : tensor<2xi64>>,
-  // CHECK-SAME:   window_reversal = #vhlo.dense<dense<false> : tensor<2xi1>>,
-  // CHECK-SAME:   window_strides = #vhlo.dense<dense<1> : tensor<2xi64>>
+  // CHECK-SAME:   rhs_dilation = #vhlo.tensor<dense<1> : tensor<2xi64>>,
+  // CHECK-SAME:   window_reversal = #vhlo.tensor<dense<false> : tensor<2xi1>>,
+  // CHECK-SAME:   window_strides = #vhlo.tensor<dense<1> : tensor<2xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<1x8x8x207x!vhlo.f32>, !vhlo.tensor<3x3x207x16x!vhlo.f32>, !vhlo.tensor<4x!vhlo.i32>) -> !vhlo.tensor<1x?x?x16x!vhlo.f32>
   %0 = "stablehlo.dynamic_conv"(%arg0, %arg1, %arg2) {
     window_strides = dense<1> : tensor<2xi64>,
@@ -780,13 +792,11 @@ func.func @op_dynamic_conv(%arg0: tensor<1x8x8x207xf32>, %arg1: tensor<3x3x207x1
 
 func.func @op_dynamic_gather(%arg0 : tensor<2x4x9xf32>, %arg1 : tensor<1x5x2xi32>, %arg2 : tensor<3xi32>) -> tensor<1x5x8xf32> {
   //      CHECK: "vhlo.dynamic_gather"(%arg0, %arg1, %arg2) {
-  // CHECK-SAME:   dimension_numbers = #vhlo.gather<
-  // CHECK-SAME:     offsetDims = [2],
-  // CHECK-SAME:     collapsedSliceDims = [0, 1],
-  // CHECK-SAME:     startIndexMap = [0, 1],
-  // CHECK-SAME:     indexVectorDim = 2
-  // CHECK-SAME:   >,
-  // CHECK-SAME:   indices_are_sorted = #vhlo.integer<false>
+  // CHECK-SAME:   collapsed_slice_dims = #vhlo.tensor<dense<[0, 1]> : tensor<2xi64>>,
+  // CHECK-SAME:   index_vector_dim = #vhlo.integer<2 : i64>,
+  // CHECK-SAME:   indices_are_sorted = #vhlo.bool<false>,
+  // CHECK-SAME:   offset_dims = #vhlo.tensor<dense<2> : tensor<1xi64>>,
+  // CHECK-SAME:   start_index_map = #vhlo.tensor<dense<[0, 1]> : tensor<2xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<2x4x9x!vhlo.f32>, !vhlo.tensor<1x5x2x!vhlo.i32>, !vhlo.tensor<3x!vhlo.i32>) -> !vhlo.tensor<1x5x8x!vhlo.f32>
   %0 = "stablehlo.dynamic_gather"(%arg0, %arg1, %arg2) {
     dimension_numbers = #stablehlo.gather<
@@ -828,7 +838,7 @@ func.func @op_dynamic_reshape(%arg0: tensor<16xf32>, %arg1: tensor<?xindex>) -> 
 
 func.func @op_dynamic_slice(%arg0: tensor<16xf32>, %arg1: tensor<i64>) -> tensor<4xf32> {
   //      CHECK: "vhlo.dynamic_slice"(%arg0, %arg1) {
-  // CHECK-SAME:   slice_sizes = #vhlo.dense<dense<4> : tensor<1xi64>>
+  // CHECK-SAME:   slice_sizes = #vhlo.tensor<dense<4> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<16x!vhlo.f32>, !vhlo.tensor<!vhlo.i64>) -> !vhlo.tensor<4x!vhlo.f32>
   %0 = "stablehlo.dynamic_slice"(%arg0, %arg1) {
     slice_sizes = dense<4> : tensor<1xi64>
@@ -871,7 +881,7 @@ func.func @op_exponential(%arg0: tensor<f32>) -> tensor<f32> {
 
 func.func @op_fft(%arg0: tensor<16xcomplex<f32>>) -> tensor<16xcomplex<f32>> {
   //      CHECK: "vhlo.fft"(%arg0) {
-  // CHECK-SAME:   fft_length = #vhlo.dense<dense<16> : tensor<1xi64>>,
+  // CHECK-SAME:   fft_length = #vhlo.tensor<dense<16> : tensor<1xi64>>,
   // CHECK-SAME:   fft_type = #vhlo<fft_type FFT>
   // CHECK-SAME: } : (!vhlo.tensor<16x!vhlo.complex<!vhlo.f32>>) -> !vhlo.tensor<16x!vhlo.complex<!vhlo.f32>>
   %0 = "stablehlo.fft"(%arg0) {
@@ -889,27 +899,25 @@ func.func @op_floor(%arg0: tensor<f32>) -> tensor<f32> {
 }
 // CHECK-LABEL: "op_floor"
 
-func.func @op_func(%arg0: tensor<f32> {stablehlo.self = unit}) -> (tensor<f32> {stablehlo.self = unit}) {
+func.func @op_func(%arg0: tensor<f32> {stablehlo.arg = "0"}) -> (tensor<f32> {stablehlo.result = "0"}) {
   // CHECK:      "vhlo.func"() ({
   // CHECK-NEXT: ^bb0(%arg0: !vhlo.tensor<!vhlo.f32>):
   // CHECK-NEXT:   "vhlo.return"(%arg0) : (!vhlo.tensor<!vhlo.f32>) -> ()
-  // CHECK-NEXT: arg_attrs = #vhlo.array<[#vhlo.dict<{#vhlo.string<"stablehlo.self"> = #vhlo.unit}>]>
+  // CHECK-NEXT: arg_attrs = #vhlo.array<[#vhlo.dict<{#vhlo.string<"stablehlo.arg"> = #vhlo.string<"0">}>]>
   // CHECK-SAME: function_type = #vhlo.type<!vhlo.func<(!vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>>>
-  // CHECK-SAME: res_attrs = #vhlo.array<[#vhlo.dict<{#vhlo.string<"stablehlo.self"> = #vhlo.unit}>]>
+  // CHECK-SAME: res_attrs = #vhlo.array<[#vhlo.dict<{#vhlo.string<"stablehlo.result"> = #vhlo.string<"0">}>]>
   func.return %arg0 : tensor<f32>
 }
 // CHECK-LABEL: "op_func"
 
 func.func @op_gather(%arg0 : tensor<2x4x9xf32>, %arg1 : tensor<1x5x2xi32>) -> tensor<1x5x1xf32> {
   //      CHECK: "vhlo.gather"(%arg0, %arg1) {
-  // CHECK-SAME:   dimension_numbers = #vhlo.gather<
-  // CHECK-SAME:     offsetDims = [2],
-  // CHECK-SAME:     collapsedSliceDims = [0, 1],
-  // CHECK-SAME:     startIndexMap = [0, 1],
-  // CHECK-SAME:     indexVectorDim = 2
-  // CHECK-SAME:   >,
-  // CHECK-SAME:   indices_are_sorted = #vhlo.integer<false>,
-  // CHECK-SAME:   slice_sizes = #vhlo.dense<dense<1> : tensor<3xi64>>
+  // CHECK-SAME:   collapsed_slice_dims = #vhlo.tensor<dense<[0, 1]> : tensor<2xi64>>,
+  // CHECK-SAME:   index_vector_dim = #vhlo.integer<2 : i64>,
+  // CHECK-SAME:   indices_are_sorted = #vhlo.bool<false>,
+  // CHECK-SAME:   offset_dims = #vhlo.tensor<dense<2> : tensor<1xi64>>,
+  // CHECK-SAME:   slice_sizes = #vhlo.tensor<dense<1> : tensor<3xi64>>,
+  // CHECK-SAME:   start_index_map = #vhlo.tensor<dense<[0, 1]> : tensor<2xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<2x4x9x!vhlo.f32>, !vhlo.tensor<1x5x2x!vhlo.i32>) -> !vhlo.tensor<1x5x1x!vhlo.f32>
   %0 = "stablehlo.gather"(%arg0, %arg1) {
     dimension_numbers = #stablehlo.gather<
@@ -952,7 +960,7 @@ func.func @op_if(%arg0: tensor<i1>, %arg1: tensor<f32>, %arg2: tensor<f32>) -> t
   // CHECK-NEXT:   "vhlo.return"(%arg1) : (!vhlo.tensor<!vhlo.f32>) -> ()
   // CHECK-NEXT: }, {
   // CHECK-NEXT:   "vhlo.return"(%arg2) : (!vhlo.tensor<!vhlo.f32>) -> ()
-  // CHECK-NEXT: }) : (!vhlo.tensor<!vhlo.i1>) -> !vhlo.tensor<!vhlo.f32>
+  // CHECK-NEXT: }) : (!vhlo.tensor<!vhlo.bool>) -> !vhlo.tensor<!vhlo.f32>
   %0 = "stablehlo.if"(%arg0) ({
     "stablehlo.return"(%arg1) : (tensor<f32>) -> ()
   }, {
@@ -994,7 +1002,7 @@ func.func @op_iota() -> tensor<16xf32> {
 // CHECK-LABEL: "op_iota"
 
 func.func @op_is_finite(%arg0: tensor<f32>) -> tensor<i1> {
-  // CHECK: "vhlo.is_finite"(%arg0) : (!vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.i1>
+  // CHECK: "vhlo.is_finite"(%arg0) : (!vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.bool>
   %0 = "stablehlo.is_finite"(%arg0) : (tensor<f32>) -> tensor<i1>
   func.return %0 : tensor<i1>
 }
@@ -1027,7 +1035,7 @@ func.func @op_map(%arg0: tensor<16xf32>) -> tensor<16xf32> {
   // CHECK-NEXT:     %[[VAL1:.*]] = "vhlo.abs"(%[[ARG1]]) : (!vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   // CHECK-NEXT:     "vhlo.return"(%[[VAL1]]) : (!vhlo.tensor<!vhlo.f32>) -> ()
   // CHECK-NEXT: }) {
-  // CHECK-SAME:   dimensions = #vhlo.dense<dense<0> : tensor<1xi64>>
+  // CHECK-SAME:   dimensions = #vhlo.tensor<dense<0> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<16x!vhlo.f32>) -> !vhlo.tensor<16x!vhlo.f32>
   %0 = "stablehlo.map"(%arg0) ({
     ^bb0(%arg1: tensor<f32>):
@@ -1069,7 +1077,7 @@ func.func @op_negate(%arg0: tensor<f32>) -> tensor<f32> {
 // CHECK-LABEL: "op_negate"
 
 func.func @op_not(%arg0: tensor<i1>) -> tensor<i1> {
-  // CHECK: "vhlo.not"(%arg0) : (!vhlo.tensor<!vhlo.i1>) -> !vhlo.tensor<!vhlo.i1>
+  // CHECK: "vhlo.not"(%arg0) : (!vhlo.tensor<!vhlo.bool>) -> !vhlo.tensor<!vhlo.bool>
   %0 = "stablehlo.not"(%arg0) : (tensor<i1>) -> tensor<i1>
   func.return %0 : tensor<i1>
 }
@@ -1083,7 +1091,7 @@ func.func @op_optimization_barrier(%arg0: tensor<f32>) -> tensor<f32> {
 // CHECK-LABEL: "op_optimization_barrier"
 
 func.func @op_or(%arg0: tensor<i1>, %arg1: tensor<i1>) -> tensor<i1> {
-  // CHECK: "vhlo.or"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.i1>, !vhlo.tensor<!vhlo.i1>) -> !vhlo.tensor<!vhlo.i1>
+  // CHECK: "vhlo.or"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.bool>, !vhlo.tensor<!vhlo.bool>) -> !vhlo.tensor<!vhlo.bool>
   %0 = "stablehlo.or"(%arg0, %arg1) : (tensor<i1>, tensor<i1>) -> tensor<i1>
   func.return %0 : tensor<i1>
 }
@@ -1102,9 +1110,9 @@ func.func @op_outfeed(%arg0: tensor<f32>, %arg1: !stablehlo.token) -> !stablehlo
 
 func.func @op_pad(%arg0: tensor<8xf32>, %arg1: tensor<f32>) -> tensor<16xf32> {
   //      CHECK: "vhlo.pad"(%arg0, %arg1) {
-  // CHECK-SAME:   edge_padding_high = #vhlo.dense<dense<4> : tensor<1xi64>>,
-  // CHECK-SAME:   edge_padding_low = #vhlo.dense<dense<4> : tensor<1xi64>>,
-  // CHECK-SAME:   interior_padding = #vhlo.dense<dense<0> : tensor<1xi64>>
+  // CHECK-SAME:   edge_padding_high = #vhlo.tensor<dense<4> : tensor<1xi64>>,
+  // CHECK-SAME:   edge_padding_low = #vhlo.tensor<dense<4> : tensor<1xi64>>,
+  // CHECK-SAME:   interior_padding = #vhlo.tensor<dense<0> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<8x!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<16x!vhlo.f32>
   %0 = "stablehlo.pad"(%arg0, %arg1) {
     edge_padding_high = dense<4> : tensor<1xi64>,
@@ -1145,8 +1153,9 @@ func.func @op_real(%arg0: tensor<complex<f32>>) -> tensor<f32> {
 
 func.func @op_recv(%arg0: !stablehlo.token) -> (tensor<f32>, !stablehlo.token) {
   //      CHECK: "vhlo.recv"(%arg0) {
-  // CHECK-SAME:   channel_handle = #vhlo.channel_handle<handle = 0, type = 0>,
-  // CHECK-SAME:   is_host_transfer = #vhlo.integer<true>
+  // CHECK-SAME:   channel_id = #vhlo.integer<0 : i64>,
+  // CHECK-SAME:   channel_type = #vhlo.integer<0 : i64>,
+  // CHECK-SAME:   is_host_transfer = #vhlo.bool<true>
   // CHECK-SAME: } : (!vhlo.token) -> (!vhlo.tensor<!vhlo.f32>, !vhlo.token)
   %0:2 = "stablehlo.recv"(%arg0) {
     channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>,
@@ -1187,8 +1196,8 @@ func.func @op_reduce_scatter(%arg0: tensor<16xf32>) -> tensor<16xf32> {
   //          CHECK-NEXT:     %[[VAL1:.*]] = "vhlo.add"(%[[ARG1]], %[[ARG2]]) : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   //          CHECK-NEXT:     "vhlo.return"(%[[VAL1]]) : (!vhlo.tensor<!vhlo.f32>) -> ()
   //          CHECK-NEXT: }) {
-  //          CHECK-SAME:   channel_handle = #vhlo.channel_handle<handle = 0, type = 0>,
-  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.dense<dense<[[0], [1]]> : tensor<2x1xi64>>,
+  //          CHECK-SAME:   channel_id = #vhlo.integer<0 : i64>,
+  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.tensor<dense<[[0], [1]]> : tensor<2x1xi64>>,
   //          CHECK-SAME:   scatter_dimension = #vhlo.integer<0 : i64>
   //          CHECK-SAME: } : (!vhlo.tensor<16x!vhlo.f32>) -> !vhlo.tensor<16x!vhlo.f32>
   %0 = "stablehlo.reduce_scatter"(%arg0) ({
@@ -1210,11 +1219,11 @@ func.func @op_reduce_window(%arg0: tensor<2x17x31x7xf32>, %arg1: tensor<f32>) ->
   //          CHECK-NEXT:     %[[VAL1:.*]] = "vhlo.maximum"(%[[ARG2]], %[[ARG3]]) : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   //          CHECK-NEXT:     "vhlo.return"(%[[VAL1]]) : (!vhlo.tensor<!vhlo.f32>) -> ()
   //          CHECK-NEXT: }) {
-  //          CHECK-SAME:   base_dilations = #vhlo.dense<dense<1> : tensor<4xi64>>,
-  // CHECK-SAME{LITERAL}:   padding = #vhlo.dense<dense<[[0, 0], [2, 0], [0, 2], [0, 0]]> : tensor<4x2xi64>>,
-  //          CHECK-SAME:   window_dilations = #vhlo.dense<dense<[1, 2, 2, 1]> : tensor<4xi64>>,
-  //          CHECK-SAME:   window_dimensions = #vhlo.dense<dense<[1, 2, 2, 1]> : tensor<4xi64>>,
-  //          CHECK-SAME:   window_strides = #vhlo.dense<dense<[1, 4, 4, 1]> : tensor<4xi64>>
+  //          CHECK-SAME:   base_dilations = #vhlo.tensor<dense<1> : tensor<4xi64>>,
+  // CHECK-SAME{LITERAL}:   padding = #vhlo.tensor<dense<[[0, 0], [2, 0], [0, 2], [0, 0]]> : tensor<4x2xi64>>,
+  //          CHECK-SAME:   window_dilations = #vhlo.tensor<dense<[1, 2, 2, 1]> : tensor<4xi64>>,
+  //          CHECK-SAME:   window_dimensions = #vhlo.tensor<dense<[1, 2, 2, 1]> : tensor<4xi64>>,
+  //          CHECK-SAME:   window_strides = #vhlo.tensor<dense<[1, 4, 4, 1]> : tensor<4xi64>>
   //          CHECK-SAME: } : (!vhlo.tensor<2x17x31x7x!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<2x5x8x7x!vhlo.f32>
   %0 = "stablehlo.reduce_window"(%arg0, %arg1) ({
     ^bb0(%arg2: tensor<f32>, %arg3: tensor<f32>):
@@ -1272,7 +1281,7 @@ func.func @op_return(%arg0: tensor<i32>, %arg1: tensor<f32>) -> tensor<f32> {
 
 func.func @op_reverse(%arg0: tensor<16xf32>) -> tensor<16xf32> {
   //      CHECK: "vhlo.reverse"(%arg0) {
-  // CHECK-SAME:   dimensions = #vhlo.dense<dense<0> : tensor<1xi64>>
+  // CHECK-SAME:   dimensions = #vhlo.tensor<dense<0> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<16x!vhlo.f32>) -> !vhlo.tensor<16x!vhlo.f32>
   %0 = "stablehlo.reverse"(%arg0) {
     dimensions = dense<0> : tensor<1xi64>
@@ -1330,14 +1339,12 @@ func.func @op_scatter(%arg0: tensor<200x100x300xf32>, %arg1: tensor<10x2xi32>, %
   // CHECK-NEXT:     %[[VAL1:.*]] = "vhlo.add"(%[[ARG3]], %[[ARG4]]) : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   // CHECK-NEXT:     "vhlo.return"(%[[VAL1]]) : (!vhlo.tensor<!vhlo.f32>) -> ()
   // CHECK-NEXT: }) {
-  // CHECK-SAME:  indices_are_sorted = #vhlo.integer<true>,
-  // CHECK-SAME:  scatter_dimension_numbers = #vhlo.scatter<
-  // CHECK-SAME:    updateWindowDims = [1],
-  // CHECK-SAME:    insertedWindowDims = [0, 1],
-  // CHECK-SAME:    scatterDimsToOperandDims = [0, 1],
-  // CHECK-SAME:    indexVectorDim = 1
-  // CHECK-SAME:  >,
-  // CHECK-SAME:  unique_indices = #vhlo.integer<true>
+  // CHECK-SAME:   index_vector_dim = #vhlo.integer<1 : i64>,
+  // CHECK-SAME:   indices_are_sorted = #vhlo.bool<true>,
+  // CHECK-SAME:   inserted_window_dims = #vhlo.tensor<dense<[0, 1]> : tensor<2xi64>>,
+  // CHECK-SAME:   scatter_dims_to_operand_dims = #vhlo.tensor<dense<[0, 1]> : tensor<2xi64>>,
+  // CHECK-SAME:   unique_indices = #vhlo.bool<true>,
+  // CHECK-SAME:   update_window_dims = #vhlo.tensor<dense<1> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<200x100x300x!vhlo.f32>, !vhlo.tensor<10x2x!vhlo.i32>, !vhlo.tensor<10x300x!vhlo.f32>) -> !vhlo.tensor<200x100x300x!vhlo.f32>
   %0 = "stablehlo.scatter"(%arg0, %arg1, %arg2) ({
     ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
@@ -1360,16 +1367,16 @@ func.func @op_scatter(%arg0: tensor<200x100x300xf32>, %arg1: tensor<10x2xi32>, %
 func.func @op_select_and_scatter(%arg0: tensor<10x24x24x64xf32>, %arg1: tensor<10x12x12x64xf32>, %arg2: tensor<f32>) -> tensor<10x24x24x64xf32> {
   //      CHECK: "vhlo.select_and_scatter"(%arg0, %arg1, %arg2) ({
   // CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG31:arg.*]]: !vhlo.tensor<!vhlo.f32>, %[[ARG41:arg.*]]: !vhlo.tensor<!vhlo.f32>):
-  // CHECK-NEXT:     %[[VAL11:.*]] = "vhlo.compare"(%[[ARG31]], %[[ARG41]]) {compare_type = #vhlo<comparison_type TOTALORDER>, comparison_direction = #vhlo<comparison_direction GE>} : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.i1>
-  // CHECK-NEXT:     "vhlo.return"(%[[VAL11]]) : (!vhlo.tensor<!vhlo.i1>) -> ()
+  // CHECK-NEXT:     %[[VAL11:.*]] = "vhlo.compare"(%[[ARG31]], %[[ARG41]]) {compare_type = #vhlo<comparison_type TOTALORDER>, comparison_direction = #vhlo<comparison_direction GE>} : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.bool>
+  // CHECK-NEXT:     "vhlo.return"(%[[VAL11]]) : (!vhlo.tensor<!vhlo.bool>) -> ()
   // CHECK-NEXT: }, {
   // CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG32:arg.*]]: !vhlo.tensor<!vhlo.f32>, %[[ARG42:arg.*]]: !vhlo.tensor<!vhlo.f32>):
   // CHECK-NEXT:     %[[VAL12:.*]] = "vhlo.add"(%[[ARG32]], %[[ARG42]]) : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   // CHECK-NEXT:     "vhlo.return"(%[[VAL12]]) : (!vhlo.tensor<!vhlo.f32>) -> ()
   // CHECK-NEXT: }) {
-  // CHECK-SAME:   padding = #vhlo.dense<dense<0> : tensor<4x2xi64>>,
-  // CHECK-SAME:   window_dimensions = #vhlo.dense<dense<[1, 2, 2, 1]> : tensor<4xi64>>,
-  // CHECK-SAME:   window_strides = #vhlo.dense<dense<[1, 2, 2, 1]> : tensor<4xi64>>
+  // CHECK-SAME:   padding = #vhlo.tensor<dense<0> : tensor<4x2xi64>>,
+  // CHECK-SAME:   window_dimensions = #vhlo.tensor<dense<[1, 2, 2, 1]> : tensor<4xi64>>,
+  // CHECK-SAME:   window_strides = #vhlo.tensor<dense<[1, 2, 2, 1]> : tensor<4xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<10x24x24x64x!vhlo.f32>, !vhlo.tensor<10x12x12x64x!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<10x24x24x64x!vhlo.f32>
   %0 = "stablehlo.select_and_scatter"(%arg0, %arg1, %arg2) ({
     ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
@@ -1389,7 +1396,7 @@ func.func @op_select_and_scatter(%arg0: tensor<10x24x24x64xf32>, %arg1: tensor<1
 // CHECK-LABEL: "op_select_and_scatter"
 
 func.func @op_select(%arg0: tensor<i1>, %arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> {
-  // CHECK: "vhlo.select"(%arg0, %arg1, %arg2) : (!vhlo.tensor<!vhlo.i1>, !vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
+  // CHECK: "vhlo.select"(%arg0, %arg1, %arg2) : (!vhlo.tensor<!vhlo.bool>, !vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.f32>
   %0 = "stablehlo.select"(%arg0, %arg1, %arg2) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
   func.return %0 : tensor<f32>
 }
@@ -1397,8 +1404,9 @@ func.func @op_select(%arg0: tensor<i1>, %arg1: tensor<f32>, %arg2: tensor<f32>) 
 
 func.func @op_send(%arg0: tensor<f32>, %arg1: !stablehlo.token) -> !stablehlo.token {
   //      CHECK: "vhlo.send"(%arg0, %arg1) {
-  // CHECK-SAME:   channel_handle = #vhlo.channel_handle<handle = 0, type = 0>,
-  // CHECK-SAME:   is_host_transfer = #vhlo.integer<true>
+  // CHECK-SAME:   channel_id = #vhlo.integer<0 : i64>,
+  // CHECK-SAME:   channel_type = #vhlo.integer<0 : i64>,
+  // CHECK-SAME:   is_host_transfer = #vhlo.bool<true>
   // CHECK-SAME: } : (!vhlo.tensor<!vhlo.f32>, !vhlo.token) -> !vhlo.token
   %0 = "stablehlo.send"(%arg0, %arg1) {
     channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>,
@@ -1456,9 +1464,9 @@ func.func @op_sine(%arg0: tensor<f32>) -> tensor<f32> {
 
 func.func @op_slice(%arg0: tensor<16xf32>) -> tensor<4xf32> {
   //      CHECK: "vhlo.slice"(%arg0) {
-  // CHECK-SAME:   limit_indices = #vhlo.dense<dense<4> : tensor<1xi64>>,
-  // CHECK-SAME:   start_indices = #vhlo.dense<dense<0> : tensor<1xi64>>,
-  // CHECK-SAME:   strides = #vhlo.dense<dense<1> : tensor<1xi64>>
+  // CHECK-SAME:   limit_indices = #vhlo.tensor<dense<4> : tensor<1xi64>>,
+  // CHECK-SAME:   start_indices = #vhlo.tensor<dense<0> : tensor<1xi64>>,
+  // CHECK-SAME:   strides = #vhlo.tensor<dense<1> : tensor<1xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<16x!vhlo.f32>) -> !vhlo.tensor<4x!vhlo.f32>
   %0 = "stablehlo.slice"(%arg0) {
     start_indices = dense<0> : tensor<1xi64>,
@@ -1472,11 +1480,11 @@ func.func @op_slice(%arg0: tensor<16xf32>) -> tensor<4xf32> {
 func.func @op_sort(%arg0: tensor<16xf32>) -> tensor<16xf32> {
   //      CHECK: "vhlo.sort"(%arg0) ({
   // CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG1:arg.*]]: !vhlo.tensor<!vhlo.f32>, %[[ARG2:arg.*]]: !vhlo.tensor<!vhlo.f32>):
-  // CHECK-NEXT:     %[[VAL1:.*]] = "vhlo.compare"(%[[ARG1]], %[[ARG2]]) {compare_type = #vhlo<comparison_type FLOAT>, comparison_direction = #vhlo<comparison_direction GT>} : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.i1>
-  // CHECK-NEXT:     "vhlo.return"(%[[VAL1]]) : (!vhlo.tensor<!vhlo.i1>) -> ()
+  // CHECK-NEXT:     %[[VAL1:.*]] = "vhlo.compare"(%[[ARG1]], %[[ARG2]]) {compare_type = #vhlo<comparison_type FLOAT>, comparison_direction = #vhlo<comparison_direction GT>} : (!vhlo.tensor<!vhlo.f32>, !vhlo.tensor<!vhlo.f32>) -> !vhlo.tensor<!vhlo.bool>
+  // CHECK-NEXT:     "vhlo.return"(%[[VAL1]]) : (!vhlo.tensor<!vhlo.bool>) -> ()
   // CHECK-NEXT: }) {
   // CHECK-SAME:   dimension = #vhlo.integer<0 : i64>
-  // CHECK-SAME:   is_stable = #vhlo.integer<true>
+  // CHECK-SAME:   is_stable = #vhlo.bool<true>
   // CHECK-SAME: } : (!vhlo.tensor<16x!vhlo.f32>) -> !vhlo.tensor<16x!vhlo.f32>
   %0 = "stablehlo.sort"(%arg0) ({
     ^bb0(%arg1: tensor<f32>, %arg2: tensor<f32>):
@@ -1537,7 +1545,7 @@ func.func @op_trace(%arg0: tensor<f32>) {
 
 func.func @op_transpose(%arg0: tensor<16x8xf32>) ->  tensor<8x16xf32> {
   //      CHECK: "vhlo.transpose"(%arg0) {
-  // CHECK-SAME:   permutation = #vhlo.dense<dense<[1, 0]> : tensor<2xi64>>
+  // CHECK-SAME:   permutation = #vhlo.tensor<dense<[1, 0]> : tensor<2xi64>>
   // CHECK-SAME: } : (!vhlo.tensor<16x8x!vhlo.f32>) -> !vhlo.tensor<8x16x!vhlo.f32>
   %0 = "stablehlo.transpose"(%arg0) {
     permutation = dense<[1, 0]> : tensor<2xi64>
@@ -1548,10 +1556,10 @@ func.func @op_transpose(%arg0: tensor<16x8xf32>) ->  tensor<8x16xf32> {
 
 func.func @op_triangular_solve(%arg0: tensor<16x16xf32>, %arg1: tensor<16x16xf32>) ->  tensor<16x16xf32> {
   //      CHECK: "vhlo.triangular_solve"(%arg0, %arg1) {
-  // CHECK-SAME:   left_side = #vhlo.integer<true>,
-  // CHECK-SAME:   lower = #vhlo.integer<true>,
+  // CHECK-SAME:   left_side = #vhlo.bool<true>,
+  // CHECK-SAME:   lower = #vhlo.bool<true>,
   // CHECK-SAME:   transpose_a = #vhlo<transpose NO_TRANSPOSE>,
-  // CHECK-SAME:   unit_diagonal = #vhlo.integer<true>
+  // CHECK-SAME:   unit_diagonal = #vhlo.bool<true>
   // CHECK-SAME: } : (!vhlo.tensor<16x16x!vhlo.f32>, !vhlo.tensor<16x16x!vhlo.f32>) -> !vhlo.tensor<16x16x!vhlo.f32>
   %0 = "stablehlo.triangular_solve"(%arg0, %arg1) {
     left_side = true,
@@ -1597,12 +1605,12 @@ func.func @op_uniform_quantize(%arg0: tensor<f32>) -> tensor<!quant.uniform<i8:f
 
 func.func @op_while(%arg0: tensor<i1>) -> tensor<i1> {
   //      CHECK: "vhlo.while"(%arg0) ({
-  // CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG1:arg.*]]: !vhlo.tensor<!vhlo.i1>):
-  // CHECK-NEXT:     "vhlo.return"(%[[ARG1]]) : (!vhlo.tensor<!vhlo.i1>) -> ()
+  // CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG1:arg.*]]: !vhlo.tensor<!vhlo.bool>):
+  // CHECK-NEXT:     "vhlo.return"(%[[ARG1]]) : (!vhlo.tensor<!vhlo.bool>) -> ()
   // CHECK-NEXT:   }, {
-  // CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG1:arg.*]]: !vhlo.tensor<!vhlo.i1>)
-  // CHECK-NEXT:     "vhlo.return"(%[[ARG1]]) : (!vhlo.tensor<!vhlo.i1>) -> ()
-  // CHECK-NEXT: }) : (!vhlo.tensor<!vhlo.i1>) -> !vhlo.tensor<!vhlo.i1>
+  // CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG1:arg.*]]: !vhlo.tensor<!vhlo.bool>)
+  // CHECK-NEXT:     "vhlo.return"(%[[ARG1]]) : (!vhlo.tensor<!vhlo.bool>) -> ()
+  // CHECK-NEXT: }) : (!vhlo.tensor<!vhlo.bool>) -> !vhlo.tensor<!vhlo.bool>
   %0 = "stablehlo.while"(%arg0) ({
     ^bb0(%arg1: tensor<i1>):
       "stablehlo.return"(%arg1) : (tensor<i1>) -> ()
@@ -1615,7 +1623,7 @@ func.func @op_while(%arg0: tensor<i1>) -> tensor<i1> {
 // CHECK-LABEL: "op_while"
 
 func.func @op_xor(%arg0: tensor<i1>, %arg1: tensor<i1>) -> tensor<i1> {
-  // CHECK: "vhlo.xor"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.i1>, !vhlo.tensor<!vhlo.i1>) -> !vhlo.tensor<!vhlo.i1>
+  // CHECK: "vhlo.xor"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.bool>, !vhlo.tensor<!vhlo.bool>) -> !vhlo.tensor<!vhlo.bool>
   %0 = "stablehlo.xor"(%arg0, %arg1) : (tensor<i1>, tensor<i1>) -> tensor<i1>
   func.return %0 : tensor<i1>
 }
@@ -1624,7 +1632,7 @@ func.func @op_xor(%arg0: tensor<i1>, %arg1: tensor<i1>) -> tensor<i1> {
 // ============ TYPES ============
 
 func.func @type_i1(%arg0: tensor<i1>, %arg1: tensor<i1>) -> tensor<i1> {
-  // CHECK: "vhlo.and"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.i1>, !vhlo.tensor<!vhlo.i1>) -> !vhlo.tensor<!vhlo.i1>
+  // CHECK: "vhlo.and"(%arg0, %arg1) : (!vhlo.tensor<!vhlo.bool>, !vhlo.tensor<!vhlo.bool>) -> !vhlo.tensor<!vhlo.bool>
   %0 = "stablehlo.and"(%arg0, %arg1) : (tensor<i1>, tensor<i1>) -> tensor<i1>
   func.return %0 : tensor<i1>
 }
@@ -1785,7 +1793,7 @@ func.func @type_token_callee(%arg0: !stablehlo.token) -> !stablehlo.token {
 // CHECK-LABEL: "type_token_callee"
 
 func.func @type_token_caller(%arg0: !stablehlo.token) -> !stablehlo.token {
-  // CHECK:      "vhlo.call"(%arg0) {callee = #vhlo.sym<#vhlo.string<"type_token_callee">>}
+  // CHECK:      "vhlo.call"(%arg0) {callee = #vhlo.string<"type_token_callee">}
   // CHECK-SAME: (!vhlo.token) -> !vhlo.token
   %0 = func.call @type_token_callee(%arg0) : (!stablehlo.token) -> !stablehlo.token
   return %0 : !stablehlo.token

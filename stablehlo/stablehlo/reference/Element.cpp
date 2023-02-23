@@ -190,6 +190,50 @@ Element Element::operator+(const Element &other) const {
       });
 }
 
+Element Element::operator/(const Element &other) const {
+  auto lhs = *this;
+  auto rhs = other;
+
+  Type type = lhs.getType();
+  if (lhs.getType() != rhs.getType())
+    report_fatal_error(invalidArgument("Element types don't match: %s vs %s",
+                                       debugString(lhs.getType()).c_str(),
+                                       debugString(rhs.getType()).c_str()));
+
+  if (isSupportedIntegerType(type)) {
+    auto intLhs = lhs.getIntegerValue();
+    auto intRhs = rhs.getIntegerValue();
+    return Element(type, isSupportedSignedIntegerType(type)
+                             ? intLhs.sdiv(intRhs)
+                             : intLhs.udiv(intRhs));
+  }
+
+  if (isSupportedFloatType(type)) {
+    APFloat lhsVal = lhs.getFloatValue();
+    APFloat rhsVal = rhs.getFloatValue();
+    return Element(type, lhsVal / rhsVal);
+  }
+
+  if (isSupportedComplexType(type)) {
+    auto lhsVal = lhs.getComplexValue();
+    auto rhsVal = rhs.getComplexValue();
+    const llvm::fltSemantics &elSemantics = lhsVal.real().getSemantics();
+    auto resultVal = std::complex<double>(lhsVal.real().convertToDouble(),
+                                          lhsVal.imag().convertToDouble()) /
+                     std::complex<double>(rhsVal.real().convertToDouble(),
+                                          rhsVal.imag().convertToDouble());
+    bool roundingErr;
+    APFloat resultReal(resultVal.real());
+    resultReal.convert(elSemantics, APFloat::rmNearestTiesToEven, &roundingErr);
+    APFloat resultImag(resultVal.imag());
+    resultImag.convert(elSemantics, APFloat::rmNearestTiesToEven, &roundingErr);
+    return Element(type, std::complex<APFloat>(resultReal, resultImag));
+  }
+
+  report_fatal_error(invalidArgument("Unsupported element type: %s",
+                                     debugString(type).c_str()));
+}
+
 Element Element::operator*(const Element &other) const {
   return map(
       *this, other, [](APInt lhs, APInt rhs) { return lhs * rhs; },
@@ -320,6 +364,12 @@ Element cosine(const Element &el) {
       [](std::complex<double> e) { return std::cos(e); });
 }
 
+Element log(const Element &el) {
+  return mapWithUpcastToDouble(
+      el, [](double e) { return std::log(e); },
+      [](std::complex<double> e) { return std::log(e); });
+}
+
 Element max(const Element &e1, const Element &e2) {
   return map(
       e1, e2,
@@ -356,10 +406,22 @@ Element min(const Element &e1, const Element &e2) {
       });
 }
 
+Element rsqrt(const Element &el) {
+  return mapWithUpcastToDouble(
+      el, [](double e) { return 1.0 / std::sqrt(e); },
+      [](std::complex<double> e) { return 1.0 / std::sqrt(e); });
+}
+
 Element sine(const Element &el) {
   return mapWithUpcastToDouble(
       el, [](double e) { return std::sin(e); },
       [](std::complex<double> e) { return std::sin(e); });
+}
+
+Element sqrt(const Element &el) {
+  return mapWithUpcastToDouble(
+      el, [](double e) { return std::sqrt(e); },
+      [](std::complex<double> e) { return std::sqrt(e); });
 }
 
 Element tanh(const Element &el) {

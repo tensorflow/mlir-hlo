@@ -75,7 +75,7 @@ one of the following tracking labels.
 | cross-replica-sum        | no            | revisit      | yes\*          | no              | no          |
 | cstr_reshapable          | no            | revisit      | no             | yes             | no          |
 | custom_call              | yes           | yes          | infeasible     | yes             | no          |
-| divide                   | yes           | yes          | yes            | yes             | no          |
+| divide                   | yes           | yes          | yes            | yes             | yes         |
 | dot                      | no            | revisit      | infeasible     | yes             | no          |
 | dot_general              | yes           | revisit      | infeasible     | no              | no          |
 | dynamic_broadcast_in_dim | no            | revisit      | infeasible     | no              | no          |
@@ -99,7 +99,7 @@ one of the following tracking labels.
 | infeed                   | yes           | revisit      | infeasible     | no              | no          |
 | iota                     | yes           | yes          | infeasible     | yes             | yes         |
 | is_finite                | yes           | yes          | yes            | yes             | no          |
-| log                      | yes           | yes          | yes            | yes             | no          |
+| log                      | yes           | yes          | yes            | yes             | yes         |
 | log_plus_one             | yes           | yes          | yes            | yes             | no          |
 | logistic                 | yes           | yes          | yes            | yes             | no          |
 | map                      | yes           | revisit      | yes            | no              | no          |
@@ -131,7 +131,7 @@ one of the following tracking labels.
 | rng_bit_generator        | yes           | revisit      | infeasible     | yes             | no          |
 | round_nearest_afz        | yes           | yes          | yes            | yes             | no          |
 | round_nearest_even       | yes           | yes          | yes            | yes             | no          |
-| rsqrt                    | yes           | yes          | yes            | yes             | no          |
+| rsqrt                    | yes           | yes          | yes            | yes             | yes         |
 | scatter                  | yes           | revisit      | yes            | no              | no          |
 | select                   | yes           | yes          | yes            | yes             | yes         |
 | select_and_scatter       | yes           | revisit      | yes            | no              | no          |
@@ -144,7 +144,7 @@ one of the following tracking labels.
 | sine                     | yes           | yes          | yes            | yes             | yes         |
 | slice                    | yes           | yes          | yes            | no              | yes         |
 | sort                     | yes           | yes          | yes            | no              | no          |
-| sqrt                     | yes           | yes          | yes            | yes             | no          |
+| sqrt                     | yes           | yes          | yes            | yes             | yes         |
 | subtract                 | yes           | yes          | yes            | yes             | yes         |
 | tanh                     | yes           | yes          | yes            | yes             | yes         |
 | torch_index_select       | no            | revisit      | no             | no              | no          |

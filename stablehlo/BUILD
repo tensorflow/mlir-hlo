@@ -276,6 +276,21 @@ cc_library(
 )
 
 cc_library(
+    name = "reference_axes",
+    srcs = [
+        "stablehlo/reference/Axes.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/Axes.h",
+    ],
+    includes = ["."],
+    deps = [
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+    ],
+)
+
+cc_library(
     name = "reference_element",
     srcs = [
         "stablehlo/reference/Element.cpp",
@@ -306,6 +321,22 @@ cc_library(
 )
 
 cc_library(
+    name = "reference_index",
+    srcs = [
+        "stablehlo/reference/Index.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/Index.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":reference_sizes",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
     name = "reference_ops",
     srcs = [
         "stablehlo/reference/Ops.cpp",
@@ -315,9 +346,11 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":reference_axes",
         ":reference_element",
         ":reference_errors",
         ":reference_scope",
+        ":reference_sizes",
         ":reference_tensor",
         ":reference_types",
         ":stablehlo_ops",
@@ -345,19 +378,34 @@ cc_library(
 )
 
 cc_library(
+    name = "reference_sizes",
+    srcs = [
+        "stablehlo/reference/Sizes.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/Sizes.h",
+    ],
+    includes = ["."],
+    deps = [
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+    ],
+)
+
+cc_library(
     name = "reference_tensor",
     srcs = [
-        "stablehlo/reference/Index.cpp",
         "stablehlo/reference/Tensor.cpp",
     ],
     hdrs = [
-        "stablehlo/reference/Index.h",
         "stablehlo/reference/Tensor.h",
     ],
     includes = ["."],
     deps = [
         ":reference_element",
         ":reference_errors",
+        ":reference_index",
+        ":reference_sizes",
         ":reference_types",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
