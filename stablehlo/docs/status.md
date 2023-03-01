@@ -56,7 +56,7 @@ one of the following tracking labels.
 | bitcast_convert          | yes           | yes          | infeasible     | yes             | no          |
 | broadcast                | no            | yes\*        | yes\*          | yes             | no          |
 | broadcast_in_dim         | yes           | yes          | infeasible     | yes             | yes         |
-| case                     | yes           | revisit      | yes            | no              | no          |
+| case                     | yes           | revisit      | yes            | no              | yes         |
 | cbrt                     | yes           | yes          | yes            | yes             | no          |
 | ceil                     | yes           | yes          | yes            | yes             | yes         |
 | cholesky                 | yes           | yes          | yes            | yes             | no          |
@@ -65,7 +65,7 @@ one of the following tracking labels.
 | compare                  | yes           | yes          | yes            | yes             | no          |
 | complex                  | yes           | yes          | yes            | yes             | no          |
 | compute_reshape_shape    | no            | revisit      | no             | yes             | no          |
-| concatenate              | yes           | yes          | yes            | yes             | no          |
+| concatenate              | yes           | yes          | yes            | yes             | yes         |
 | constant                 | yes           | yes          | yes            | yes             | yes         |
 | convert                  | yes           | yes          | infeasible     | yes             | no          |
 | convolution              | yes           | yes          | infeasible     | revisit         | no          |
@@ -95,7 +95,7 @@ one of the following tracking labels.
 | get_dimension_size       | yes           | yes          | yes            | yes             | no          |
 | get_tuple_element        | yes           | yes          | yes            | yes             | no          |
 | if                       | yes           | revisit      | yes            | no              | yes         |
-| imag                     | yes           | yes          | yes            | yes             | no          |
+| imag                     | yes           | yes          | yes            | yes             | yes         |
 | infeed                   | yes           | revisit      | infeasible     | no              | no          |
 | iota                     | yes           | yes          | infeasible     | yes             | yes         |
 | is_finite                | yes           | yes          | yes            | yes             | no          |
@@ -115,14 +115,14 @@ one of the following tracking labels.
 | partition_id             | yes           | yes          | yes            | yes             | no          |
 | popcnt                   | yes           | yes          | yes            | yes             | no          |
 | power                    | yes           | yes          | yes            | yes             | no          |
-| real                     | yes           | yes          | yes            | yes             | no          |
+| real                     | yes           | yes          | yes            | yes             | yes         |
 | real_dynamic_slice       | no            | revisit      | no             | yes             | no          |
 | recv                     | yes           | revisit      | infeasible     | no              | no          |
 | reduce                   | yes           | revisit      | yes            | revisit         | no          |
 | reduce_precision         | yes           | yes          | yes            | yes             | no          |
 | reduce_scatter           | yes           | revisit      | no             | no              | no          |
 | reduce_window            | yes           | revisit      | yes            | no              | no          |
-| remainder                | yes           | yes          | yes            | yes             | no          |
+| remainder                | yes           | yes          | yes            | yes             | yes         |
 | replica_id               | yes           | yes          | yes            | yes             | no          |
 | reshape                  | yes           | yes          | infeasible     | yes             | yes         |
 | return                   | no            | revisit      | infeasible     | yes             | no          |

@@ -75,6 +75,14 @@ Tensor evalBroadcastInDimOp(const Tensor &operand, Axes broadcastDimensions,
   return result;
 }
 
+SmallVector<Tensor> evalCaseOp(const Tensor &index, RegionRange branches,
+                               Scope &scope) {
+  int64_t idx = index.get({}).getIntegerValue().getSExtValue();
+  if (idx < 0 || idx >= static_cast<int64_t>(branches.size()))
+    idx = branches.size() - 1;
+  return eval(*branches[idx], {}, &scope);
+}
+
 Tensor evalCeilOp(const Tensor &operand, TensorType resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
@@ -94,6 +102,22 @@ Tensor evalClampOp(const Tensor &min, const Tensor &operand, const Tensor &max,
   return result;
 }
 
+Tensor evalConcatenateOp(ArrayRef<Tensor> inputs, Axis dimension,
+                         TensorType resultType) {
+  Tensor result(resultType);
+  int64_t dimensionOffset = 0;
+  for (const auto &input : inputs) {
+    for (auto inputIt = input.index_begin(); inputIt != input.index_end();
+         ++inputIt) {
+      Index resultIdx(*inputIt);
+      resultIdx[dimension] += dimensionOffset;
+      result.set(resultIdx, input.get(*inputIt));
+    }
+    dimensionOffset += input.getShape()[dimension];
+  }
+  return result;
+}
+
 Tensor evalConstantOp(ElementsAttr value) {
   return makeTensor(value.cast<DenseElementsAttr>());
 }
@@ -102,9 +126,9 @@ Tensor evalConstantOp(ElementsAttr value) {
 // with integer to bool conversion. To be updated as part of #969.
 Tensor evalConvertOp(const Tensor &operand, TensorType resultType) {
   Tensor result(resultType);
-  Type elType = result.getElementType();
+  Type elementType = result.getElementType();
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
-    result.set(*it, Element(elType,
+    result.set(*it, Element(elementType,
                             operand.get(*it).getIntegerValue().getBoolValue()));
   return result;
 }
@@ -171,37 +195,30 @@ SmallVector<Tensor> evalIfOp(const Tensor &pred, Region &trueBranch,
                                         : eval(falseBranch, {}, &scope);
 }
 
-Tensor evalIotaOp(int64_t iotaDimension, TensorType resultType) {
+Tensor evalImagOp(const Tensor &operand, TensorType resultType) {
   Tensor result(resultType);
-  Type elType = result.getElementType();
+  for (auto it = operand.index_begin(); it != operand.index_end(); ++it)
+    result.set(*it, imag(operand.get(*it)));
+  return result;
+}
+
+Tensor evalIotaOp(Axis iotaDimension, TensorType resultType) {
+  Tensor result(resultType);
+  Type elementType = result.getElementType();
   for (auto it = result.index_begin(); it != result.index_end(); ++it) {
-    auto iota = (*it)[iotaDimension];
-    if (isSupportedSignedIntegerType(elType)) {
-      result.set(*it, Element(elType, APInt(elType.getIntOrFloatBitWidth(),
-                                            iota, /*isSigned=*/true)));
-    } else if (isSupportedUnsignedIntegerType(elType)) {
-      result.set(*it, Element(elType, APInt(elType.getIntOrFloatBitWidth(),
-                                            iota, /*isSigned=*/false)));
-    } else if (isSupportedFloatType(elType)) {
-      APFloat val = APFloat((double)iota);
-      bool roundingErr;
-      val.convert(elType.cast<FloatType>().getFloatSemantics(),
-                  APFloat::rmNearestTiesToEven, &roundingErr);
-      result.set(*it, Element(elType, val));
-    } else if (isSupportedComplexType(elType)) {
-      APFloat real((double)iota);
-      APFloat imag((double)0.0);
-      FloatType flType =
-          elType.cast<ComplexType>().getElementType().cast<FloatType>();
-      bool roundingErr;
-      real.convert(flType.getFloatSemantics(), APFloat::rmNearestTiesToEven,
-                   &roundingErr);
-      imag.convert(flType.getFloatSemantics(), APFloat::rmNearestTiesToEven,
-                   &roundingErr);
-      result.set(*it, Element(elType, std::complex<APFloat>(real, imag)));
+    if (isSupportedIntegerType(elementType)) {
+      result.set(*it, Element(elementType, (*it)[iotaDimension]));
+    } else if (isSupportedFloatType(elementType)) {
+      result.set(
+          *it, Element(elementType, static_cast<double>((*it)[iotaDimension])));
+    } else if (isSupportedComplexType(elementType)) {
+      result.set(*it,
+                 Element(elementType,
+                         std::complex<double>(
+                             static_cast<double>((*it)[iotaDimension]), 0.0)));
     } else {
       report_fatal_error(invalidArgument("Unsupported element type: %s",
-                                         debugString(elType).c_str()));
+                                         debugString(elementType).c_str()));
     }
   }
   return result;
@@ -272,6 +289,20 @@ Tensor evalPadOp(const Tensor &operand, const Tensor &paddingValue,
     if (resultIdx.inBounds(result.getShape()))
       result.set(resultIdx, operand.get(*operandIt));
   }
+  return result;
+}
+
+Tensor evalRealOp(const Tensor &operand, TensorType resultType) {
+  Tensor result(resultType);
+  for (auto it = operand.index_begin(); it != operand.index_end(); ++it)
+    result.set(*it, real(operand.get(*it)));
+  return result;
+}
+
+Tensor evalRemOp(const Tensor &lhs, const Tensor &rhs, TensorType resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it)
+    result.set(*it, rem(lhs.get(*it), rhs.get(*it)));
   return result;
 }
 
@@ -391,11 +422,13 @@ Tensor evalXorOp(const Tensor &lhs, const Tensor &rhs, TensorType resultType) {
   return result;
 }
 
-SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
+SmallVector<Tensor> eval(
+    Region &region, ArrayRef<Tensor> args, Scope *parent,
+    llvm::function_ref<llvm::Error(Operation &, Scope &)> fallback) {
   Block &block = region.front();
   if (block.getArguments().size() != args.size())
     report_fatal_error(invalidArgument(
-        "Expected same amount of block arguments and runtime arguments (%d)",
+        "Expected same number of block arguments and runtime arguments (%d)",
         args.size()));
 
   Scope scope(parent);
@@ -423,6 +456,11 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
       Tensor runtimeResult = evalBroadcastInDimOp(
           runtimeOperand, broadcastDimensions, broadcastInDimOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto caseOp = dyn_cast<CaseOp>(op)) {
+      Tensor runtimeIndex = scope.find(caseOp.getIndex());
+      auto runtimeResults =
+          evalCaseOp(runtimeIndex, caseOp.getBranches(), scope);
+      scope.add(op.getResults(), {runtimeResults});
     } else if (auto ceilOp = dyn_cast<CeilOp>(op)) {
       Tensor runtimeOperand = scope.find(ceilOp.getOperand());
       Tensor runtimeResult = evalCeilOp(runtimeOperand, ceilOp.getType());
@@ -433,6 +471,12 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
       Tensor runtimeMax = scope.find(clampOp.getMax());
       Tensor runtimeResult = evalClampOp(runtimeMin, runtimeOperand, runtimeMax,
                                          clampOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
+    } else if (auto concatenateOp = dyn_cast<ConcatenateOp>(op)) {
+      auto runtimeOperands = scope.find(concatenateOp.getOperands());
+      Tensor runtimeResult =
+          evalConcatenateOp(runtimeOperands, concatenateOp.getDimension(),
+                            concatenateOp.getType());
       scope.add(op.getResults(), {runtimeResult});
     } else if (auto constantOp = dyn_cast<ConstantOp>(op)) {
       Tensor runtimeResult = evalConstantOp(constantOp.getValue());
@@ -482,6 +526,10 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
       auto runtimeResults = evalIfOp(runtimePred, ifOp.getTrueBranch(),
                                      ifOp.getFalseBranch(), scope);
       scope.add(op.getResults(), runtimeResults);
+    } else if (auto imagOp = dyn_cast<ImagOp>(op)) {
+      Tensor runtimeOperand = scope.find(imagOp.getOperand());
+      Tensor runtimeResult = evalImagOp(runtimeOperand, imagOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
     } else if (auto iotaOp = dyn_cast<IotaOp>(op)) {
       Tensor runtimeResult =
           evalIotaOp(iotaOp.getIotaDimension(), iotaOp.getType());
@@ -528,6 +576,11 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
           evalPadOp(runtimeOperand, runtimePaddingValue, edgePaddingLow,
                     interiorPadding, padOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto remOp = dyn_cast<RemOp>(op)) {
+      Tensor runtimeLhs = scope.find(remOp.getLhs());
+      Tensor runtimeRhs = scope.find(remOp.getRhs());
+      Tensor runtimeResult = evalRemOp(runtimeLhs, runtimeRhs, remOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
     } else if (auto whileOp = dyn_cast<WhileOp>(op)) {
       SmallVector<Value> runtimeOperands(whileOp.getOperand().begin(),
                                          whileOp.getOperand().end());
@@ -535,6 +588,10 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
       auto runtimeResults = evalWhileOp(runtimeInputs, whileOp.getCond(),
                                         whileOp.getBody(), scope);
       scope.add(op.getResults(), runtimeResults);
+    } else if (auto realOp = dyn_cast<RealOp>(op)) {
+      Tensor runtimeOperand = scope.find(realOp.getOperand());
+      Tensor runtimeResult = evalRealOp(runtimeOperand, realOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
     } else if (auto reshapeOp = dyn_cast<ReshapeOp>(op)) {
       Tensor runtimeOperand = scope.find(reshapeOp.getOperand());
       Tensor runtimeResult = evalReshapeOp(runtimeOperand, reshapeOp.getType());
@@ -595,8 +652,11 @@ SmallVector<Tensor> eval(Region &region, ArrayRef<Tensor> args, Scope *parent) {
       Tensor runtimeResult = evalXorOp(runtimeLhs, runtimeRhs, xorOp.getType());
       scope.add(op.getResults(), {runtimeResult});
     } else {
-      report_fatal_error(
-          invalidArgument("Unsupported op: %s", debugString(op).c_str()));
+      if (!fallback)
+        report_fatal_error(
+            invalidArgument("Unsupported op: %s", debugString(op).c_str()));
+      auto status = fallback(op, scope);
+      if (status) llvm::report_fatal_error(std::move(status));
     }
   }
 

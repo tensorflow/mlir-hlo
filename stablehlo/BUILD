@@ -728,7 +728,11 @@ cc_binary(
         "stablehlo/tools/StablehloInterpreterMain.cpp",
     ],
     deps = [
+        ":check_ops",
+        ":reference_errors",
         ":reference_ops",
+        ":reference_scope",
+        ":reference_tensor",
         ":stablehlo_ops",
         ":test_utils",
         "@llvm-project//mlir:FuncDialect",
@@ -759,6 +763,65 @@ filegroup(
         ":stablehlo-interpreter",
         ":stablehlo-opt",
         "@llvm-project//llvm:FileCheck",
+    ],
+)
+
+gentbl_cc_library(
+    name = "check_ops_inc_gen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "stablehlo/tests/CheckOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "stablehlo/tests/CheckOps.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "stablehlo/tests/CheckOps.td",
+    deps = [
+        ":check_ops_td_files",
+    ],
+)
+
+td_library(
+    name = "check_ops_td_files",
+    srcs = [
+        "stablehlo/tests/CheckOps.td",
+    ],
+    includes = ["."],
+    deps = [
+        ":base_td_files",
+        "@llvm-project//mlir:PassBaseTdFiles",
+    ],
+)
+
+cc_library(
+    name = "check_ops",
+    srcs = [
+        "stablehlo/tests/CheckOps.cpp",
+    ],
+    hdrs = [
+        "stablehlo/tests/CheckOps.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":base",
+        ":check_ops_inc_gen",
+        ":reference_errors",
+        ":reference_tensor",
+        ":stablehlo_assembly_format",
+        ":version",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:InferTypeOpInterface",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:QuantOps",
+        "@llvm-project//mlir:ShapeDialect",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:Transforms",
     ],
 )
 

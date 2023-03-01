@@ -32,9 +32,13 @@ Tensor evalAddOp(const Tensor &lhs, const Tensor &rhs, TensorType resultType);
 Tensor evalAndOp(const Tensor &lhs, const Tensor &rhs, TensorType resultType);
 Tensor evalBroadcastInDimOp(const Tensor &operand, Axes broadcastDimensions,
                             TensorType resultType);
+SmallVector<Tensor> evalCaseOp(const Tensor &index, RegionRange branches,
+                               Scope &scope);
 Tensor evalCeilOp(const Tensor &operand, TensorType resultType);
 Tensor evalClampOp(const Tensor &min, const Tensor &operand, const Tensor &max,
                    TensorType resultType);
+Tensor evalConcatenateOp(ArrayRef<Tensor> inputs, Axis dimension,
+                         TensorType resultType);
 Tensor evalConstantOp(ElementsAttr value);
 Tensor evalConvertOp(const Tensor &operand, TensorType resultType);
 Tensor evalCosineOp(const Tensor &operand, TensorType resultType);
@@ -49,6 +53,7 @@ Tensor evalExponentialOp(const Tensor &operand, TensorType resultType);
 Tensor evalFloorOp(const Tensor &operand, TensorType resultType);
 SmallVector<Tensor> evalIfOp(const Tensor &pred, Region &trueBranch,
                              Region &falseBranch, Scope &scope);
+Tensor evalImagOp(const Tensor &operand, TensorType resultType);
 Tensor evalIotaOp(Axis iotaDimension, TensorType resultType);
 Tensor evalLogOp(const Tensor &operand, TensorType resultType);
 Tensor evalMaxOp(const Tensor &lhs, const Tensor &rhs, TensorType resultType);
@@ -61,6 +66,8 @@ Tensor evalOrOp(const Tensor &lhs, const Tensor &rhs, TensorType resultType);
 Tensor evalPadOp(const Tensor &operand, const Tensor &paddingValue,
                  Sizes edgePaddingLow, Sizes interiorPadding,
                  TensorType resultType);
+Tensor evalRealOp(const Tensor &operand, TensorType resultType);
+Tensor evalRemOp(const Tensor &lhs, const Tensor &rhs, TensorType resultType);
 Tensor evalReshapeOp(const Tensor &operand, TensorType resultType);
 Tensor evalReverseOp(const Tensor &operand, Axes dimensions,
                      TensorType resultType);
@@ -83,10 +90,12 @@ Tensor evalXorOp(const Tensor &lhs, const Tensor &rhs, TensorType resultType);
 /// Evaluates an mlir::Region `region` using the runtime values `args`
 /// corresponding to the arguments of the entry block of the region.
 /// Interprets the operations within the entry block and returns the runtime
-/// values for the terminator's arguments.
-/// Assumes that the region has only one block.
-llvm::SmallVector<Tensor> eval(Region &region, llvm::ArrayRef<Tensor> args,
-                               Scope *parentScope = nullptr);
+/// values for the terminator's arguments. The optional callback `fallback` is
+/// used for evaluating ops which are not supported by the interpreter.
+/// Assumes that `region` has only one block.
+llvm::SmallVector<Tensor> eval(
+    Region &region, llvm::ArrayRef<Tensor> args, Scope *parent = nullptr,
+    llvm::function_ref<llvm::Error(Operation &, Scope &)> fallback = nullptr);
 
 }  // namespace stablehlo
 }  // namespace mlir

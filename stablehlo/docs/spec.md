@@ -1322,7 +1322,7 @@ returned.
 
 | Label | Name       | Type                                | Constraints |
 |-------|------------|-------------------------------------|-------------|
-| (I1)  | `index`    | 1-dimensional tensor of type `si32` |             |
+| (I1)  | `index`    | 0-dimensional tensor of type `si32` |             |
 | (I2)  | `branches` | variadic number of functions        | (C1-C4)     |
 
 #### Outputs
@@ -1341,16 +1341,19 @@ returned.
 #### Examples
 
 ```mlir
-// %result_branch0: 10
-// %result_branch1: 11
-// %index: 1
-%result = "stablehlo.case"(%index) ({
-  "stablehlo.return"(%result_branch0) : (tensor<i32>) -> ()
+// %index: -1
+// %result_branch0: [0, 0]
+// %result_branch1: [1, 1]
+%result0, %result1 = "stablehlo.case"(%index) ({
+  "stablehlo.return"(%result_branch0, %result_branch0) : (tensor<2xi64>, tensor<2xi64>) -> ()
 }, {
-  "stablehlo.return"(%result_branch1) : (tensor<i32>) -> ()
-}) : (tensor<i32>) -> tensor<i32>
-// %result: 11
+  "stablehlo.return"(%result_branch1, %result_branch1) : (tensor<2xi64>, tensor<2xi64>) -> ()
+}) : (tensor<i32>) -> (tensor<2xi64>, tensor<2xi64>)
+// %result0: [1, 1]
+// %result1: [1, 1]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_case.mlir)
 
 ### cbrt
 
@@ -1743,9 +1746,11 @@ tensor. More formally,
 // %input1: [[7, 8]]
 %result = "stablehlo.concatenate"(%input0, %input1) {
   dimension = 0 : i64
-} : (tensor<3x2xi32>, tensor<1x2xi32>) -> tensor<4x2xi32>
+} : (tensor<3x2xi64>, tensor<1x2xi64>) -> tensor<4x2xi64>
 // %result: [[1, 2], [3, 4], [5, 6], [7, 8]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_concatenate.mlir)
 
 ### constant
 
@@ -2850,11 +2855,11 @@ output of `true_branch` is returned, else if pred is `false`, output of
 
 #### Inputs
 
-| Label | Name           | Type                                       | Constraints |
-|-------|----------------|--------------------------------------------|-------------|
-| (I1)  | `pred`         | 0-dimensional tensor constant of type `i1` |             |
-| (I2)  | `true_branch`  | function                                   | (C1-C3)     |
-| (I3)  | `false_branch` | function                                   | (C1), (C2)  |
+| Label | Name           | Type                              | Constraints |
+|-------|----------------|-----------------------------------|-------------|
+| (I1)  | `pred`         | 0-dimensional tensor of type `i1` |             |
+| (I2)  | `true_branch`  | function                          | (C1-C3)     |
+| (I3)  | `false_branch` | function                          | (C1), (C2)  |
 
 #### Outputs
 
@@ -2918,6 +2923,8 @@ Extracts the imaginary part, element-wise, from the `operand` and produces a
 %result = "stablehlo.imag"(%operand) : (tensor<2xcomplex<f32>>) -> tensor<2xf32>
 // %result: [2.0, 4.0]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_imag.mlir)
 
 ### infeed
 
@@ -3720,6 +3727,8 @@ tensor. More formally, for each element `x`:
 // %result: [1.0, 3.0]
 ```
 
+&nbsp;[More Examples](../stablehlo/tests/interpret_real.mlir)
+
 ### recv
 
 #### Semantics
@@ -4129,16 +4138,13 @@ nearest to the exact value of `lhs/rhs` with ties to even.
 #### Examples
 
 ```mlir
-// %lhs: [17.1, -17.1, 17.1, -17.1]
-// %rhs: [3.0, 3.0, -3.0, -3.0]
-%result = "stablehlo.remainder"(%lhs, %rhs) : (tensor<4xf32>, tensor<4xf32>) -> tensor<4xf32>
-// %result: [2.1, -2.1, 2.1, -2.1]
-
 // %lhs: [17, -17, 17, -17]
 // %rhs: [3, 3, -3, -3]
-%result = "stablehlo.remainder"(%lhs, %rhs) : (tensor<4xi32>, tensor<4xi32>) -> tensor<4xi32>
+%result = "stablehlo.remainder"(%lhs, %rhs) : (tensor<4xi64>, tensor<4xi64>) -> tensor<4xi64>
 // %result: [2, -2, 2, -2]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_rem.mlir)
 
 ### replica_id
 
@@ -5422,11 +5428,11 @@ The behavior of an infinite loop is TBD
 
 #### Inputs
 
-| Label | Name       | Type                                 | Constraints |
-|-------|------------|--------------------------------------|-------------|
-| (I1)  | `operand`  | variadic number of tensors or tokens | (C1-C3)     |
-| (I2)  | `cond`     | function                             | (C1)        |
-| (I3)  | `body`     | function                             | (C2)        |
+| Label | Name      | Type                                 | Constraints |
+|-------|-----------|--------------------------------------|-------------|
+| (I1)  | `operand` | variadic number of tensors or tokens | (C1-C3)     |
+| (I2)  | `cond`    | function                             | (C1)        |
+| (I3)  | `body`    | function                             | (C2)        |
 
 #### Outputs
 

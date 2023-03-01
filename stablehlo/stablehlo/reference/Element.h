@@ -34,12 +34,13 @@ class Element {
  public:
   /// \name Constructors
   /// @{
-  Element(Type type, APInt value) : type_(type), value_(value) {}
-  Element(Type type, bool value) : type_(type), value_(value) {}
-  Element(Type type, APFloat value) : type_(type), value_(value) {}
-  Element(Type type, std::complex<APFloat> value)
-      : type_(type), value_(std::make_pair(value.real(), value.imag())) {}
-
+  Element(Type type, APInt value);
+  Element(Type type, int64_t value);
+  Element(Type type, bool value);
+  Element(Type type, APFloat value);
+  Element(Type type, double value);
+  Element(Type type, std::complex<APFloat> value);
+  Element(Type type, std::complex<double> value);
   Element(const Element &other) = default;
   /// @}
 
@@ -64,6 +65,12 @@ class Element {
   /// Returns the underlying complex value stored in an Element object with
   /// complex type.
   std::complex<APFloat> getComplexValue() const;
+
+  /// Overloaded equality operator.
+  bool operator==(const Element &other) const;
+
+  /// Overloaded inequality operator.
+  bool operator!=(const Element &other) const;
 
   /// Overloaded and (bitwise) operator.
   Element operator&(const Element &other) const;
@@ -106,6 +113,17 @@ class Element {
 /// Returns abs of Element object.
 Element abs(const Element &e);
 
+/// For floating point type T, checks if two normal values f1 and f2 are equal
+/// within a tolerance given by:
+///
+/// std::fabs(f1 - f2) <=
+///   std::numeric_limits<T>::epsilon() * std::fmax(f1, f2) ||
+/// std::fabs(f1 - f2) <= std::numeric_limits<T>::min()
+///
+/// For complex element type, checks if both real and imaginary parts are
+/// individually equal modulo the tolerance.
+bool areApproximatelyEqual(const Element &e1, const Element &e2);
+
 /// Returns ceil of Element object.
 Element ceil(const Element &e);
 
@@ -118,6 +136,10 @@ Element exponential(const Element &el);
 /// Returns floor of Element object.
 Element floor(const Element &e);
 
+/// Returns the imaginary part extracted from the Element object with
+/// floating-point or complex type.
+Element imag(const Element &el);
+
 /// Returns log of Element object.
 Element log(const Element &el);
 
@@ -126,6 +148,13 @@ Element max(const Element &e1, const Element &e2);
 
 /// Returns the minimum between two Element objects.
 Element min(const Element &e1, const Element &e2);
+
+/// Returns the real part extracted from the Element object with floating-point
+/// or complex type.
+Element real(const Element &e);
+
+/// Returns the remainder for two Element objects.
+Element rem(const Element &e1, const Element &e2);
 
 /// Returns reverse square root of Element object.
 Element rsqrt(const Element &e);

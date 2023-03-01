@@ -358,8 +358,8 @@ def StableHLO_FloorOp: StableHLO_UnaryElementwiseOp<"floor",
 
 def StableHLO_ImagOp: StableHLO_UnaryElementwiseOp<"imag",
     [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>],
-    HLO_FpOrComplexTensor, HLO_FpTensor> {
-  let summary = "Imag operator";
+    HLO_FpOrComplexTensor /*imag_i1*/, HLO_FpTensor> {/*imag_c1*/
+  let summary = "Imag operation";
   let description = [{
     Extracts the imaginary part, element-wise, from the `operand` and produces a
     `result` tensor.
@@ -502,8 +502,8 @@ def StableHLO_PopulationCountOp: StableHLO_UnaryElementwiseOp<"popcnt",
 
 def StableHLO_RealOp: StableHLO_UnaryElementwiseOp<"real",
     [Pure, DeclareOpInterfaceMethods<InferTypeOpInterface>],
-    HLO_FpOrComplexTensor, HLO_FpTensor> {
-  let summary = "Real operator";
+    HLO_FpOrComplexTensor /*real_i1*/, HLO_FpTensor> {/*real_c1*/
+  let summary = "Real operation";
   let description = [{
     Extracts the real part, element-wise, from the `operand` and produces a
     `result` tensor.
@@ -825,8 +825,9 @@ def StableHLO_PowOp : StableHLO_BinaryElementwiseOp<"power",
 }
 
 def StableHLO_RemOp : StableHLO_BinaryElementwiseOp<"remainder",
-      [Pure, HLO_CompatibleOperandsAndResultType], HLO_IntFpOrComplexTensor> {
-  let summary = "Remainder operator";
+      [Pure, HLO_CompatibleOperandsAndResultType /*remainder_c1*/],
+       HLO_IntFpOrComplexTensor /*remainder_i1, remainder_i2*/> {
+  let summary = "Remainder operation";
   let description = [{
     Performs element-wise remainder of dividend `lhs` and divisor `rhs` tensors
     and produces a `result` tensor.
@@ -1206,9 +1207,9 @@ def StableHLO_IfOp: StableHLO_Op<"if", [
 def StableHLO_CaseOp: StableHLO_Op<"case", [
       RecursiveMemoryEffects,
       SingleBlockImplicitTerminator<"ReturnOp">,
-      DeclareOpInterfaceMethods<InferTypeOpInterface>
+      DeclareOpInterfaceMethods<InferTypeOpInterface> /*case_c4*/
     ]> {
-  let summary = "Switch-Case operator";
+  let summary = "Case operation";
   let description = [{
     Produces the output from executing exactly one `function` from `branches`
     depending on the value of `index`.
@@ -1218,19 +1219,19 @@ def StableHLO_CaseOp: StableHLO_Op<"case", [
 
     Example:
     ```mlir
-    %result = "stablehlo.case"(%index) ({
-      stablehlo.return %result_branch0 : tensor<i32>
+    %result0, %result1 = "stablehlo.case"(%index) ({
+      stablehlo.return %result_branch0, %result_branch0 : tensor<2xi64>, tensor<2xi64>
     }, {
-      stablehlo.return %result_branch1 : tensor<i32>
-    }) : (tensor<i32>) -> tensor<i32>
+      stablehlo.return %result_branch1, %result_branch1 : tensor<2xi64>, tensor<2xi64>
+    }) : (tensor<i32>) -> (tensor<2xi64>, tensor<2xi64>)
     ```
   }];
 
   let arguments = (ins
-    I32Tensor:$index
+    I32Tensor:$index /*case_i1*/
   );
 
-  let regions = (region VariadicRegion<SizedRegion<1>>:$branches);
+  let regions = (region VariadicRegion<SizedRegion<1>>:$branches /*case_i2*/);
 
   let results = (outs Variadic<HLO_TensorOrToken>);
 }
@@ -1975,9 +1976,9 @@ def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [Pure,
 }
 
 def StableHLO_ConcatenateOp : StableHLO_ShapedInterfaceOp<"concatenate",
-    [Pure, SameOperandsAndResultElementType,
+    [Pure, SameOperandsAndResultElementType /*concatenate_c1, concatenate_c3, concatenate_c5*/,
      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
-  let summary = "XLA's concatenate op";
+  let summary = "Concatenate operation";
   let description = [{
     Concatenates a variadic number of tensors in `inputs` along `dimension`
     dimension in the same order as the given arguments and produces a `result`
@@ -1988,13 +1989,13 @@ def StableHLO_ConcatenateOp : StableHLO_ShapedInterfaceOp<"concatenate",
 
     Example:
     ```mlir
-     %result = stablehlo.concatenate %input0, %input1, dim = 1 : (tensor<3x2xi32>, tensor<1x2xi32>) -> tensor<4x2xi32>
+    %result = stablehlo.concatenate %input0, %input1, dim = 0 : (tensor<3x2xi64>, tensor<1x2xi64>) -> tensor<4x2xi64>
     ```
    }];
 
   let arguments = (ins
-    Variadic<HLO_Tensor>:$inputs,
-    I64Attr:$dimension
+    Variadic<HLO_Tensor>:$inputs /*concatenate_i1*/,
+    I64Attr:$dimension /*concatenate_i2*/
   );
 
   let results = (outs HLO_Tensor);
