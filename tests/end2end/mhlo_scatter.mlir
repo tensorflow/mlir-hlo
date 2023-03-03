@@ -1,7 +1,6 @@
 // RUN: mlir-hlo-opt %s \
 // RUN: --hlo-canonicalize-scatter --legalize-mhlo-to-thlo \
-// RUN: --hlo-legalize-to-linalg \
-// RUN: --gml-tiling="tile-sizes=1 distribute=false op-name=thlo.scatter" \
+// RUN: --hlo-legalize-to-linalg  --xla-cpu-transform-scatter \
 // RUN: --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \
 // RUN: --hlo-one-shot-bufferize --canonicalize -cse \
