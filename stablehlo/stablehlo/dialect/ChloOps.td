@@ -681,7 +681,6 @@ def CHLO_ErfInvOp : CHLO_UnaryElementwiseOp<"erf_inv",
   }];
 }
 
-
 def CHLO_ErfcOp : CHLO_UnaryElementwiseOp<"erfc",
     [HLO_CompatibleOperandsAndResultType], HLO_FpTensor, HLO_FpTensor> {
   let summary = "Erfc operator";
