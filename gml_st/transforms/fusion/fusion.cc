@@ -255,7 +255,7 @@ void reifyDimOp(PatternRewriter& rewriter, tensor::DimOp dimOp) {
   std::optional<int64_t> dimIndex = dimOp.getConstantIndex();
   if (!dimIndex) return;
 
-  SmallVector<SmallVector<Value>> reifiedResultShapes;
+  ReifiedRankedShapedTypeDims reifiedResultShapes;
   if (failed(
           rankedShapeTypeOp.reifyResultShapes(rewriter, reifiedResultShapes))) {
     return;
@@ -269,7 +269,9 @@ void reifyDimOp(PatternRewriter& rewriter, tensor::DimOp dimOp) {
       static_cast<size_t>(sourceType.getRank()))
     return;
 
-  rewriter.replaceOp(dimOp, reifiedResultShapes[resultNumber][*dimIndex]);
+  rewriter.replaceOp(dimOp, getValueOrCreateConstantIndexOp(
+                                rewriter, dimOp.getLoc(),
+                                reifiedResultShapes[resultNumber][*dimIndex]));
 }
 
 void reifyDimOpsUsers(PatternRewriter& rewriter, Operation* op) {
