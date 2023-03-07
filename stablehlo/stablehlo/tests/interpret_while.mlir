@@ -1,4 +1,4 @@
-// RUN: stablehlo-interpreter --interpret -split-input-file %s
+// RUN: stablehlo-translate --interpret -split-input-file %s
 
 func.func @while() {
   // int i = 10;
@@ -21,6 +21,6 @@ func.func @while() {
       stablehlo.return %new_i, %new_state : tensor<i64>, tensor<i64>
   }) : (tensor<i64>, tensor<i64>) -> (tensor<i64>, tensor<i64>)
 
-  check.eq %result_state, dense<10> : tensor<i64>
+  check.expect_eq_const %result_state, dense<10> : tensor<i64>
   func.return
 }

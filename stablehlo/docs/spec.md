@@ -3688,9 +3688,11 @@ produces a `result` tensor. Depending on the element type, does the following:
 ```mlir
 // %lhs: [-2.0, -0.0, -36.0, 5.0, 3.0, 10000.0]
 // %rhs: [2.0, 2.0, 1.1, 2.0, -1.0, 10.0]
-%result = "stablehlo.power"(%lhs, %rhs) : (tensor<6xf32>, tensor<6xf32>) -> tensor<6xf32>
+%result = "stablehlo.power"(%lhs, %rhs) : (tensor<6xf64>, tensor<6xf64>) -> tensor<6xf64>
 // %result: [4.0, 0.0, -nan, 25.0, 0.333333343, inf]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_power.mlir)
 
 ### real
 
@@ -4237,7 +4239,7 @@ and produces a `result` tensor. More formally,
 ```mlir
 // %operand = [[1, 2], [3, 4], [5, 6]]
 %result = "stablehlo.reverse"(%operand) {
-  dimensions = dense<1> : tensor<i64>
+  dimensions = dense<1> : tensor<1xi64>
 } : (tensor<3x2xi32>) -> tensor<3x2xi32>
 // %result: [[2, 1], [4, 3], [6, 5]]
 ```

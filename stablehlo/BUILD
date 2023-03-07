@@ -672,6 +672,29 @@ cc_library(
 )
 
 cc_library(
+    name = "stablehlo_serialization",
+    srcs = [
+        "stablehlo/dialect/Serialization.cpp",
+    ],
+    hdrs = [
+        "stablehlo/dialect/Serialization.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":stablehlo_ops",
+        ":stablehlo_passes",
+        ":vhlo_ops",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:BytecodeReader",
+        "@llvm-project//mlir:BytecodeWriter",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Parser",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
     name = "stablehlo_type_inference",
     srcs = [
         "stablehlo/dialect/TypeInference.cpp",
@@ -723,9 +746,9 @@ cc_library(
 )
 
 cc_binary(
-    name = "stablehlo-interpreter",
+    name = "stablehlo-translate",
     srcs = [
-        "stablehlo/tools/StablehloInterpreterMain.cpp",
+        "stablehlo/tools/StablehloTranslateMain.cpp",
     ],
     deps = [
         ":check_ops",
@@ -733,8 +756,12 @@ cc_binary(
         ":reference_ops",
         ":reference_scope",
         ":reference_tensor",
+        ":register",
         ":stablehlo_ops",
+        ":stablehlo_serialization",
         ":test_utils",
+        ":vhlo_ops",
+        "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
@@ -760,8 +787,8 @@ filegroup(
     name = "test_data",
     testonly = True,
     data = [
-        ":stablehlo-interpreter",
         ":stablehlo-opt",
+        ":stablehlo-translate",
         "@llvm-project//llvm:FileCheck",
     ],
 )
