@@ -1873,6 +1873,7 @@ cc_library(
     ),
     strip_include_prefix = ".",
     deps = [
+        ":deallocation",
         ":gml_st",
         ":mlir_hlo",
         ":mlir_interpreter_dialect_utils",
@@ -1882,6 +1883,7 @@ cc_library(
         "@llvm-project//mlir:AffineDialect",
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:BufferizationDialect",
+        "@llvm-project//mlir:ComplexDialect",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:LinalgDialect",
@@ -1949,6 +1951,7 @@ cc_binary(
     name = "mlir-interpreter-runner",
     srcs = ["tools/mlir_interpreter/mlir-interpreter-runner.cc"],
     deps = [
+        ":deallocation",
         ":gml_st",
         ":hlo_dialect_registration",
         ":lhlo",
