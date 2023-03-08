@@ -1,3 +1,5 @@
+load("//third_party/bazel_skylib/rules:build_test.bzl", "build_test")
+
 # MHLO -> TOSA bridge.
 package(
     # copybara:uncomment default_applicable_licenses = ["//third_party/tensorflow:license"],
@@ -8,6 +10,13 @@ package(
 package_group(
     name = "internal",
     packages = [],
+)
+
+build_test(
+    name = "mhlo-tosa-opt_build_test",
+    targets = [
+        "mhlo-tosa-opt",
+    ],
 )
 
 cc_binary(
