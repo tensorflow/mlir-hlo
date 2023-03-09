@@ -1431,6 +1431,7 @@ cc_library(
         "gml_st/transforms/cpu_tiling/cpu_tiling_pipeline.cc",
         "gml_st/transforms/cpu_tiling/fusion_outlining.cc",
         "gml_st/transforms/cpu_tiling/fusion_planning_for_cpu.cc",
+        "gml_st/transforms/cpu_tiling/transform_conv_for_cpu.cc",
         "gml_st/transforms/cpu_tiling/transform_dot_for_cpu.cc",
         "gml_st/transforms/cpu_tiling/transform_generic_for_cpu.cc",
         "gml_st/transforms/cpu_tiling/transform_map_for_cpu.cc",
