@@ -1,11 +1,11 @@
 // RUN: mlir-hlo-opt %s \
 // RUN: --hlo-canonicalize-scatter --legalize-mhlo-to-thlo \
 // RUN: --hlo-legalize-to-linalg  --xla-cpu-transform-scatter \
-// RUN: --scalarize -cse --canonicalize |\
+// RUN: --gml-st-rewrite-forall-ops --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \
 // RUN: --hlo-one-shot-bufferize --canonicalize -cse \
 // RUN: --convert-bufferization-to-memref --convert-linalg-to-loops \
-// RUN: --gml-st-to-scf --buffer-results-to-out-params --convert-scf-to-cf \
+// RUN: --buffer-results-to-out-params --convert-scf-to-cf \
 // RUN: --generic-host-to-llvm -cse --canonicalize |\
 // RUN: mlir-cpu-runner \
 // RUN: -e main -entry-point-result=void \

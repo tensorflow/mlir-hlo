@@ -1,7 +1,7 @@
 // RUN: mlir-hlo-opt %s --legalize-mhlo-to-thlo \
-// RUN: --gml-tiling="tile-sizes=1,1,1" --scalarize \
+// RUN: --gml-tiling="tile-sizes=1,1,1" --gml-st-rewrite-forall-ops -scalarize \
 // RUN: --empty-tensor-to-alloc-tensor --hlo-one-shot-bufferize \
-// RUN: --gml-st-to-scf --convert-scf-to-cf --generic-host-to-llvm | \
+// RUN: --convert-scf-to-cf --generic-host-to-llvm | \
 
 // RUN: mlir-cpu-runner \
 // RUN: -e main -entry-point-result=void \

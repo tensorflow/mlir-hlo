@@ -2,11 +2,11 @@
 // RUN: --hlo-canonicalize-gather --legalize-mhlo-to-thlo="enable-experimental=true" \
 // RUN: --hlo-legalize-to-linalg \
 // RUN: --gml-tiling="tile-sizes=1 op-name=thlo.gather" \
-// RUN: --scalarize -cse --canonicalize |\
+// RUN: --gml-st-rewrite-forall-ops --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \
 // RUN: --empty-tensor-to-alloc-tensor --hlo-one-shot-bufferize --canonicalize \
-// RUN: -cse --convert-bufferization-to-memref \
-// RUN: --gml-st-to-scf --buffer-results-to-out-params --convert-scf-to-cf \
+// RUN: --cse --convert-bufferization-to-memref \
+// RUN: --buffer-results-to-out-params --convert-scf-to-cf \
 // RUN: --generic-host-to-llvm -cse --canonicalize |\
 // RUN: mlir-cpu-runner \
 // RUN: -e main -entry-point-result=void \
