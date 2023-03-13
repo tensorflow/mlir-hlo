@@ -153,6 +153,7 @@ struct ConvertDeallocationOpsToLLVMPass
     LowerToLLVMOptions options(&getContext(),
                                dataLayoutAnalysis.getAtOrAbove(func));
 
+    options.useOpaquePointers = false;
     LLVMTypeConverter typeConverter(&getContext(), options,
                                     &dataLayoutAnalysis);
     RewritePatternSet patterns(&getContext());
