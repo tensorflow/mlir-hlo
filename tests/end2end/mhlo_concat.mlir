@@ -1,6 +1,5 @@
 // RUN: mlir-hlo-opt %s \
-// RUN: --legalize-mhlo-to-thlo \
-// RUN: --gml-tiling="tile-sizes=1,1 distribute=false op-name=thlo.concatenate" \
+// RUN: --legalize-mhlo-to-thlo --gml-tile-by-one \
 // RUN: --gml-st-rewrite-forall-ops --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \
 // RUN: --empty-tensor-to-alloc-tensor \

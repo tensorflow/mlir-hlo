@@ -1,14 +1,13 @@
 // RUN: mlir-hlo-opt %s \
-// RUN:   --legalize-mhlo-to-thlo="enable-experimental" \
-// RUN:   --gml-tiling="tile-sizes=1 distribute=false op-name=thlo.sort" \
-// RUN:   --gml-st-rewrite-forall-ops --canonicalize --cse | \
+// RUN: --legalize-mhlo-to-thlo="enable-experimental" \
+// RUN: --gml-tile-by-one  --gml-st-rewrite-forall-ops --canonicalize --cse | \
 // RUN: mlir-hlo-opt --empty-tensor-to-alloc-tensor  --hlo-one-shot-bufferize \
-// RUN:   --canonicalize --cse --convert-bufferization-to-memref | \
+// RUN: --canonicalize --cse --convert-bufferization-to-memref | \
 // RUN: mlir-hlo-opt --thlo-legalize-sort --cse --canonicalize | \
 // RUN: mlir-hlo-opt --generic-host-to-llvm --cse --canonicalize | \
 // RUN: mlir-cpu-runner \
-// RUN:   -e main -entry-point-result=void \
-// RUN:   --shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
+// RUN: -e main -entry-point-result=void \
+// RUN: --shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 func.func @sort(%input0: tensor<2x5xf32>, %input1: tensor<2x5xi32>)

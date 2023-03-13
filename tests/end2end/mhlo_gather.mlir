@@ -1,7 +1,6 @@
 // RUN: mlir-hlo-opt %s \
 // RUN: --hlo-canonicalize-gather --legalize-mhlo-to-thlo="enable-experimental=true" \
-// RUN: --hlo-legalize-to-linalg \
-// RUN: --gml-tiling="tile-sizes=1 op-name=thlo.gather" \
+// RUN: --hlo-legalize-to-linalg --gml-tile-by-one \
 // RUN: --gml-st-rewrite-forall-ops --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \
 // RUN: --empty-tensor-to-alloc-tensor --hlo-one-shot-bufferize --canonicalize \

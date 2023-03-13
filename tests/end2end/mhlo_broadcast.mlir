@@ -1,5 +1,5 @@
 // RUN: mlir-hlo-opt %s --legalize-mhlo-to-thlo \
-// RUN: --gml-tiling="tile-sizes=1,1,1" --gml-st-rewrite-forall-ops -scalarize \
+// RUN: --gml-tile-by-one --gml-st-rewrite-forall-ops -scalarize \
 // RUN: --empty-tensor-to-alloc-tensor --hlo-one-shot-bufferize \
 // RUN: --convert-scf-to-cf --generic-host-to-llvm | \
 

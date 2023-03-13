@@ -1,6 +1,6 @@
 // RUN: mlir-hlo-opt %s \
 // RUN: --hlo-canonicalize-scatter --legalize-mhlo-to-thlo \
-// RUN: --hlo-legalize-to-linalg  --xla-cpu-transform-scatter \
+// RUN: --hlo-legalize-to-linalg  --gml-tile-by-one \
 // RUN: --gml-st-rewrite-forall-ops --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \
 // RUN: --hlo-one-shot-bufferize --canonicalize -cse \
