@@ -26,6 +26,7 @@ limitations under the License.
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Support/LogicalResult.h"
+#include "stablehlo/dialect/Base.h"
 
 namespace mlir {
 namespace hlo {
@@ -80,7 +81,7 @@ LogicalResult verifyReplicaGroups(std::optional<Location> location,
                                   std::optional<size_t> expectedGroupSize);
 
 LogicalResult verifyConvolutionAttributes(
-    std::optional<Location> location, Value lhs, Value rhs,
+    std::optional<Location> location, Type lhsType, Type rhsType,
     int64_t inputBatchDimension, int64_t inputFeatureDimension,
     ArrayRef<int64_t> inputSpatialDimensions,
     int64_t kernelInputFeatureDimension, int64_t kernelOutputFeatureDimension,
@@ -104,7 +105,7 @@ LogicalResult verifyConvolutionAttributes(
 LogicalResult inferAbsOp(std::optional<Location>, Value operand,
                          SmallVectorImpl<Type>& inferredReturnTypes);
 
-LogicalResult inferAfterAllOp(Dialect* dialect,
+LogicalResult inferAfterAllOp(HloDialectInterface* dialect,
                               std::optional<Location> location,
                               SmallVectorImpl<Type>& inferredReturnTypes);
 
@@ -165,7 +166,7 @@ LogicalResult inferConvertOp(
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
 LogicalResult inferConvolutionOp(
-    std::optional<Location> location, Value lhs, Value rhs,
+    std::optional<Location> location, Type lhsType, Type rhsType,
     std::optional<DenseIntElementsAttr> windowStrides,
     std::optional<DenseIntElementsAttr> padding,
     std::optional<DenseIntElementsAttr> lhsDilation,
@@ -180,7 +181,7 @@ LogicalResult inferConvolutionOp(
     std::optional<ArrayAttr> precisionConfig,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
-LogicalResult inferCreateTokenOp(Dialect* dialect,
+LogicalResult inferCreateTokenOp(HloDialectInterface* dialect,
                                  std::optional<Location> location,
                                  SmallVectorImpl<Type>& inferredReturnTypes);
 
@@ -255,11 +256,12 @@ LogicalResult inferOptimizationBarrierOp(
     std::optional<Location> location, ValueRange operand,
     SmallVectorImpl<Type>& inferredReturnTypes);
 
-LogicalResult inferOutfeedOp(Dialect* dialect, std::optional<Location> location,
+LogicalResult inferOutfeedOp(HloDialectInterface* dialect,
+                             std::optional<Location> location,
                              SmallVectorImpl<Type>& inferredReturnTypes);
 
-LogicalResult inferPadOp(std::optional<Location> location, Value operand,
-                         Value paddingValue,
+LogicalResult inferPadOp(std::optional<Location> location, Type operandType,
+                         Type paddingValueType,
                          DenseIntElementsAttr edgePaddingLow,
                          DenseIntElementsAttr edgePaddingHigh,
                          DenseIntElementsAttr interiorPadding,
@@ -289,6 +291,10 @@ LogicalResult inferReduceWindowOp(
 LogicalResult inferReplicaIdOp(MLIRContext* context, std::optional<Location>,
                                SmallVectorImpl<Type>& inferredReturnTypes);
 
+LogicalResult inferReverseOp(
+    std::optional<Location> location, Type operands,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnTypes);
+
 LogicalResult inferRngOp(
     std::optional<Location> location, Value a, Value b, Value shape,
     bool isRngDistributionUniform,
@@ -305,12 +311,13 @@ LogicalResult inferSelectOp(
 LogicalResult inferSelectAndScatterOp(
     Value operand, SmallVectorImpl<Type>& inferredReturnTypes);
 
-LogicalResult inferSendOp(Dialect* dialect, std::optional<Location> location,
+LogicalResult inferSendOp(HloDialectInterface* dialect,
+                          std::optional<Location> location,
                           SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferSetDimensionSizeOp(
-    Dialect* dialect, std::optional<Location> location, Type operandType,
-    Value size, int64_t dimension,
+    HloDialectInterface* dialect, std::optional<Location> location,
+    Type operandType, Value size, int64_t dimension,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
 LogicalResult inferSliceOp(std::optional<Location> location, Type operandType,
@@ -372,7 +379,7 @@ LogicalResult verifyCollectivePermuteOp(std::optional<Location> location,
                                         DenseIntElementsAttr sourceTargetPairs);
 
 LogicalResult verifyConvolutionOp(
-    std::optional<Location> location, Value lhs, Value rhs,
+    std::optional<Location> location, Type lhsType, Type rhsType,
     std::optional<DenseIntElementsAttr> windowStrides,
     std::optional<DenseIntElementsAttr> padding,
     std::optional<DenseIntElementsAttr> lhsDilation,
@@ -384,7 +391,7 @@ LogicalResult verifyConvolutionOp(
     ArrayRef<int64_t> kernelSpatialDimensions, int64_t outputBatchDimension,
     int64_t outputFeatureDimension, ArrayRef<int64_t> outputSpatialDimensions,
     int64_t featureGroupCount, int64_t batchGroupCount,
-    std::optional<ArrayAttr> precisionConfig, Value result);
+    std::optional<ArrayAttr> precisionConfig, Type resultType);
 
 LogicalResult verifyDotOp(std::optional<Location> location, Value lhs,
                           Value rhs, std::optional<ArrayAttr> precisionConfig,
@@ -414,7 +421,8 @@ LogicalResult verifyDynamicPadOp(std::optional<Location> location,
 LogicalResult verifyDynamicReshapeOp(std::optional<Location> location,
                                      Value outputShape, Value result);
 
-LogicalResult verifyInfeedOp(Dialect* dialect, std::optional<Location> location,
+LogicalResult verifyInfeedOp(HloDialectInterface* dialect,
+                             std::optional<Location> location,
                              std::optional<ArrayAttr> layout,
                              ValueRange results);
 
@@ -425,7 +433,8 @@ LogicalResult verifyRealDynamicSliceOp(std::optional<Location> location,
                                        Value operand, Value startIndices,
                                        Value limitIndices, Value strides);
 
-LogicalResult verifyRecvOp(Dialect* dialect, std::optional<Location> location,
+LogicalResult verifyRecvOp(HloDialectInterface* dialect,
+                           std::optional<Location> location,
                            ValueRange results);
 
 LogicalResult verifyReduceOp(std::optional<Location> location,

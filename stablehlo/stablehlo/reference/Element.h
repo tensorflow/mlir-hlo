@@ -35,12 +35,22 @@ class Element {
   /// \name Constructors
   /// @{
   Element(Type type, APInt value);
+
   Element(Type type, int64_t value);
+
   Element(Type type, bool value);
+
   Element(Type type, APFloat value);
+
+  /// The double `value` can be used to construct two types: floating-point or
+  /// complex element types. By specifying a double value for complex element
+  /// type, the real part is set to `value`, and the imaginary part is zero.
   Element(Type type, double value);
+
   Element(Type type, std::complex<APFloat> value);
+
   Element(Type type, std::complex<double> value);
+
   Element(const Element &other) = default;
   /// @}
 
@@ -114,12 +124,7 @@ class Element {
 Element abs(const Element &e);
 
 /// For floating point type T, checks if two normal values f1 and f2 are equal
-/// within a tolerance given by:
-///
-/// std::fabs(f1 - f2) <=
-///   std::numeric_limits<T>::epsilon() * std::fmax(f1, f2) ||
-/// std::fabs(f1 - f2) <= std::numeric_limits<T>::min()
-///
+/// within a tolerance given by 0.0001.
 /// For complex element type, checks if both real and imaginary parts are
 /// individually equal modulo the tolerance.
 bool areApproximatelyEqual(const Element &e1, const Element &e2);
@@ -142,6 +147,9 @@ Element imag(const Element &el);
 
 /// Returns log of Element object.
 Element log(const Element &el);
+
+/// Returns logistic of Element object.
+Element logistic(const Element &el);
 
 /// Returns the maximum between two Element objects.
 Element max(const Element &e1, const Element &e2);

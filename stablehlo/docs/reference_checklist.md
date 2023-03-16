@@ -37,8 +37,9 @@ After implementing the interpreter:
 
        ```td
         def StableHLO_XyzOp: StableHLO_FooOp<"xyz", [Trait1,
-            Trait2 /*xyz_c1, xyz_c2*/, InferTensorType /*xyz_c3*/]> /*xyz_c4*/ {
+            Trait2 /*xyz_c1, xyz_c2*/, InferTensorType /*xyz_c3*/]> { /*xyz_c4*/
              ...
+          let summary = "Xyz operation";
           let arguments = (ins
              1DTensorOf<[HLO_Float]>:$a, /*xyz_c5, xyz_i1*/
              HLO_Tensor:$b, /*xyz_i2*/
@@ -80,7 +81,7 @@ After implementing the interpreter:
        apply, keep the existing name.
     1. Once the above step is complete, sort all the tests related to the op
        under test alphabetically based on the function name.
-    1. Keep adding tests until the [ccov](https://github.com/openxla/stablehlo/blob/main/build_tools/github_actions/ci_build_stablehlo_code_coverage.sh)
+    1. Keep adding tests until the [ccov](https://github.com/openxla/stablehlo/blob/main/build_tools/github_actions/ci_build_cmake_code_coverage.sh)
        shows >= 90% coverage for the op.
 1. In [infer_stablehlo.mlir](https://github.com/openxla/stablehlo/blob/main/stablehlo/tests/infer_stablehlo.mlir):
     1. Make sure all constraints related to shape inference tests are present

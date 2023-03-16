@@ -144,16 +144,6 @@ Element mapWithUpcastToDouble(const Element &lhs, const Element &rhs,
                                      debugString(type).c_str()));
 }
 
-template <typename T>
-std::enable_if_t<std::is_floating_point<T>::value, bool> areApproximatelyEqual(
-    T x, T y) {
-  // The machine epsilon has to be scaled to the magnitude of the values used,
-  return std::fabs(x - y) <=
-             std::numeric_limits<T>::epsilon() * std::fmax(x, y) ||
-         // unless the result is subnormal
-         std::fabs(x - y) < std::numeric_limits<T>::min();
-}
-
 // Checks if two APFloat values, f and g, are almost equal.
 bool areApproximatelyEqual(APFloat f, APFloat g) {
   if (&f.getSemantics() != &g.getSemantics()) return false;
@@ -161,16 +151,26 @@ bool areApproximatelyEqual(APFloat f, APFloat g) {
   llvm::APFloatBase::cmpResult cmpResult = f.compare(g);
   if (cmpResult == APFloat::cmpEqual) return true;
   if (cmpResult == APFloat::cmpUnordered) return f.isNaN() == g.isNaN();
-  if (!f.isFiniteNonZero() || !g.isFiniteNonZero()) return false;
+  if (!f.isFiniteNonZero() || !g.isFiniteNonZero()) {
+    // f and g could have the following cases
+    //          f                           g
+    //  (1) non-finite or zero      non-finite or zero
+    //  (2) non-finite or zero      finite and non-zero
+    //    (2.1) non-finite              finite and non-zero
+    //    (2.2) zero                    finite and non-zero
+    //  (3) finite and non-zero     non-finite or zero
+    //    (3.1) finite and non-zero     non-finite
+    //    (3.2) finite and non-zero     zero
+    //
+    // The equality of the cases (1), (2.1) and (3.1) have already been handled,
+    // and it safe to return false for these case. The remaining cases (2.2)
+    // and (3.2) will be handled in the following code.
+    if (!f.isZero() && !g.isZero()) return false;
+  }
 
-  // Both f and g are normal values.
+  // Both f and g are finite (zero, subnormal, or normal) values.
   if (f.isNegative() != g.isNegative()) return false;
-  if (&f.getSemantics() == &llvm::APFloat::IEEEdouble())
-    return areApproximatelyEqual<double>(f.convertToDouble(),
-                                         g.convertToDouble());
-
-  // Convert the half and bfloat16 types to float before comparison.
-  return areApproximatelyEqual<float>(f.convertToFloat(), g.convertToFloat());
+  return std::fabs(f.convertToDouble() - g.convertToDouble()) <= 0.0001;
 }
 
 }  // namespace
@@ -191,15 +191,28 @@ Element::Element(Type type, bool value) : type_(type), value_(value) {}
 Element::Element(Type type, APFloat value) : type_(type), value_(value) {}
 
 Element::Element(Type type, double value) {
-  if (!isSupportedFloatType(type))
+  if (isSupportedFloatType(type)) {
+    APFloat floatVal(value);
+    bool roundingErr;
+    floatVal.convert(type.cast<FloatType>().getFloatSemantics(),
+                     APFloat::rmNearestTiesToEven, &roundingErr);
+    type_ = type;
+    value_ = floatVal;
+  } else if (isSupportedComplexType(type)) {
+    APFloat real(value);
+    APFloat imag(0.0);
+    auto floatTy = type.cast<ComplexType>().getElementType().cast<FloatType>();
+    bool roundingErr;
+    real.convert(floatTy.getFloatSemantics(), APFloat::rmNearestTiesToEven,
+                 &roundingErr);
+    imag.convert(floatTy.getFloatSemantics(), APFloat::rmNearestTiesToEven,
+                 &roundingErr);
+    type_ = type;
+    value_ = std::make_pair(real, imag);
+  } else {
     report_fatal_error(invalidArgument("Unsupported element type: %s",
                                        debugString(type).c_str()));
-  APFloat floatVal(static_cast<double>(value));
-  bool roundingErr;
-  floatVal.convert(type.cast<FloatType>().getFloatSemantics(),
-                   APFloat::rmNearestTiesToEven, &roundingErr);
-  type_ = type;
-  value_ = floatVal;
+  }
 }
 
 Element::Element(Type type, std::complex<APFloat> value)
@@ -530,6 +543,11 @@ Element log(const Element &el) {
       [](std::complex<double> e) { return std::log(e); });
 }
 
+Element logistic(const Element &el) {
+  auto one = Element(el.getType(), 1.0);
+  return one / (one + exponential(-el));
+}
+
 Element max(const Element &e1, const Element &e2) {
   return map(
       e1, e2,
@@ -577,7 +595,7 @@ Element power(const Element &e1, const Element &e2) {
       if (base.abs().isOne())
         exponent = exponent.abs();
       else
-        return Element(type, 0l);
+        return Element(type, static_cast<int64_t>(0));
     }
     APInt result(base.getBitWidth(), 1, isSigned);
     while (!exponent.isZero()) {

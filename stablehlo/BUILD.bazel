@@ -22,6 +22,7 @@ exports_files([
     "LICENSE",
     "stablehlo/integrations/python/ChloModule.cpp",
     "stablehlo/integrations/python/StablehloModule.cpp",
+    "stablehlo/integrations/python/VhloModule.cpp",
 ])
 
 filegroup(
@@ -385,6 +386,7 @@ cc_library(
     strip_include_prefix = ".",
     deps = [
         ":reference_tensor",
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Support",
     ],
 )
@@ -453,7 +455,10 @@ cc_library(
         ":stablehlo_ops",
         ":vhlo_ops",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:QuantOps",
+        "@llvm-project//mlir:ShapeDialect",
         "@llvm-project//mlir:SparseTensorDialect",
+        "@llvm-project//mlir:TensorDialect",
     ],
 )
 
@@ -539,43 +544,6 @@ cc_library(
     ],
     alwayslink = True,
 )
-
-cc_library(
-    name = "check_ops",
-    srcs = [
-        "stablehlo/tests/CheckOps.cpp",
-    ],
-    hdrs = [
-        "stablehlo/tests/CheckOps.h",
-    ],
-    strip_include_prefix = ".",
-    deps = [
-        ":base",
-        ":check_ops_inc_gen",
-        ":reference_tensor",
-    ],
-)
-
-gentbl_cc_library(
-    name = "check_ops_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "stablehlo/tests/CheckOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "stablehlo/tests/CheckOps.cpp.inc",
-        ),
-    ],
-    tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "stablehlo/tests/CheckOps.td",
-    strip_include_prefix = ".",
-    deps = [
-        "base_td_files",
-    ],
-)
-
 
 gentbl_cc_library(
     name = "stablehlo_enums_inc_gen",
@@ -715,6 +683,8 @@ cc_library(
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
         "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:QuantOps",
+        "@llvm-project//mlir:ShapeDialect",
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:TransformUtils",
@@ -801,12 +771,16 @@ cc_binary(
         "stablehlo/tools/StablehloTranslateMain.cpp",
     ],
     deps = [
+        ":reference_errors",
         ":reference_ops",
+        ":reference_scope",
+        ":reference_tensor",
         ":register",
-        ":check_ops",
         ":stablehlo_ops",
         ":stablehlo_serialization",
         ":vhlo_ops",
+        "//stablehlo/tests:check_ops",
+        "//stablehlo/tests:test_utils",
         "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
@@ -823,72 +797,9 @@ cc_binary(
     deps = [
         ":register",
         ":stablehlo_passes",
-        ":test_utils",
+        "//stablehlo/tests:test_utils",
         "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:MlirOptLib",
-    ],
-)
-
-filegroup(
-    name = "test_data",
-    testonly = True,
-    data = [
-        ":stablehlo-translate",
-        ":stablehlo-opt",
-        "@llvm-project//llvm:FileCheck",
-    ],
-)
-
-gentbl_cc_library(
-    name = "test_utils_inc_gen",
-    strip_include_prefix = ".",
-    tbl_outs = [
-        (
-            [
-                "-gen-pass-decls",
-                "-name=HloTest",
-            ],
-            "stablehlo/tests/TestUtils.h.inc",
-        ),
-    ],
-    tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "stablehlo/tests/TestUtils.td",
-    deps = [
-        ":test_utils_td_files",
-    ],
-)
-
-td_library(
-    name = "test_utils_td_files",
-    srcs = [
-        "stablehlo/tests/TestUtils.td",
-    ],
-    includes = ["."],
-    deps = [
-        "@llvm-project//mlir:PassBaseTdFiles",
-    ],
-)
-
-cc_library(
-    name = "test_utils",
-    srcs = [
-        "stablehlo/tests/TestUtils.cpp",
-    ],
-    hdrs = [
-        "stablehlo/tests/TestUtils.h",
-    ],
-    strip_include_prefix = ".",
-    deps = [
-        ":stablehlo_assembly_format",
-        ":test_utils_inc_gen",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:FuncDialect",
-        "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:InferTypeOpInterface",
-        "@llvm-project//mlir:Pass",
-        "@llvm-project//mlir:ShapeDialect",
-        "@llvm-project//mlir:Support",
-        "@llvm-project//mlir:Transforms",
     ],
 )
 

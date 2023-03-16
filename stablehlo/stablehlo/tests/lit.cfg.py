@@ -22,17 +22,11 @@ import lit.formats
 from lit.llvm import llvm_config
 import lit.util
 
-# Configuration file for the 'lit' test runner.
-
-# name: The name of this test suite.
+# Populate Lit configuration with the minimal required metadata.
+# Some metadata is populated in lit.site.cfg.py.in.
 config.name = 'STABLEHLO_TESTS_SUITE'
-
 config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
-
-# suffixes: A list of file extensions to treat as test files.
-config.suffixes = ['.mlir', '.mlir.py']
-
-# test_source_root: The root path where tests are located.
+config.suffixes = ['.mlir']
 config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
@@ -63,8 +57,12 @@ tool_dirs = [
     config.llvm_tools_dir,
 ]
 tools = [
-    'stablehlo-opt',
-    'stablehlo-translate',
+  'FileCheck',
+  'stablehlo-opt',
+  'stablehlo-translate',
 ]
-
+tool_dirs = [
+  config.llvm_tools_dir,
+  config.stablehlo_tools_dir,
+]
 llvm_config.add_tool_substitutions(tools, tool_dirs)

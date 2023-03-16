@@ -633,9 +633,9 @@ struct RefineConvolutionOpPattern : public OpRewritePattern<ConvolutionOp> {
                                 PatternRewriter& rewriter) const override {
     SmallVector<ShapedTypeComponents> inferredReturnShapes;
     if (failed(hlo::inferConvolutionOp(
-            /*location=*/{}, op.getLhs(), op.getRhs(), op.getWindowStrides(),
-            op.getPadding(), op.getLhsDilation(), op.getRhsDilation(),
-            op.getWindowReversal(),
+            /*location=*/{}, op.getLhs().getType(), op.getRhs().getType(),
+            op.getWindowStrides(), op.getPadding(), op.getLhsDilation(),
+            op.getRhsDilation(), op.getWindowReversal(),
             op.getDimensionNumbers().getInputBatchDimension(),
             op.getDimensionNumbers().getInputFeatureDimension(),
             op.getDimensionNumbers().getInputSpatialDimensions(),
@@ -719,9 +719,9 @@ struct RefineDynamicConvOpPattern : public OpRewritePattern<DynamicConvOp> {
 
     SmallVector<ShapedTypeComponents> inferredReturnShapes;
     if (failed(hlo::inferConvolutionOp(
-            /*location=*/{}, op.getLhs(), op.getRhs(), op.getWindowStrides(),
-            paddingAttr, op.getLhsDilation(), op.getRhsDilation(),
-            op.getWindowReversal(),
+            /*location=*/{}, op.getLhs().getType(), op.getRhs().getType(),
+            op.getWindowStrides(), paddingAttr, op.getLhsDilation(),
+            op.getRhsDilation(), op.getWindowReversal(),
             op.getDimensionNumbers().getInputBatchDimension(),
             op.getDimensionNumbers().getInputFeatureDimension(),
             op.getDimensionNumbers().getInputSpatialDimensions(),
@@ -766,7 +766,8 @@ struct RefineDynamicPadOpPattern : public OpRewritePattern<DynamicPadOp> {
 
     SmallVector<Type> inferredReturnTypes;
     if (failed(hlo::inferPadOp(
-            /*location=*/{}, op.getOperand(), op.getPaddingValue(),
+            /*location=*/{}, op.getOperand().getType(),
+            op.getPaddingValue().getType(),
             rewriter.getI64TensorAttr(edgePaddingLow),
             rewriter.getI64TensorAttr(edgePaddingHigh),
             rewriter.getI64TensorAttr(interiorPadding), inferredReturnTypes)))

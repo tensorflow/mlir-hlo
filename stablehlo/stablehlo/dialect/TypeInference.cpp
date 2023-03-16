@@ -59,7 +59,6 @@ limitations under the License.
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "stablehlo/dialect/AssemblyFormat.h"
-#include "stablehlo/dialect/Base.h"
 
 namespace mlir {
 namespace hlo {
@@ -756,7 +755,7 @@ LogicalResult verifyRegionNotEmpty(std::optional<Location> location,
 //  dimensions in the range [0,num) because of the presence of 'unknown'
 //  dimensions (ref. `printConvolutionDimensions()`)
 LogicalResult isSpatialDimensionsValid(
-    Value lhs, int64_t inputBatchDimension, int64_t inputFeatureDimension,
+    Type lhsType, int64_t inputBatchDimension, int64_t inputFeatureDimension,
     ArrayRef<int64_t> inputSpatialDimensions,
     int64_t kernelInputFeatureDimension, int64_t kernelOutputFeatureDimension,
     ArrayRef<int64_t> kernelSpatialDimensions, int64_t outputBatchDimension,
@@ -792,7 +791,7 @@ LogicalResult isSpatialDimensionsValid(
   std::copy(outputSpatialDimensions.begin(), outputSpatialDimensions.end(),
             OutputDimNums.begin() + 2);
 
-  auto numDims = lhs.getType().cast<RankedTensorType>().getRank();
+  auto numDims = lhsType.cast<RankedTensorType>().getRank();
   const auto inRange = [numDims](int64_t i) { return 0 <= i && i < numDims; };
 
   if (!llvm::all_of(inputDimNums, inRange) ||
@@ -856,7 +855,7 @@ LogicalResult verifyPrecisionConfig(std::optional<Location> loc,
 //          dim(rhs, o) (or dim(output, f')) % fgc == 0
 //  P3. Precision config is null, of size 0 or of size 2.
 LogicalResult verifyConvolutionAttributes(
-    std::optional<Location> location, Value lhs, Value rhs,
+    std::optional<Location> location, Type lhsType, Type rhsType,
     int64_t inputBatchDimension, int64_t inputFeatureDimension,
     ArrayRef<int64_t> inputSpatialDimensions,
     int64_t kernelInputFeatureDimension, int64_t kernelOutputFeatureDimension,
@@ -866,7 +865,7 @@ LogicalResult verifyConvolutionAttributes(
     std::optional<ArrayAttr> precisionConfig) {
   // P1.
   if (failed(isSpatialDimensionsValid(
-          lhs, inputBatchDimension, inputFeatureDimension,
+          lhsType, inputBatchDimension, inputFeatureDimension,
           inputSpatialDimensions, kernelInputFeatureDimension,
           kernelOutputFeatureDimension, kernelSpatialDimensions,
           outputBatchDimension, outputFeatureDimension, outputSpatialDimensions,
@@ -891,15 +890,15 @@ LogicalResult verifyConvolutionAttributes(
         "greater than 1. Got ",
         batchGroupCount, " and ", featureGroupCount, " resp.");
 
-  auto lhsType = lhs.getType().cast<RankedTensorType>();
-  const int64_t inputFeatures = lhsType.getShape()[inputFeatureDimension];
-  const int64_t inputBatch = lhsType.getShape()[inputBatchDimension];
+  auto rankedLhsType = lhsType.cast<RankedTensorType>();
+  const int64_t inputFeatures = rankedLhsType.getShape()[inputFeatureDimension];
+  const int64_t inputBatch = rankedLhsType.getShape()[inputBatchDimension];
 
-  auto rhsType = rhs.getType().cast<RankedTensorType>();
+  auto rankedRhsType = rhsType.cast<RankedTensorType>();
   const int64_t kernelInputFeatures =
-      rhsType.getShape()[kernelInputFeatureDimension];
+      rankedRhsType.getShape()[kernelInputFeatureDimension];
   const int64_t kernelOutputFeatures =
-      rhsType.getShape()[kernelOutputFeatureDimension];
+      rankedRhsType.getShape()[kernelOutputFeatureDimension];
 
   if (!isDynamicDimSize(kernelOutputFeatures)) {
     if (kernelOutputFeatures % batchGroupCount != 0)
@@ -1385,11 +1384,10 @@ LogicalResult inferAbsOp(std::optional<Location>, Value operand,
   return success();
 }
 
-LogicalResult inferAfterAllOp(Dialect* dialect,
+LogicalResult inferAfterAllOp(HloDialectInterface* dialect,
                               std::optional<Location> location,
                               SmallVectorImpl<Type>& inferredReturnTypes) {
-  auto hloDialect = cast<HloDialectInterface>(dialect);
-  inferredReturnTypes.push_back(hloDialect->createTokenType());
+  inferredReturnTypes.push_back(dialect->createTokenType());
   return success();
 }
 
@@ -1733,7 +1731,7 @@ LogicalResult inferConvertOp(
  *      TODO(b/232574102): Verify the element-type of return-value.
  */
 LogicalResult inferConvolutionOp(
-    std::optional<Location> location, Value lhs, Value rhs,
+    std::optional<Location> location, Type lhsType, Type rhsType,
     std::optional<DenseIntElementsAttr> windowStrides,
     std::optional<DenseIntElementsAttr> padding,
     std::optional<DenseIntElementsAttr> lhsDilation,
@@ -1747,34 +1745,33 @@ LogicalResult inferConvolutionOp(
     int64_t featureGroupCount, int64_t batchGroupCount,
     std::optional<ArrayAttr> precisionConfig,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
-  auto lhsType = lhs.getType().dyn_cast<RankedTensorType>();
-  auto rhsType = rhs.getType().dyn_cast<RankedTensorType>();
-  if (!lhsType || !rhsType) {
+  auto rankedLhsType = lhsType.dyn_cast<RankedTensorType>();
+  auto rankedRhsType = rhsType.dyn_cast<RankedTensorType>();
+  if (!rankedLhsType || !rankedRhsType) {
     inferredReturnShapes.push_back({});
     return success();
   }
 
   // P1.
-  int numDims = lhsType.getRank();
-  if (numDims != rhsType.getRank())
+  int numDims = rankedLhsType.getRank();
+  if (numDims != rankedRhsType.getRank())
     return emitOptionalError(location,
                              "expects convolution arguments to have same "
                              "number of dimensions. Got: ",
-                             lhsType, " and ", rhsType, ".");
-
+                             rankedLhsType, " and ", rankedRhsType, ".");
   if (numDims < 2)
     return emitOptionalError(
         location,
-        "expects convolution arguments to have >= 2 dimensions. Got: ", lhsType,
-        " and ", rhsType, ".");
-
+        "expects convolution arguments to have >= 2 dimensions. Got: ",
+        rankedLhsType, " and ", rankedRhsType, ".");
   // P2.
   if (failed(verifyConvolutionAttributes(
-          location, lhs, rhs, inputBatchDimension, inputFeatureDimension,
-          inputSpatialDimensions, kernelInputFeatureDimension,
-          kernelOutputFeatureDimension, kernelSpatialDimensions,
-          outputBatchDimension, outputFeatureDimension, outputSpatialDimensions,
-          featureGroupCount, batchGroupCount, precisionConfig)))
+          location, lhsType, rhsType, inputBatchDimension,
+          inputFeatureDimension, inputSpatialDimensions,
+          kernelInputFeatureDimension, kernelOutputFeatureDimension,
+          kernelSpatialDimensions, outputBatchDimension, outputFeatureDimension,
+          outputSpatialDimensions, featureGroupCount, batchGroupCount,
+          precisionConfig)))
     return failure();
 
   if ((size_t)numDims != inputSpatialDimensions.size() + 2)
@@ -1785,7 +1782,7 @@ LogicalResult inferConvolutionOp(
   // P3.
   SmallVector<int64_t> windowDimensions(kernelSpatialDimensions.size());
   for (size_t i = 0; i < windowDimensions.size(); i++)
-    windowDimensions[i] = rhsType.getShape()[kernelSpatialDimensions[i]];
+    windowDimensions[i] = rankedRhsType.getShape()[kernelSpatialDimensions[i]];
 
   auto paddingOrErr = convertPaddingAttribute(padding, location);
   if (failed(paddingOrErr)) return failure();
@@ -1814,15 +1811,15 @@ LogicalResult inferConvolutionOp(
     return failure();
 
   // P5.
-  SmallVector<int64_t> outputDimensions(lhsType.getShape().size(),
+  SmallVector<int64_t> outputDimensions(rankedLhsType.getShape().size(),
                                         ShapedType::kDynamic);
 
   // Infer the output spatial dimensions.
   auto numSpatialDims = inputSpatialDimensions.size();
   SmallVector<int64_t> inputSpatialDimVals(numSpatialDims);
   for (int64_t i = 0; i < static_cast<int64_t>(numSpatialDims); ++i)
-    inputSpatialDimVals[i] = lhsType.getShape()[inputSpatialDimensions[i]];
-
+    inputSpatialDimVals[i] =
+        rankedLhsType.getShape()[inputSpatialDimensions[i]];
   auto windowOutputShape =
       inferWindowOutputShape(inputSpatialDimVals, *windowOrErr);
 
@@ -1830,10 +1827,9 @@ LogicalResult inferConvolutionOp(
     outputDimensions[outputSpatialDimensions[i]] = windowOutputShape[i];
 
   // Infer the output-batch-dimension and output-feature-dimension.
-  const int64_t inputBatch = lhsType.getShape()[inputBatchDimension];
+  const int64_t inputBatch = rankedLhsType.getShape()[inputBatchDimension];
   const int64_t kernelOutputFeatures =
-      rhsType.getShape()[kernelOutputFeatureDimension];
-
+      rankedRhsType.getShape()[kernelOutputFeatureDimension];
   outputDimensions[outputBatchDimension] = isDynamicDimSize(inputBatch)
                                                ? ShapedType::kDynamic
                                                : inputBatch / batchGroupCount;
@@ -1843,11 +1839,10 @@ LogicalResult inferConvolutionOp(
   return success();
 }
 
-LogicalResult inferCreateTokenOp(Dialect* dialect,
+LogicalResult inferCreateTokenOp(HloDialectInterface* dialect,
                                  std::optional<Location> location,
                                  SmallVectorImpl<Type>& inferredReturnTypes) {
-  auto hloDialect = cast<HloDialectInterface>(dialect);
-  inferredReturnTypes.push_back(hloDialect->createTokenType());
+  inferredReturnTypes.push_back(dialect->createTokenType());
   return success();
 }
 
@@ -2454,21 +2449,21 @@ LogicalResult inferOptimizationBarrierOp(
   return success();
 }
 
-LogicalResult inferOutfeedOp(Dialect* dialect, std::optional<Location> location,
+LogicalResult inferOutfeedOp(HloDialectInterface* dialect,
+                             std::optional<Location> location,
                              SmallVectorImpl<Type>& inferredReturnTypes) {
-  auto hloDialect = cast<HloDialectInterface>(dialect);
-  inferredReturnTypes.push_back(hloDialect->createTokenType());
+  inferredReturnTypes.push_back(dialect->createTokenType());
   return success();
 }
 
-LogicalResult inferPadOp(std::optional<Location> location, Value operand,
-                         Value paddingValue,
+LogicalResult inferPadOp(std::optional<Location> location, Type operandType,
+                         Type paddingValueType,
                          DenseIntElementsAttr edgePaddingLow,
                          DenseIntElementsAttr edgePaddingHigh,
                          DenseIntElementsAttr interiorPadding,
                          SmallVectorImpl<Type>& inferredReturnTypes) {
-  auto inputType = operand.getType().cast<RankedTensorType>();
-  auto padType = paddingValue.getType().cast<RankedTensorType>();
+  auto inputType = operandType.cast<RankedTensorType>();
+  auto padType = paddingValueType.cast<RankedTensorType>();
 
   // pad_i2
   if (padType.getRank() != 0)
@@ -2631,6 +2626,13 @@ LogicalResult inferReplicaIdOp(MLIRContext* context, std::optional<Location>,
   return success();
 }
 
+LogicalResult inferReverseOp(
+    std::optional<Location> location, Type operandType,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  return hlo::inferMostSpecificTypeComponents(location, operandType,
+                                              inferredReturnShapes);
+}
+
 LogicalResult inferRngOp(
     std::optional<Location> location, Value a, Value b, Value shape,
     bool isRngDistributionUniform,
@@ -2709,16 +2711,16 @@ LogicalResult inferSelectAndScatterOp(
   return success();
 }
 
-LogicalResult inferSendOp(Dialect* dialect, std::optional<Location> location,
+LogicalResult inferSendOp(HloDialectInterface* dialect,
+                          std::optional<Location> location,
                           SmallVectorImpl<Type>& inferredReturnTypes) {
-  auto hloDialect = cast<HloDialectInterface>(dialect);
-  inferredReturnTypes.push_back(hloDialect->createTokenType());
+  inferredReturnTypes.push_back(dialect->createTokenType());
   return success();
 }
 
 LogicalResult inferSetDimensionSizeOp(
-    Dialect* dialect, std::optional<Location> location, Type operandType,
-    Value size, int64_t dimension,
+    HloDialectInterface* dialect, std::optional<Location> location,
+    Type operandType, Value size, int64_t dimension,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
   auto sizeType = size.getType().dyn_cast<RankedTensorType>();
   if (sizeType && sizeType.getRank() != 0)
@@ -2760,9 +2762,8 @@ LogicalResult inferSetDimensionSizeOp(
   if (llvm::all_of(bounds, [&](auto b) { return isDynamicDimSize(b); }))
     inferredReturnShapes.emplace_back(shape, inputType.getElementType());
   else
-    inferredReturnShapes.emplace_back(
-        shape, inputType.getElementType(),
-        cast<HloDialectInterface>(dialect)->createTypeExtensions(bounds));
+    inferredReturnShapes.emplace_back(shape, inputType.getElementType(),
+                                      dialect->createTypeExtensions(bounds));
   return success();
 }
 
@@ -3252,7 +3253,7 @@ LogicalResult verifyCollectivePermuteOp(
 }
 
 LogicalResult verifyConvolutionOp(
-    std::optional<Location> location, Value lhs, Value rhs,
+    std::optional<Location> location, Type lhsType, Type rhsType,
     std::optional<DenseIntElementsAttr> windowStrides,
     std::optional<DenseIntElementsAttr> padding,
     std::optional<DenseIntElementsAttr> lhsDilation,
@@ -3264,26 +3265,27 @@ LogicalResult verifyConvolutionOp(
     ArrayRef<int64_t> kernelSpatialDimensions, int64_t outputBatchDimension,
     int64_t outputFeatureDimension, ArrayRef<int64_t> outputSpatialDimensions,
     int64_t featureGroupCount, int64_t batchGroupCount,
-    std::optional<ArrayAttr> precisionConfig, Value result) {
+    std::optional<ArrayAttr> precisionConfig, Type resultType) {
   SmallVector<ShapedTypeComponents> inferredReturnShapes;
   if (failed(inferConvolutionOp(
-          location, lhs, rhs, windowStrides, padding, lhsDilation, rhsDilation,
-          windowReversal, inputBatchDimension, inputFeatureDimension,
-          inputSpatialDimensions, kernelInputFeatureDimension,
-          kernelOutputFeatureDimension, kernelSpatialDimensions,
-          outputBatchDimension, outputFeatureDimension, outputSpatialDimensions,
-          featureGroupCount, batchGroupCount, precisionConfig,
-          inferredReturnShapes)))
+          location, lhsType, rhsType, windowStrides, padding, lhsDilation,
+          rhsDilation, windowReversal, inputBatchDimension,
+          inputFeatureDimension, inputSpatialDimensions,
+          kernelInputFeatureDimension, kernelOutputFeatureDimension,
+          kernelSpatialDimensions, outputBatchDimension, outputFeatureDimension,
+          outputSpatialDimensions, featureGroupCount, batchGroupCount,
+          precisionConfig, inferredReturnShapes)))
     return failure();
 
   auto inferredShape = inferredReturnShapes[0];
-  auto resultType = result.getType().dyn_cast<ShapedType>();
-  if (inferredShape.hasRank() && resultType.hasRank() &&
+  auto shapedResultType = resultType.dyn_cast<ShapedType>();
+  if (inferredShape.hasRank() && shapedResultType.hasRank() &&
       failed(verifyCompatibleShape(inferredShape.getDims(),
-                                   resultType.getShape())))
-    return emitOptionalError(
-        location, "inferred shape '", dimSizesToString(inferredShape.getDims()),
-        "' ", "is incompatible with return type of operation ", resultType, "");
+                                   shapedResultType.getShape())))
+    return emitOptionalError(location, "inferred shape '",
+                             dimSizesToString(inferredShape.getDims()), "' ",
+                             "is incompatible with return type of operation ",
+                             shapedResultType, "");
 
   return success();
 }
@@ -3478,7 +3480,8 @@ LogicalResult verifyDynamicReshapeOp(std::optional<Location> location,
 
 // Checks that the result type is of the form `zero_or_more_type(s),
 // stablehlo::token`
-LogicalResult verifyInfeedOp(Dialect* dialect, std::optional<Location> location,
+LogicalResult verifyInfeedOp(HloDialectInterface* dialect,
+                             std::optional<Location> location,
                              std::optional<ArrayAttr> layout,
                              ValueRange results) {
   auto resultTypes = results.getType();
@@ -3487,8 +3490,7 @@ LogicalResult verifyInfeedOp(Dialect* dialect, std::optional<Location> location,
         location, "result is expected to be at least of size 1, but got ",
         resultTypes.size());
 
-  auto hloDialect = cast<HloDialectInterface>(dialect);
-  if (!hloDialect->isTokenType(resultTypes[resultTypes.size() - 1]))
+  if (!dialect->isTokenType(resultTypes[resultTypes.size() - 1]))
     return emitOptionalError(location,
                              "last element of result types is expected to "
                              "be of token type, but got ",
@@ -3573,7 +3575,8 @@ LogicalResult verifyRealDynamicSliceOp(std::optional<Location> location,
 
 // Checks that the result type is of the form `zero_or_more_type(s),
 // stablehlo::token`
-LogicalResult verifyRecvOp(Dialect* dialect, std::optional<Location> location,
+LogicalResult verifyRecvOp(HloDialectInterface* dialect,
+                           std::optional<Location> location,
                            ValueRange results) {
   auto resultTypes = results.getTypes();
   if (resultTypes.empty())
@@ -3581,8 +3584,7 @@ LogicalResult verifyRecvOp(Dialect* dialect, std::optional<Location> location,
         location, "result is expected to be at least of size 1, but got ",
         resultTypes.size());
 
-  auto hloDialect = cast<HloDialectInterface>(dialect);
-  if (!hloDialect->isTokenType(resultTypes[resultTypes.size() - 1]))
+  if (!dialect->isTokenType(resultTypes[resultTypes.size() - 1]))
     return emitOptionalError(location,
                              "last element of result types is expected to "
                              "be of token type, but got ",
