@@ -1,4 +1,4 @@
-load("//third_party/bazel_skylib/rules:build_test.bzl", "build_test")
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 
 # MHLO -> TOSA bridge.
 package(
