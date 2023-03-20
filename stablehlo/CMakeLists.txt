@@ -114,7 +114,8 @@ endif()
 
 set(STABLEHLO_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(STABLEHLO_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-set(STABLEHLO_TOOLS_DIR ${STABLEHLO_BINARY_DIR}/bin)
+set(STABLEHLO_TOOLS_DIR ${CMAKE_BINARY_DIR}/bin)
+
 add_custom_target(check-stablehlo)
 
 add_subdirectory(stablehlo)

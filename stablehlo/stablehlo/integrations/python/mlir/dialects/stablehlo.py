@@ -19,10 +19,8 @@ from ._stablehlo_ops_gen import *
 from .._mlir_libs._stablehlo import *
 
 
-# TODO(#1298): Add C++ API as well
 def get_earliest_forward_compatible_version():
   """Return the earliest StableHLO version that the current StableHLO version
-
-  is still forward compatible with.
+    is still forward compatible with.
   """
   return "0.9.0"

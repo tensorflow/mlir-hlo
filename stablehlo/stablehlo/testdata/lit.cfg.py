@@ -20,7 +20,6 @@ import os
 
 import lit.formats
 from lit.llvm import llvm_config
-import lit.util
 
 # Populate Lit configuration with the minimal required metadata.
 # Some metadata is populated in lit.site.cfg.py.in.
@@ -29,29 +28,7 @@ config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 config.suffixes = ['.mlir']
 config.test_source_root = os.path.dirname(__file__)
 
-# test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.stablehlo_obj_root, 'test')
-
-config.substitutions.append(('%PATH%', config.environment['PATH']))
-config.substitutions.append(('%shlibext', config.llvm_shlib_ext))
-
-llvm_config.with_system_environment(['HOME', 'INCLUDE', 'LIB', 'TMP', 'TEMP'])
-
-llvm_config.use_default_substitutions()
-
-# excludes: A list of directories to exclude from the testsuite.
-config.excludes = []
-
-# test_source_root: The root path where tests are located.
-config.test_source_root = os.path.dirname(__file__)
-
-# test_exec_root: The root path where tests should be run.
-config.test_exec_root = os.path.join(config.stablehlo_obj_root, 'testdata')
-config.stablehlo_tools_dir = os.path.join(config.stablehlo_obj_root, 'bin')
-
-# Tweak the PATH to include the tools dir.
-llvm_config.with_environment('PATH', config.llvm_tools_dir, append_path=True)
-
+# Make LLVM and StableHLO tools available in RUN directives
 tools = [
   'FileCheck',
   'stablehlo-opt',
