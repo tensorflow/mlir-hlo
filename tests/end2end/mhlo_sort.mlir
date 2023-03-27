@@ -1,10 +1,10 @@
 // RUN: mlir-hlo-opt %s \
-// RUN: --legalize-mhlo-to-thlo="enable-experimental" \
-// RUN: --gml-tile-by-one  --gml-st-rewrite-forall-ops --canonicalize --cse | \
-// RUN: mlir-hlo-opt --empty-tensor-to-alloc-tensor  --hlo-one-shot-bufferize \
-// RUN: --canonicalize --cse --convert-bufferization-to-memref | \
-// RUN: mlir-hlo-opt --thlo-legalize-sort --cse --canonicalize | \
-// RUN: mlir-hlo-opt --generic-host-to-llvm --cse --canonicalize | \
+// RUN: --legalize-mhlo-to-thlo="enable-experimental" --gml-tile-by-one \
+// RUN: --gml-st-rewrite-forall-ops --canonicalize --cse \
+// RUN: --empty-tensor-to-alloc-tensor  --hlo-one-shot-bufferize \
+// RUN: --canonicalize --cse --convert-bufferization-to-memref \
+// RUN: --thlo-legalize-sort --cse --canonicalize --generic-host-to-llvm --cse \
+// RUN: --canonicalize | \
 // RUN: mlir-cpu-runner \
 // RUN: -e main -entry-point-result=void \
 // RUN: --shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
