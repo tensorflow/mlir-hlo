@@ -80,6 +80,7 @@ add_mlir_library(GmlStPasses
   MLIRVectorToSCF
   MLIRX86VectorTransforms
   MhloDialect
+  MLIRGmlStUtils
 )
 
 add_mlir_library(GmlStTransforms
