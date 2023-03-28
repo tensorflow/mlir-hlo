@@ -378,6 +378,14 @@ gentbl_cc_library(
             ["-gen-dialect-defs"],
             "deallocation/IR/deallocation_dialect.cc.inc",
         ),
+        (
+            ["-gen-typedef-decls"],
+            "deallocation/IR/deallocation_typedefs.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "deallocation/IR/deallocation_typedefs.cc.inc",
+        ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "deallocation/IR/deallocation_ops.td",
@@ -390,6 +398,7 @@ cc_library(
         "deallocation/transforms/buffer_reuse.cc",
         "deallocation/transforms/convert_deallocation_ops_to_llvm.cc",
         "deallocation/transforms/deallocate.cc",
+        "deallocation/transforms/deallocation_simplification.cc",
         "deallocation/transforms/deallocation_to_scf.cc",
         "deallocation/transforms/split_alloc_tensors.cc",
         "deallocation/transforms/xla_buffer_arg_rewrite.cc",
@@ -1181,6 +1190,7 @@ cc_library(
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:LLVMCommonConversion",
         "@llvm-project//mlir:LLVMDialect",
         "@llvm-project//mlir:Pass",
     ],
@@ -1212,6 +1222,8 @@ cc_library(
     ],
     strip_include_prefix = ".",
     deps = [
+        ":deallocation",
+        ":deallocation_passes",
         ":gml_st",
         ":gml_st_passes",
         ":lhlo",
@@ -1280,6 +1292,8 @@ cc_library(
         "@llvm-project//mlir:VectorDialect",
         "@llvm-project//mlir:VectorToLLVM",
         "@llvm-project//mlir:VectorTransforms",
+        "@llvm-project//mlir:X86VectorDialect",
+        "@llvm-project//mlir:X86VectorTransforms",
     ],
 )
 
