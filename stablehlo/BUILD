@@ -689,6 +689,7 @@ gentbl_cc_library(
 cc_library(
     name = "stablehlo_passes",
     srcs = [
+        "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
         "stablehlo/transforms/StablehloLegalizeToVhlo.cpp",
         "stablehlo/transforms/StablehloRefineShapes.cpp",
         "stablehlo/transforms/VhloLegalizeToStablehlo.cpp",
@@ -700,6 +701,7 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":base",
         ":chlo_ops",
         ":stablehlo_ops",
         ":stablehlo_ops_inc_gen",

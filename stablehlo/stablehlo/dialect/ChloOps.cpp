@@ -139,8 +139,8 @@ LogicalResult InferBroadcastBinaryOpReturnTypeComponents(
       attributes.get("broadcast_dimensions")
           .dyn_cast_or_null<DenseIntElementsAttr>();
 
-  ShapedType lhsType = operands[0].getType().dyn_cast<ShapedType>();
-  ShapedType rhsType = operands[1].getType().dyn_cast<ShapedType>();
+  ShapedType lhsType = operands[0].getType().cast<ShapedType>();
+  ShapedType rhsType = operands[1].getType().cast<ShapedType>();
   if (!lhsType || !rhsType ||
       lhsType.getElementType() != rhsType.getElementType())
     return emitOptionalError(location, "mismatched operand types");
@@ -190,8 +190,7 @@ LogicalResult BroadcastComplexOp::inferReturnTypeComponents(
     ValueShapeRange operands, DictionaryAttr attributes,
     RegionRange /*regions*/,
     SmallVectorImpl<ShapedTypeComponents>& inferedReturnShapes) {
-  ShapedType lhsType = operands[0].getType().dyn_cast<ShapedType>();
-  if (!lhsType) return emitOptionalError(location, "expected ShapedType");
+  ShapedType lhsType = operands[0].getType();
   Type elementType = ComplexType::get(lhsType.getElementType());
   return InferBroadcastBinaryOpReturnTypeComponents(context, location, operands,
                                                     attributes, elementType,
@@ -243,7 +242,7 @@ LogicalResult BroadcastCompareOp::reifyReturnTypeShapes(
 
 static Type getIsInfLikeReturnType(Value operand) {
   Builder b(operand.getContext());
-  return hlo::getSameShapeTensorType(operand.getType().cast<TensorType>(),
+  return hlo::getSameShapeTensorType(operand.getType().cast<ShapedType>(),
                                      b.getI1Type());
 }
 
@@ -319,7 +318,7 @@ BROADCAST_BINARY_OP_DEFS(BroadcastZetaOp)
 #undef BROADCAST_BINARY_OP_DEFS
 
 LogicalResult ConstantLikeOp::verify() {
-  if (getValue().getType() != getType().cast<ShapedType>().getElementType())
+  if (getValue().getType() != getType().getElementType())
     return emitOpError() << "value's type doesn't match element return type";
   return success();
 }
@@ -367,7 +366,7 @@ LogicalResult ConstantLikeOp::reifyReturnTypeShapes(
 }
 
 OpFoldResult ConstantLikeOp::fold(FoldAdaptor /*adaptor*/) {
-  auto opType = getOperand().getType().cast<ShapedType>();
+  auto opType = getOperand().getType();
   if (!opType.hasStaticShape()) return {};
   auto type = RankedTensorType::get(opType.getShape(), getValue().getType());
   if (auto complexAttr = getValue().dyn_cast<complex::NumberAttr>())
@@ -380,12 +379,11 @@ LogicalResult BroadcastSelectOp::inferReturnTypeComponents(
     DictionaryAttr, RegionRange,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
   BroadcastSelectOp::Adaptor op(operands.getValues());
-  auto predType = op.getPred().getType().dyn_cast<ShapedType>();
-  auto onTrueType = op.getOnTrue().getType().dyn_cast<ShapedType>();
-  auto onFalseType = op.getOnFalse().getType().dyn_cast<ShapedType>();
+  auto predType = op.getPred().getType().cast<ShapedType>();
+  auto onTrueType = op.getOnTrue().getType().cast<ShapedType>();
+  auto onFalseType = op.getOnFalse().getType().cast<ShapedType>();
 
-  if (!predType || !onTrueType || !onFalseType ||
-      onTrueType.getElementType() != onFalseType.getElementType())
+  if (onTrueType.getElementType() != onFalseType.getElementType())
     return emitOptionalError(location, "mismatched operand types");
 
   Type elementType = onTrueType.getElementType();

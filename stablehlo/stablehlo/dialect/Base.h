@@ -20,6 +20,7 @@ limitations under the License.
 #include <algorithm>
 #include <optional>
 
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
@@ -31,6 +32,7 @@ limitations under the License.
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Types.h"
@@ -58,14 +60,22 @@ inline static bool isStaticDimSize(int64_t val) {
 //  different element types.
 LogicalResult verifyCompatibleShapeWithBounds(Type type1, Type type2);
 
-// Returns true if the given types are the same for the purposes of HLO type
-// inference, accounting for special properties of quantization and sparsity.
+// Returns true if the given types are compatible for the purposes of HLO type
+// inference, accounting for special properties of dynamism, quantization and
+// sparsity.
 bool isCompatibleForHloTypeInference(Type tp1, Type tp2);
 
-// Returns true if the given type ranges have same types for the purposes of HLO
-// type inference, accounting for special properties of quantization and
-// sparsity.
+// Returns true if the given type ranges are compatible for the purposes of HLO
+// type inference, accounting for special properties of dynamism, quantization
+// and sparsity.
 bool isCompatibleForHloTypeInference(TypeRange tp1, TypeRange tp2);
+
+// Returns true if the given shape, expressed as a runtime value, is compatible
+// with the given type for the purposes of HLO type inference.
+// If we know that this runtime value is a constant, then we perform the check.
+// If we don't, then we return true - because shape mismatches at runtime are
+// undefined behavior.
+bool isCompatibleForHloTypeInference(Value shape1, Type tp2);
 
 // TODO(zhouxin) Move type inference related methods to TypeInference.cpp
 
@@ -100,6 +110,21 @@ LogicalResult inferMostSpecificTypeComponents(
     std::optional<Location> location, TypeRange inputTypes,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes);
 
+// Matches a constant tensor with integer values into a 1-dimensional vector.
+template <typename T>
+LogicalResult matchInts(Value value, SmallVector<T> &result) {
+  DenseIntElementsAttr attr;
+  if (!matchPattern(value, m_Constant(&attr))) return failure();
+  for (auto element : attr.getValues<APInt>()) {
+    if constexpr (std::is_same<T, int64_t>::value) {
+      result.push_back(element.getSExtValue());
+    } else {
+      result.push_back(element);
+    }
+  }
+  return success();
+}
+
 // Shape derivation function that computes the shape of the result based on an
 // operand. For a 2-dimensional input tensor, this produces IR of the form
 //
@@ -116,12 +141,12 @@ LogicalResult deriveShapeFromOperand(
     SmallVectorImpl<Value> *reifiedReturnShapes);
 
 // Type derivation function that returns a tensor type with a new element type.
-TensorType getSameShapeTensorType(TensorType tensorType, Type elementType);
+ShapedType getSameShapeTensorType(ShapedType shapedType, Type elementType);
 
 // Takes a tensor type that may have complex elements and returns a type that
 // maintains the shape, but with real numeric data types.
 //   Ex: tensor<4xcomplex<f32>>  -->  tensor<4xf32>
-Type createRealType(TensorType type);
+ShapedType createRealType(ShapedType type);
 
 // Verify bounds expressed by HLO_BoundedAttrInterface against the provided
 // type. See documentation for HLO_BoundedAttrInterface for the list of checks.
@@ -136,6 +161,16 @@ ArrayRef<int64_t> encodingToBounds(Attribute encoding);
 // bounds. Requires a prototype - an existing encoding attribute - to obtain
 // the underlying dialect that knows how to create these attributes.
 Attribute boundsToEncoding(Attribute prototype, ArrayRef<int64_t> bounds);
+
+// Get refinements for return types from an indices_of_shape_operands attribute.
+// If the attribute doesn't exist, returns failure.
+// If the attribute exists but is not invalid with respect to the operation,
+// reports an optional error and returns failure.
+// If the attribute is valid but not all shape operands are constants,
+// returns failure.
+LogicalResult getShapeRefinements(
+    std::optional<Location> location, Operation *operation,
+    SmallVector<ShapedTypeComponents> &refinements);
 
 // This interface is implemented by both StableHLO and MHLO dialects
 // and is used as the foundation for sharing verification, type inference and
@@ -270,7 +305,9 @@ class CompatibleOperandsAndResultType
     if (failed(inferReturnTypes(context, location, operands.getValues(),
                                 attributes, regions, inferredReturnTypes)))
       return failure();
-    auto inferredReturnType = inferredReturnTypes[0].cast<ShapedType>();
+    if (inferredReturnTypes.size() != 1) return failure();
+    auto inferredReturnType = inferredReturnTypes[0].dyn_cast<ShapedType>();
+    if (!inferredReturnType) return failure();
     inferredReturnShapes.push_back(inferredReturnType);
     return success();
   }

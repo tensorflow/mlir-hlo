@@ -2105,10 +2105,12 @@ tensor and produces a `result` tensor.
 #### Examples
 
 ```mlir
-// %operand: [[0, 1], [127, -1]]
-%result = "stablehlo.count_leading_zeros"(%operand) : (tensor<2x2xi8>) -> tensor<2x2xi8>
-// %result: [[8, 7], [1, 0]]
+// %operand: [[0, 1], [128, -1]]
+%result = "stablehlo.count_leading_zeros"(%operand) : (tensor<2x2xi64>) -> tensor<2x2xi64>
+// %result: [[64, 63], [56, 0]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_count_leading_zeros.mlir)
 
 ### custom_call
 
@@ -3053,10 +3055,12 @@ operation from the IEEE-754 specification.
 
 ```mlir
 // Logical values: -Inf, +Inf, NaN, ...
-// %x: [0xFF800000, 0x7F800000, 0x7FFFFFFF, -10.0, -0.0, 0.0, 10.0]
-%y = "stablehlo.is_finite"(%x) : (tensor<7xf32>) -> tensor<7xi1>
+// %x: [0xFFF0000000000000, 0x7FF0000000000000, 0x7FF8000000000000, -10.0, -0.0, 0.0, 10.0]
+%y = "stablehlo.is_finite"(%x) : (tensor<7xf64) -> tensor<7xi1>
 // %y: [false, false, false, true, true, true, true]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_is_finite.mlir)
 
 ### log
 
@@ -5467,23 +5471,27 @@ The behavior of an infinite loop is TBD
 #### Examples
 
 ```mlir
-// %constant0: 1
-// %operand0: 0
-// %operand1: 10
-%results0, %results1 = "stablehlo.while"(%operand0, %operand1) ({
-  ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
-    %0 = "stablehlo.compare"(%arg0, %arg1) {
+// %init_i: 1
+// %init_sum: 0
+// %one: 1
+// %ten: 10
+%results0, %results1 = "stablehlo.while"(%init_i, %init_sum) ({
+  ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>):
+    %cond = "stablehlo.compare"(%arg0, %ten) {
       comparison_direction = #stablehlo<comparison_direction LT>
-    } : (tensor<i32>, tensor<i32>) -> tensor<i1>
-    "stablehlo.return"(%0) : (tensor<i1>) -> ()
-}, {
-  ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
-    %0 = "stablehlo.add"(%arg0, %constant0) : (tensor<i32>, tensor<i32>) -> tensor<i32>
-    "stablehlo.return"(%0, %arg1) : (tensor<i32>, tensor<i32>) -> ()
-}) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>)
+    } : (tensor<i64>, tensor<i64>) -> tensor<i1>
+    stablehlo.return %cond : tensor<i1>
+  }, {
+  ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>):
+    %new_sum = stablehlo.add %arg1, %one : tensor<i64>
+    %new_i = stablehlo.add %arg0, %one : tensor<i64>
+    stablehlo.return %new_i, %new_sum : tensor<i64>, tensor<i64>
+}) : (tensor<i64>, tensor<i64>) -> (tensor<i64>, tensor<i64>)
 // %results0: 10
 // %results1: 10
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_while.mlir)
 
 ### xor
 

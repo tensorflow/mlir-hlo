@@ -141,6 +141,7 @@ def StableHLO_DynamicIotaOp: StableHLO_ShapedInterfaceOp<"dynamic_iota", [Pure]>
 
   let arguments = (ins HLO_DimensionTensor:$output_shape, I64Attr:$iota_dimension);
   let results = (outs HLO_Tensor:$result);
+  let hasVerifier = 1;
 
   let assemblyFormat = [{
     $output_shape `,` `dim` `=` $iota_dimension attr-dict `:` functional-type(operands, results)
@@ -269,7 +270,8 @@ def StableHLO_ConvertOp : StableHLO_UnaryElementwiseOp<"convert",
 }
 
 def StableHLO_ClzOp: StableHLO_UnaryElementwiseOp<"count_leading_zeros",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_IntTensor> {
+    [Pure, HLO_CompatibleOperandsAndResultType /*count_leading_zeros_c1*/],
+     HLO_IntTensor /*count_leading_zeros_i1*/> { /*count_leading_zeros_c1*/
   let summary = "Clz operation";
   let description = [{
     Performs element-wise count of the number of leading zero bits in the
@@ -280,7 +282,7 @@ def StableHLO_ClzOp: StableHLO_UnaryElementwiseOp<"count_leading_zeros",
 
     Example:
     ```mlir
-    %result = stablehlo.count_leading_zeros %operand : tensor<2x2xi8>
+    %result = stablehlo.count_leading_zeros %operand : tensor<2x2xi64>
     ```
   }];
 }
@@ -374,6 +376,7 @@ def StableHLO_ImagOp: StableHLO_UnaryElementwiseOp<"imag",
 
 def StableHLO_IsFiniteOp: StableHLO_UnaryElementwiseOp<"is_finite", [Pure,
     DeclareOpInterfaceMethods<InferTypeOpInterface>], HLO_Tensor> {
+    /*is_finite_c1*/
   let summary = "IsFinite operation";
   let description = [{
     Performs element-wise check whether the value in `x` is finite (i.e. is
@@ -384,10 +387,10 @@ def StableHLO_IsFiniteOp: StableHLO_UnaryElementwiseOp<"is_finite", [Pure,
 
     Example:
     ```mlir
-    %y = stablehlo.is_finite %x : (tensor<7xf32>) -> tensor<7xi1>
+    %y = stablehlo.is_finite %x : (tensor<7xf64>) -> tensor<7xi1>
     ```
   }];
-  let arguments = (ins HLO_FpTensor:$x);
+  let arguments = (ins HLO_FpTensor:$x); /*is_finite_i1*/
   let results = (outs HLO_PredTensor:$y);
 
   let assemblyFormat = [{
@@ -1227,7 +1230,7 @@ def StableHLO_CaseOp: StableHLO_Op<"case", [
 def StableHLO_WhileOp: StableHLO_Op<"while", [
       RecursiveMemoryEffects,
       SingleBlockImplicitTerminator<"ReturnOp">,
-      DeclareOpInterfaceMethods<InferTypeOpInterface>,
+      DeclareOpInterfaceMethods<InferTypeOpInterface> /*while_c3*/,
       OpAsmOpInterface
     ]> {
   let summary = "While operation";
@@ -1240,22 +1243,23 @@ def StableHLO_WhileOp: StableHLO_Op<"while", [
 
     Example:
     ```mlir
-    %results0, %results1 = "stablehlo.while"(%operand0, %operand1) ({
-      ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
-        %0 = "stablehlo.compare"(%arg0, %arg1) {
-          comparison_direction = #stablehlo<comparison_direction LT>
-        } : (tensor<i32>, tensor<i32>) -> tensor<i1>
-        "stablehlo.return"(%0) : (tensor<i1>) -> ()
-    }, {
-      ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
-        %0 = "stablehlo.add"(%arg0, %constant0) : (tensor<i32>, tensor<i32>) -> tensor<i32>
-        "stablehlo.return"(%0, %arg1) : (tensor<i32>, tensor<i32>) -> ()
-    }) : (tensor<i32>, tensor<i32>) -> (tensor<i32>, tensor<i32>)
+    %results0, %results1 = stablehlo.while(%arg0 = %init_i, %arg1 = %init_sum) : tensor<i64>, tensor<i64>
+    cond {
+      %cond = stablehlo.compare LT, %arg0, %ten : (tensor<i64>, tensor<i64>) -> tensor<i1>
+      stablehlo.return %cond : tensor<i1>
+    } do {
+      %new_sum = stablehlo.add %arg1, %one : tensor<i64>
+      %new_i = stablehlo.add %arg0, %one : tensor<i64>
+      stablehlo.return %new_i, %new_sum : tensor<i64>, tensor<i64>
+    }
     ```
   }];
-  let arguments = (ins Variadic<HLO_TensorOrToken>:$operand);
+  let arguments = (ins Variadic<HLO_TensorOrToken>:$operand /*while_i1*/);
 
-  let regions = (region SizedRegion<1>:$cond, SizedRegion<1>:$body);
+  let regions = (region
+    SizedRegion<1>:$cond /*while_i2*/,
+    SizedRegion<1>:$body /*while_i3*/
+  );
 
   let results = (outs Variadic<HLO_TensorOrToken>);
 

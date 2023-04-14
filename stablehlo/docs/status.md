@@ -70,7 +70,7 @@ one of the following tracking labels.
 | convert                  | yes           | yes          | infeasible     | yes             | no          |
 | convolution              | yes           | yes          | infeasible     | revisit         | no          |
 | cosine                   | yes           | yes          | yes            | yes             | yes         |
-| count_leading_zeros      | yes           | yes          | yes            | yes             | no          |
+| count_leading_zeros      | yes           | yes          | yes            | yes             | yes         |
 | create_token             | no            | yes\*        | yes\*          | yes             | no          |
 | cross-replica-sum        | no            | revisit      | yes\*          | no              | no          |
 | cstr_reshapable          | no            | revisit      | no             | yes             | no          |
@@ -98,7 +98,7 @@ one of the following tracking labels.
 | imag                     | yes           | yes          | yes            | yes             | yes         |
 | infeed                   | yes           | revisit      | infeasible     | no              | no          |
 | iota                     | yes           | yes          | infeasible     | yes             | yes         |
-| is_finite                | yes           | yes          | yes            | yes             | no          |
+| is_finite                | yes           | yes          | yes            | yes             | yes         |
 | log                      | yes           | yes          | yes            | yes             | yes         |
 | log_plus_one             | yes           | yes          | yes            | yes             | no          |
 | logistic                 | yes           | yes          | yes            | yes             | yes         |
@@ -155,5 +155,5 @@ one of the following tracking labels.
 | unary_einsum             | no            | revisit      | no             | yes             | no          |
 | uniform_dequantize       | no            | yes\*        | yes\*          | yes             | no          |
 | uniform_quantize         | no            | yes\*        | infeasible     | yes             | no          |
-| while                    | yes           | revisit      | yes            | revisit         | no          |
+| while                    | yes           | revisit      | yes            | revisit         | yes         |
 | xor                      | yes           | yes          | yes            | yes             | yes         |
