@@ -66,6 +66,12 @@ SmallVector<Tensor> eval(
       Tensor runtimeRhs = scope.find(andOp.getRhs());
       Tensor runtimeResult = evalAndOp(runtimeLhs, runtimeRhs, andOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto atan2Op = dyn_cast<Atan2Op>(op)) {
+      Tensor runtimeLhs = scope.find(atan2Op.getLhs());
+      Tensor runtimeRhs = scope.find(atan2Op.getRhs());
+      Tensor runtimeResult =
+          evalAtan2Op(runtimeLhs, runtimeRhs, atan2Op.getType());
+      scope.add(op.getResults(), {runtimeResult});
     } else if (auto broadcastInDimOp = dyn_cast<BroadcastInDimOp>(op)) {
       Tensor runtimeOperand = scope.find(broadcastInDimOp.getOperand());
       auto broadcastDimensions =
@@ -176,6 +182,11 @@ SmallVector<Tensor> eval(
       Tensor runtimeResult =
           evalLogisticOp(runtimeOperand, logisticOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto mapOp = dyn_cast<MapOp>(op)) {
+      SmallVector<Tensor> runtimeInputs = scope.find(mapOp.getInputs());
+      auto runtimeResults = evalMapOp(runtimeInputs, mapOp.getComputation(),
+                                      scope, mapOp.getType());
+      scope.add(op.getResults(), {runtimeResults});
     } else if (auto maxOp = dyn_cast<MaxOp>(op)) {
       Tensor runtimeLhs = scope.find(maxOp.getLhs());
       Tensor runtimeRhs = scope.find(maxOp.getRhs());
@@ -252,6 +263,10 @@ SmallVector<Tensor> eval(
           scope.find(selectOp.getPred()), scope.find(selectOp.getOnTrue()),
           scope.find(selectOp.getOnFalse()), selectOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto signOp = dyn_cast<SignOp>(op)) {
+      Tensor runtimeOperand = scope.find(signOp.getOperand());
+      Tensor runtimeResult = evalSignOp(runtimeOperand, signOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
     } else if (auto sineOp = dyn_cast<SineOp>(op)) {
       Tensor runtimeOperand = scope.find(sineOp.getOperand());
       Tensor runtimeResult = evalSineOp(runtimeOperand, sineOp.getType());
@@ -325,6 +340,15 @@ Tensor evalAndOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType) {
   Tensor result(resultType);
   for (auto it = lhs.index_begin(); it != lhs.index_end(); ++it)
     result.set(*it, lhs.get(*it) & rhs.get(*it));
+  return result;
+}
+
+Tensor evalAtan2Op(const Tensor &lhs, const Tensor &rhs,
+                   ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto resultIt = result.index_begin(); resultIt != result.index_end();
+       ++resultIt)
+    result.set(*resultIt, atan2(lhs.get(*resultIt), rhs.get(*resultIt)));
   return result;
 }
 
@@ -568,6 +592,22 @@ Tensor evalLogisticOp(const Tensor &operand, ShapedType resultType) {
   return result;
 }
 
+Tensor evalMapOp(ArrayRef<Tensor> inputs, Region &computation, Scope &scope,
+                 ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto resultIt = inputs[0].index_begin();
+       resultIt != inputs[0].index_end(); ++resultIt) {
+    SmallVector<Tensor> args;
+    for (size_t i = 0; i < inputs.size(); ++i) {
+      auto tensor = Tensor(computation.getArgument(i).getType());
+      tensor.set({}, inputs[i].get(*resultIt));
+      args.push_back(tensor);
+    }
+    result.set(*resultIt, eval(computation, args, &scope)[0].get({}));
+  }
+  return result;
+}
+
 Tensor evalMaxOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
@@ -689,6 +729,13 @@ Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
     result.set(
         *it, predValue.getBooleanValue() ? onTrue.get(*it) : onFalse.get(*it));
   }
+  return result;
+}
+
+Tensor evalSignOp(const Tensor &operand, ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it)
+    result.set(*it, sign(operand.get(*it)));
   return result;
 }
 

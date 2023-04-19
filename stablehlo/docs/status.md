@@ -49,7 +49,7 @@ one of the following tracking labels.
 | all_reduce               | yes           | revisit      | yes            | no              | no          |
 | all_to_all               | yes           | revisit      | yes            | no              | no          |
 | and                      | yes           | yes          | yes            | yes             | yes         |
-| atan2                    | yes           | yes          | yes            | yes             | no          |
+| atan2                    | yes           | yes          | yes            | yes             | yes         |
 | batch_norm_grad          | yes           | revisit      | yes            | no              | no          |
 | batch_norm_inference     | yes           | revisit      | yes            | no              | no          |
 | batch_norm_training      | yes           | revisit      | yes            | no              | no          |
@@ -102,7 +102,7 @@ one of the following tracking labels.
 | log                      | yes           | yes          | yes            | yes             | yes         |
 | log_plus_one             | yes           | yes          | yes            | yes             | no          |
 | logistic                 | yes           | yes          | yes            | yes             | yes         |
-| map                      | yes           | revisit      | yes            | no              | no          |
+| map                      | yes           | revisit      | yes            | no              | yes         |
 | maximum                  | yes           | yes          | yes            | yes             | yes         |
 | minimum                  | yes           | yes          | yes            | yes             | yes         |
 | multiply                 | yes           | yes          | yes            | yes             | yes         |
@@ -140,7 +140,7 @@ one of the following tracking labels.
 | shift_left               | yes           | yes          | yes            | yes             | no          |
 | shift_right_arithmetic   | yes           | yes          | yes            | yes             | no          |
 | shift_right_logical      | yes           | yes          | yes            | yes             | no          |
-| sign                     | yes           | yes          | yes            | yes             | no          |
+| sign                     | yes           | yes          | yes            | yes             | yes         |
 | sine                     | yes           | yes          | yes            | yes             | yes         |
 | slice                    | yes           | yes          | yes            | no              | yes         |
 | sort                     | yes           | yes          | yes            | no              | no          |

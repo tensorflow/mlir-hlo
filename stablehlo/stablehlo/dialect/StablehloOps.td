@@ -575,8 +575,8 @@ def StableHLO_RsqrtOp: StableHLO_UnaryElementwiseOp<"rsqrt", [Pure,
 }
 
 def StableHLO_SignOp: StableHLO_UnaryElementwiseOp<"sign",
-    [Pure, HLO_CompatibleOperandsAndResultType],
-    TensorOf<[HLO_SInt, HLO_Float, HLO_Complex]>> {
+    [Pure, HLO_CompatibleOperandsAndResultType /*sign_c1*/],
+    TensorOf<[HLO_SInt, HLO_Float, HLO_Complex]> /*sign_i1*/> { /*sign_c1*/
   let summary = "Sign operation";
   let description = [{
     Returns the sign of the `operand` element-wise and produces a `result`
@@ -587,7 +587,7 @@ def StableHLO_SignOp: StableHLO_UnaryElementwiseOp<"sign",
 
     Example:
     ```mlir
-    %result = stablehlo.sign %operand : tensor<7xf32>
+    %result = stablehlo.sign %operand : tensor<5xf64>
     ```
   }];
 }
@@ -698,7 +698,8 @@ def StableHLO_AddOp : StableHLO_BinaryElementwiseOp<"add",
 }
 
 def StableHLO_Atan2Op : StableHLO_BinaryElementwiseOp<"atan2",
-      [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
+      [Pure, HLO_CompatibleOperandsAndResultType /*atan2_c1*/],
+      HLO_FpOrComplexTensor /*atan2_i1, atan2_i2*/> { /*atan2_c1*/
   let summary = "Atan2 operation";
   let description = [{
     Performs element-wise atan2 operation on `lhs` and `rhs` tensor and produces
@@ -709,7 +710,7 @@ def StableHLO_Atan2Op : StableHLO_BinaryElementwiseOp<"atan2",
 
     Example:
     ```mlir
-    %result = stablehlo.atan2 %lhs, %rhs : tensor<3xf32>
+    %result = stablehlo.atan2 %lhs, %rhs : tensor<3xf64>
     ```
   }];
 }
@@ -2375,7 +2376,7 @@ def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size",
 }
 
 def StableHLO_MapOp: StableHLO_ShapedInterfaceOp<"map",
-      [RecursiveMemoryEffects, SameOperandsAndResultShape,
+      [RecursiveMemoryEffects, SameOperandsAndResultShape /*map_c1, map_c2*/,
        SingleBlockImplicitTerminator<"ReturnOp">, InferTensorTypeWithReify]> {
   let summary = "Map operation";
   let description = [{
@@ -2388,19 +2389,19 @@ def StableHLO_MapOp: StableHLO_ShapedInterfaceOp<"map",
     Example:
     ```mlir
     %result = "stablehlo.map"(%input0, %input1) ({
-      ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
-        %0 = stablehlo.multiply %arg0, %arg1 : tensor<i32>
-        stablehlo.return %0 : tensor<i32>
+      ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>):
+        %0 = stablehlo.multiply %arg0, %arg1 : tensor<i64>
+        stablehlo.return %0 : tensor<i64>
     }) {
       dimensions = dense<[0, 1]> : tensor<2xi64>
-    } : (tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
+    } : (tensor<2x2xi64>, tensor<2x2xi64>) -> tensor<2x2xi64>
     ```
   }];
   let arguments = (ins
-    Variadic<HLO_Tensor>:$inputs,
-    I64ElementsAttr:$dimensions
+    Variadic<HLO_Tensor>:$inputs /*map_i1*/,
+    I64ElementsAttr:$dimensions /*map_i2*/
   );
-  let regions = (region SizedRegion<1>:$computation);
+  let regions = (region SizedRegion<1>:$computation /*map_i3*/);
   let results = (outs HLO_Tensor);
 }
 

@@ -30,6 +30,7 @@ namespace stablehlo {
 Tensor evalAbsOp(const Tensor &operand, ShapedType resultType);
 Tensor evalAddOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalAndOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
+Tensor evalAtan2Op(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalBroadcastInDimOp(const Tensor &operand, Axes broadcastDimensions,
                             ShapedType resultType);
 SmallVector<Tensor> evalCaseOp(const Tensor &index, RegionRange branches,
@@ -62,6 +63,8 @@ Tensor evalIotaOp(Axis iotaDimension, ShapedType resultType);
 Tensor evalIsFiniteOp(const Tensor &operand, ShapedType resultType);
 Tensor evalLogOp(const Tensor &operand, ShapedType resultType);
 Tensor evalLogisticOp(const Tensor &operand, ShapedType resultType);
+Tensor evalMapOp(ArrayRef<Tensor> inputs, Region &computation, Scope &scope,
+                 ShapedType resultType);
 Tensor evalMaxOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalMinOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalMultiplyOp(const Tensor &lhs, const Tensor &rhs,
@@ -81,6 +84,7 @@ Tensor evalReverseOp(const Tensor &operand, Axes dimensions,
 Tensor evalRsqrtOp(const Tensor &operand, ShapedType resultType);
 Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
                     const Tensor &onFalse, ShapedType resultType);
+Tensor evalSignOp(const Tensor &operand, ShapedType resultType);
 Tensor evalSineOp(const Tensor &operand, ShapedType resultType);
 Tensor evalSliceOp(const Tensor &operand, Index startIndices, Sizes strides,
                    ShapedType resultType);

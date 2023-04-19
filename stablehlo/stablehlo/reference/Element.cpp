@@ -585,6 +585,22 @@ Element areApproximatelyEqual(const Element &e1, const Element &e2) {
                                      debugString(type).c_str()));
 }
 
+Element atan2(const Element &e1, const Element &e2) {
+  auto type = e1.getType();
+  if (isSupportedFloatType(e1.getType()))
+    return Element(type, std::atan2(e1.getFloatValue().convertToDouble(),
+                                    e2.getFloatValue().convertToDouble()));
+
+  if (isSupportedComplexType(type)) {
+    // atan2(y, x) = -i * log((x + i * y) / sqrt(x**2+y**2))
+    auto i = Element(type, std::complex<double>(0.0, 1.0));
+    return -i * log((e2 + i * e1) / sqrt(e2 * e2 + e1 * e1));
+  }
+
+  report_fatal_error(invalidArgument("Unsupported element type: %s",
+                                     debugString(type).c_str()));
+}
+
 Element ceil(const Element &el) {
   APFloat val = el.getFloatValue();
   val.roundToIntegral(APFloat::rmTowardPositive);
@@ -745,6 +761,40 @@ Element rsqrt(const Element &el) {
   return mapWithUpcastToDouble(
       el, [](double e) { return 1.0 / std::sqrt(e); },
       [](std::complex<double> e) { return 1.0 / std::sqrt(e); });
+}
+
+Element sign(const Element &el) {
+  Type type = el.getType();
+
+  if (isSupportedIntegerType(type)) {
+    auto elVal = el.getIntegerValue();
+    if (elVal.isNegative()) return Element(type, (int64_t)-1);
+    if (elVal.isZero()) return Element(type, (int64_t)0);
+    return Element(type, (int64_t)1);
+  }
+
+  if (isSupportedFloatType(type)) {
+    auto elVal = el.getFloatValue();
+    if (elVal.isNaN()) return el;
+    if (elVal.isNegZero()) return Element(type, (double)-0.0);
+    if (elVal.isPosZero()) return Element(type, (double)+0.0);
+    if (elVal.isNegative()) return Element(type, (double)-1.0);
+    return Element(type, (double)1.0);
+  }
+
+  if (isSupportedComplexType(type)) {
+    auto elVal = el.getComplexValue();
+    const llvm::fltSemantics &elSemantics = elVal.real().getSemantics();
+
+    if (elVal.real().isNaN() || elVal.imag().isNaN())
+      return Element(type, std::complex<APFloat>(APFloat::getNaN(elSemantics),
+                                                 APFloat::getNaN(elSemantics)));
+
+    return el / Element(type, abs(el).getFloatValue().convertToDouble());
+  }
+
+  report_fatal_error(invalidArgument("Unsupported element type: %s",
+                                     debugString(type).c_str()));
 }
 
 Element sine(const Element &el) {

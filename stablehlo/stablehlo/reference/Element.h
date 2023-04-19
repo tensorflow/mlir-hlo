@@ -141,6 +141,9 @@ class Element {
 /// Returns abs of Element object.
 Element abs(const Element &e);
 
+/// Returns atan2 of Element object.
+Element atan2(const Element &e1, const Element &e2);
+
 /// For floating point type T, checks if two normal values f1 and f2 are equal
 /// within a tolerance given by 0.0001.
 /// For complex element type, checks if both real and imaginary parts are
@@ -190,6 +193,9 @@ Element rem(const Element &e1, const Element &e2);
 
 /// Returns reverse square root of Element object.
 Element rsqrt(const Element &e);
+
+/// Returns sign of Element object.
+Element sign(const Element &e);
 
 /// Returns sine of Element object.
 Element sine(const Element &e);

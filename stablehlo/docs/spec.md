@@ -81,7 +81,7 @@ completely numeric to simplify generation of StableHLO programs.
 
 ```ebnf
 Type         ::= ValueType | NonValueType
-ValueType    ::= TensorType | TokenType | TupleType
+ValueType    ::= TensorType | QuantizedTensorType | TokenType | TupleType
 NonValueType ::= ElementType | FunctionType | StringType
 ```
 
@@ -115,6 +115,89 @@ planning to explore extending tensor types beyond dimension sizes and element
 types, for example, to include layouts
 ([#629](https://github.com/openxla/stablehlo/issues/629)) and sparsity
 ([#1078](https://github.com/openxla/stablehlo/issues/1078)).
+
+```ebnf
+QuantizedTensorType ::= 'tensor' '<' TensorShape QuantizedElementType '>'
+QuantizedElementType ::= '!quant.uniform' '<'
+                  QuantizationStorageType
+                  ['<' QuantizationStorageMin ':' QuantizationStorageMax '>']
+                  ':' QuantizationExpressedType
+                  [':' QuantizationDimension]
+                  ',' QuantizationParameters '>'
+QuantizationStorageType ::= IntegerType
+QuantizationStorageMin ::= IntegerConstant
+QuantizationStorageMax ::= IntegerConstant
+QuantizationExpressedType ::= FloatType
+QuantizationDimension ::= IntegerConstant
+QuantizationParameters ::= QuantizationParameter
+                         | '{' QuantizationParameter {',' QuantizationParameter} '}'
+QuantizationParameter ::= QuantizationScale ':' QuantizationZeroPoint
+QuantizationScale ::= FloatConstant
+QuantizationZeroPoint ::=  IntegerConstant
+```
+
+**Quantized element types** represent integer values of a **storage type** in
+the range from `storage_min` to `storage_max` (inclusive) that correspond to
+floating-point values of an **expressed type**. For a given integer value `i`,
+the corresponding floating-point value `f` can be computed as
+`f = (i - zero_point) * scale`, where `scale` and `zero_point` are called
+**quantization parameters**. The `storage_min` and `storage_max` are optional
+in the grammar, but have default values of `min_value(storage_type)` and
+`max_value(storage_type)` respectively. Quantized element types have the
+following constraints:
+
+* (C1) `num_bits(storage_type) < num_bits(expressed_type)`.
+* (C2) `type(storage_min) = storage_type`.
+* (C3) `type(storage_max) = storage_type`.
+* (C4) `min_value(storage_type) <= storage_min < storage_max <= max_value(storage_type)`.
+* (C5) For all `i`, `type(scales[i]) = expressed_type`.
+* (C6) For all `i`, `scales[i] > 0`.
+* (C7) For all `i`, `is_finite(scales[i])`.
+* (C8) For all `i`, `storage_min <= zero_points[i] <= storage_max`.
+* (C9) For all `i`, `type(zero_points[i]) = storage_type`.
+* (C10) `size(scales) = size(zero_points)`.
+* (C11) If `quantization_dimension` is empty, then `size(scales) = 1`.
+* (C12) If `quantization_dimension` is not empty, then
+  `0 <= quantization_dimension`.
+
+At the moment, `QuantizationScale` is a floating-point constant, but there is
+strong interest in integer-based scales, represented with multipliers and
+shifts. We are planning to explore this in the near future
+([#1404](https://github.com/openxla/stablehlo/issues/1404)).
+
+There is an ongoing discussion on the semantics of `QuantizationZeroPoint`,
+including the type, the values and whether there can be just one or
+potentially multiple zero points in a quantized tensor type. Based on the
+results of this discussion, the specification around zero points may change
+in the future ([#1405](https://github.com/openxla/stablehlo/issues/1405)).
+
+Another ongoing discussion involves the semantics of `QuantizationStorageMin`
+and `QuantizationStorageMax` to determine whether any constraints should be
+imposed on these values and on the values of quantized tensors
+([#1406](https://github.com/openxla/stablehlo/issues/1406)).
+
+Finally, we are planning to explore representing unknown scales and zero
+points, similarly to how we are planning to explore representing unknown
+dimension sizes ([#1407](https://github.com/openxla/stablehlo/issues/1407)).
+
+**Quantized tensor types** represent tensors with quantized elements. These
+tensors are exactly the same as regular tensors, except that their elements
+have quantized element types, instead of regular element types.
+
+In quantized tensors, quantization can be **per-tensor**, meaning, having
+one `scale` and `zero_point` for the entire tensor or can be **per-axis**,
+meaning, having multiple `scales` and `zero_points`, one pair per slice of
+a particular dimension `quantized_dimension`. More formally, in a tensor `t` of
+with per-axis quantization, there are `dim(t, quantized_dimension)` slices
+of the `quantized_dimension`: `t[:, ..., 0, ..., :], t[:, ..., 1, ..., :]`, etc.
+All elements in the `i`th slice use `scales[i]` and `zero_points[i]` as their
+quantization parameters. Quantized tensor types have the following constraints:
+
+* For per-tensor quantization:
+  * No additional constraints.
+* For per-axis quantization:
+  * (C12) `quantization_dimension < size(shape)`.
+  * (C13) `size(scales) = shape[quantization_dimension]`.
 
 ```ebnf
 TokenType ::= 'token'
@@ -173,10 +256,6 @@ values of type `tensor<T>`).
   and an **imaginary part** of the same **element type**. Supported complex
   types are `complex<f32>` (both parts are of type `f32`) and `complex<f64>`
   (both parts are of type `f64`).
-* In the future, we are also planning to introduce **quantized types** that
-  represent integer values obtained via uniform quantization of floating-point
-  values using given scales and zero points
-  ([#588](https://github.com/openxla/stablehlo/issues/588)).
 
 ```ebnf
 FunctionType ::= '(' [ValueType {',' ValueType}] ')' '->' '(' [ValueType {',' ValueType}] ')'
@@ -905,9 +984,11 @@ Performs element-wise atan2 operation on `lhs` and `rhs` tensor and produces a
 ```mlir
 // %lhs: [0.0, 1.0, -1.0]
 // %rhs: [0.0, 0.0, 0.0]
-%result = "stablehlo.atan2"(%lhs, %rhs) : (tensor<3xf32>, tensor<3xf32>) -> tensor<3xf32>
+%result = "stablehlo.atan2"(%lhs, %rhs) : (tensor<3xf64>, tensor<3xf64>) -> tensor<3xf64>
 // %result: [0.0, 1.57079637, -1.57079637] // [0.0, pi/2, -pi/2]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_atan2.mlir)
 
 ### batch_norm_grad
 
@@ -3200,8 +3281,7 @@ and will likely be removed in the future
 * (C2) size(`inputs`) $=$ N $\ge$ 1.
 * (C3) `dimensions = [0, ..., R-1]`, where `R` $=$ rank(`inputs[0]`).
 * (C4) `computation` has type `(tensor<E0>, ..., tensor<EN-1>) -> tensor<E'>`
-  where `Ek` $=$ element_type(`inputs[k]`) and `E'` $=$
-  element_type(`result`).
+  where `Ek` $=$ element_type(`inputs[k]`) and `E'` $=$ element_type(`result`).
 
 #### Examples
 
@@ -3209,14 +3289,16 @@ and will likely be removed in the future
 // %input0: [[0, 1], [2, 3]]
 // %input1: [[4, 5], [6, 7]]
 %result = "stablehlo.map"(%input0, %input1) ({
-  ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
-    %0 = stablehlo.multiply %arg0, %arg1 : tensor<i32>
-    stablehlo.return %0 : tensor<i32>
+  ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>):
+    %0 = stablehlo.multiply %arg0, %arg1 : tensor<i64>
+    stablehlo.return %0 : tensor<i64>
 }) {
   dimensions = dense<[0, 1]> : tensor<2xi64>
-} : (tensor<2x2xi32>, tensor<2x2xi32>) -> tensor<2x2xi32>
+} : (tensor<2x2xi64>, tensor<2x2xi64>) -> tensor<2x2xi64>
 // %result: [[0, 5], [12, 21]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_map.mlir)
 
 ### maximum
 
@@ -4972,11 +5054,14 @@ def sign(x):
 #### Examples
 
 ```mlir
-// Logical values: -Inf, +Inf, NaN, ...
-// %operand: [0xFF800000, 0x7F800000, 0x7FFFFFFF, -10.0, -0.0, 0.0, 10.0]
-%result = "stablehlo.sign"(%operand) : (tensor<7xf32>) -> tensor<7xf32>
-// %result: [-1.0, 1.0, 0x7FFFFFFF, -1.0, -0.0, 0.0, 1.0]
+// Logical values: +NaN, -1.0, -0.0, +0.0, 1.0
+// operand: [0x7FFFFFFFFFFFFFFF, -1.0, -0.0, 0.0, 1.0]
+%result = "stablehlo.sign"(%operand) : (tensor<5xf64>) -> tensor<5xf64>
+// Logical values: +NaN, -1.0, -0.0, +0.0, 1.0
+// %result: [0x7FFFFFFFFFFFFFFF, -1.0, -0.0, 0.0, 1.0]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_sign.mlir)
 
 ### sine
 
