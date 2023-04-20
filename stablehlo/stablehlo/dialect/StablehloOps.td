@@ -486,7 +486,8 @@ def StableHLO_NegOp: StableHLO_UnaryElementwiseOp<"negate",
 }
 
 def StableHLO_PopulationCountOp: StableHLO_UnaryElementwiseOp<"popcnt",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_IntTensor> {
+    [Pure, HLO_CompatibleOperandsAndResultType /*popcnt_c1*/],
+    HLO_IntTensor /*popcnt_i1*/> { /*popcnt_c1*/
   let summary = "PopulationCount operation";
   let description = [{
     Performs element-wise count of the number of bits set in the `operand`
@@ -497,7 +498,7 @@ def StableHLO_PopulationCountOp: StableHLO_UnaryElementwiseOp<"popcnt",
 
     Example:
     ```mlir
-    %result = stablehlo.popcnt %operand : tensor<4xi8>
+    %result = stablehlo.popcnt %operand : tensor<4xi64>
     ```
   }];
 }
@@ -521,7 +522,8 @@ def StableHLO_RealOp: StableHLO_UnaryElementwiseOp<"real",
 }
 
 def StableHLO_RoundOp: StableHLO_UnaryElementwiseOp<"round_nearest_afz",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpTensor> {
+    [Pure, HLO_CompatibleOperandsAndResultType /*round_nearest_afz_c1*/],
+    HLO_FpTensor /*round_nearest_afz_i1*/> { /*round_nearest_afz_c1*/
   let summary = "Round operation";
   let description = [{
     Performs element-wise rounding towards the nearest integer, breaking ties
@@ -532,13 +534,14 @@ def StableHLO_RoundOp: StableHLO_UnaryElementwiseOp<"round_nearest_afz",
 
     Example:
     ```mlir
-    %result = stablehlo.round_nearest_afz %operand : tensor<5xf32>
+    %result = stablehlo.round_nearest_afz %operand : tensor<5xf64>
     ```
   }];
 }
 
 def StableHLO_RoundNearestEvenOp: StableHLO_UnaryElementwiseOp<"round_nearest_even",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpTensor> {
+    [Pure, HLO_CompatibleOperandsAndResultType /*round_nearest_even_c1*/],
+    HLO_FpTensor /*round_nearest_even_i1*/> { /*round_nearest_even_c1*/
   let summary = "RoundNearestEven operation";
   let description = [{
     Performs element-wise rounding towards the nearest integer, breaking ties
@@ -550,7 +553,7 @@ def StableHLO_RoundNearestEvenOp: StableHLO_UnaryElementwiseOp<"round_nearest_ev
 
     Example:
     ```mlir
-    %result = stablehlo.round_nearest_even %operand : tensor<5xf32>
+    %result = stablehlo.round_nearest_even %operand : tensor<5xf64>
     ```
   }];
 }
@@ -846,7 +849,8 @@ def StableHLO_RemOp : StableHLO_BinaryElementwiseOp<"remainder",
 }
 
 def StableHLO_ShiftLeftOp : StableHLO_BinaryElementwiseOp<"shift_left",
-      [Pure, HLO_CompatibleOperandsAndResultType], HLO_IntTensor> {
+      [Pure, HLO_CompatibleOperandsAndResultType /*shift_left_c1*/],
+      HLO_IntTensor /*shift_left_i1, shift_left_i2*/> { /*shift_left_c1*/
   let summary = "ShiftLeft operation";
   let description = [{
     Performs element-wise left-shift operation on the `lhs` tensor by `rhs`
@@ -857,7 +861,7 @@ def StableHLO_ShiftLeftOp : StableHLO_BinaryElementwiseOp<"shift_left",
 
     Example:
     ```mlir
-    %result = stablehlo.shift_left %lhs, %rhs : tensor<6xi8>
+    %result = stablehlo.shift_left %lhs, %rhs : tensor<3xi64>
     ```
   }];
 }

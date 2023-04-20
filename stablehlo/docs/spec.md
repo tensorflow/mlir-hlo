@@ -226,7 +226,8 @@ ElementType ::= BooleanType | IntegerType | FloatType | ComplexType
 BooleanType ::= 'i1'
 IntegerType ::= 'si4' | 'si8' | 'si16' | 'si32' | 'si64'
               | 'ui4' | 'ui8' | 'ui16' | 'ui32' | 'ui64'
-FloatType   ::= 'f8E4M3FN' | 'f8E5M2' | 'bf16' | 'f16' | 'f32' | 'f64'
+FloatType   ::= 'f8E4M3FN' | 'f8E5M2' | 'f8E4M3FNUZ' | 'f8E5M2FNUZ'
+              | 'bf16' | 'f16' | 'f32' | 'f64'
 ComplexType ::= 'complex' '<' ('f32' | 'f64') '>'
 ```
 
@@ -246,6 +247,9 @@ values of type `tensor<T>`).
   * `f8E4M3FN` and `f8E5M2` types corresponding to respectively the
     `E4M3` and `E5M2` encodings of the FP8 format described in
     [FP8 Formats for Deep Learning](https://arxiv.org/abs/2209.05433).
+  * `f8E4M3FNUZ` and `f8E5M2FNUZ` types corresponding to the `E4M3` and `E5M2`
+    encodings of the FP8 formats described in
+    [8-bit Numerical Formats for Deep Neural Networks](https://arxiv.org/abs/2206.02915).
   * `bf16` type corresponding to the `bfloat16` format described in
     [BFloat16: The secret to high performance on Cloud TPUs](https://cloud.google.com/blog/products/ai-machine-learning/bfloat16-the-secret-to-high-performance-on-cloud-tpus).
   * `f16`, `f32` and `f64` types corresponding to respectively
@@ -3744,9 +3748,11 @@ and produces a `result` tensor.
 
 ```mlir
 // %operand: [0, 1, 2, 127]
-%result = "stablehlo.popcnt"(%operand) : (tensor<4xi8>) -> tensor<4xi8>
+%result = "stablehlo.popcnt"(%operand) : (tensor<4xi64>) -> tensor<4xi64>
 // %result: [0, 1, 1, 7]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_popcnt.mlir)
 
 ### power
 
@@ -4485,9 +4491,11 @@ the `roundToIntegralTiesToAway` operation from the IEEE-754 specification.
 
 ```mlir
 // %operand = [-2.5, 0.4, 0.5, 0.6, 2.5]
-%result = "stablehlo.round_nearest_afz"(%operand) : (tensor<5xf32>) -> tensor<5xf32>
+%result = "stablehlo.round_nearest_afz"(%operand) : (tensor<5xf64>) -> tensor<5xf64>
 // %result: [-3.0, 0.0, 1.0, 1.0, 3.0]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_round_nearest_afz.mlir)
 
 ### round_nearest_even
 
@@ -4518,9 +4526,11 @@ specification.
 
 ```mlir
 // %operand = [-2.5, 0.4, 0.5, 0.6, 2.5]
-%result = "stablehlo.round_nearest_even"(%operand) : (tensor<5xf32>) -> tensor<5xf32>
+%result = "stablehlo.round_nearest_even"(%operand) : (tensor<5xf64>) -> tensor<5xf64>
 // %result: [-2.0, 0.0, 0.0, 1.0, 2.0]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_round_nearest_even.mlir)
 
 ### rsqrt
 
@@ -4934,11 +4944,13 @@ of bits and produces a `result` tensor.
 #### Examples
 
 ```mlir
-// %lhs: [-1, -2, 3, 4, 7, 7]
-// %rhs: [1, 2, 3, 6, 7, 8]
-%result = "stablehlo.shift_left"(%lhs, %rhs): (tensor<6xi8>, tensor<6xi8>) -> tensor<6xi8>
-// %result: [-2, -8, 24, 0, -128, 0]
+// %lhs: [-1, 0, 1]
+// %rhs: [1, 2, 3]
+%result = "stablehlo.shift_left"(%lhs, %rhs): (tensor<3xi64>, tensor<3xi64>) -> tensor<3xi64>
+// %result: [-2, 0, 8]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_shift_left.mlir)
 
 ### shift_right_arithmetic
 
@@ -5019,20 +5031,17 @@ def sign(x):
   if is_integer(x):
     if compare(x, 0, LT, SIGNED): return -1
     if compare(x, 0, EQ, SIGNED): return 0
-    if compare(x, 0, GT, SIGNED): return 1
+    return 1
   elif is_float(x):
-    if x is NaN:
-      return NaN
-    else:
-      if compare(x, 0.0, LT, FLOAT): return -1.0
-      if compare(x, -0.0, EQ, FLOAT): return -0.0
-      if compare(x, +0.0, EQ, FLOAT): return +0.0
-      if compare(x, 0.0, GT, FLOAT): return 1.0
+    if x is NaN: return NaN
+    if compare(x, -0.0, EQ, FLOAT): return -0.0
+    if compare(x, +0.0, EQ, FLOAT): return +0.0
+    if compare(x, 0.0, LT, FLOAT): return -1.0
+    return 1.0
   elif is_complex(x):
-    if x.real is NaN or x.imag is NaN:
-      return NaN
-    else:
-      return divide(x, abs(x))
+    if x.real is NaN or x.imag is NaN: return (NaN, NaN)
+    if compare(x, (0.0, 0.0), EQ, FLOAT): return (0.0, 0.0)
+    return divide(x, convert(abs(x), type(x)))
 ```
 
 #### Inputs

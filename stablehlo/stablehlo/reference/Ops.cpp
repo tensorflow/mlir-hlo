@@ -225,6 +225,11 @@ SmallVector<Tensor> eval(
           evalPadOp(runtimeOperand, runtimePaddingValue, edgePaddingLow,
                     interiorPadding, padOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto populationCountOp = dyn_cast<PopulationCountOp>(op)) {
+      Tensor runtimeOperand = scope.find(populationCountOp.getOperand());
+      Tensor runtimeResult =
+          evalPopulationCountOp(runtimeOperand, populationCountOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
     } else if (auto powerOp = dyn_cast<PowOp>(op)) {
       Tensor runtimeLhs = scope.find(powerOp.getLhs());
       Tensor runtimeRhs = scope.find(powerOp.getRhs());
@@ -254,6 +259,15 @@ SmallVector<Tensor> eval(
       Tensor runtimeResult =
           evalReverseOp(runtimeOperand, dimensions, reverseOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto roundOp = dyn_cast<RoundOp>(op)) {
+      Tensor runtimeOperand = scope.find(roundOp.getOperand());
+      Tensor runtimeResult = evalRoundOp(runtimeOperand, roundOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
+    } else if (auto roundNearestEvenOp = dyn_cast<RoundNearestEvenOp>(op)) {
+      Tensor runtimeOperand = scope.find(roundNearestEvenOp.getOperand());
+      Tensor runtimeResult =
+          evalRoundNearestEvenOp(runtimeOperand, roundNearestEvenOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
     } else if (auto rsqrtOp = dyn_cast<RsqrtOp>(op)) {
       Tensor runtimeOperand = scope.find(rsqrtOp.getOperand());
       Tensor runtimeResult = evalRsqrtOp(runtimeOperand, rsqrtOp.getType());
@@ -262,6 +276,12 @@ SmallVector<Tensor> eval(
       Tensor runtimeResult = evalSelectOp(
           scope.find(selectOp.getPred()), scope.find(selectOp.getOnTrue()),
           scope.find(selectOp.getOnFalse()), selectOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
+    } else if (auto shiftLeftOp = dyn_cast<ShiftLeftOp>(op)) {
+      Tensor runtimeLhs = scope.find(shiftLeftOp.getLhs());
+      Tensor runtimeRhs = scope.find(shiftLeftOp.getRhs());
+      Tensor runtimeResult =
+          evalShiftLeftOp(runtimeLhs, runtimeRhs, shiftLeftOp.getType());
       scope.add(op.getResults(), {runtimeResult});
     } else if (auto signOp = dyn_cast<SignOp>(op)) {
       Tensor runtimeOperand = scope.find(signOp.getOperand());
@@ -669,6 +689,14 @@ Tensor evalPadOp(const Tensor &operand, const Tensor &paddingValue,
   return result;
 }
 
+Tensor evalPopulationCountOp(const Tensor &operand, ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto resultIt = result.index_begin(); resultIt != result.index_end();
+       ++resultIt)
+    result.set(*resultIt, popcnt(operand.get(*resultIt)));
+  return result;
+}
+
 Tensor evalPowerOp(const Tensor &lhs, const Tensor &rhs,
                    ShapedType resultType) {
   Tensor result(resultType);
@@ -713,6 +741,22 @@ Tensor evalReverseOp(const Tensor &operand, Axes dimensions,
   return result;
 }
 
+Tensor evalRoundOp(const Tensor &operand, ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto resultIt = result.index_begin(); resultIt != result.index_end();
+       ++resultIt)
+    result.set(*resultIt, roundNearestAfz(operand.get(*resultIt)));
+  return result;
+}
+
+Tensor evalRoundNearestEvenOp(const Tensor &operand, ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto resultIt = result.index_begin(); resultIt != result.index_end();
+       ++resultIt)
+    result.set(*resultIt, roundNearestEven(operand.get(*resultIt)));
+  return result;
+}
+
 Tensor evalRsqrtOp(const Tensor &operand, ShapedType resultType) {
   Tensor result(resultType);
   for (auto resultIt = result.index_begin(); resultIt != result.index_end();
@@ -729,6 +773,15 @@ Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
     result.set(
         *it, predValue.getBooleanValue() ? onTrue.get(*it) : onFalse.get(*it));
   }
+  return result;
+}
+
+Tensor evalShiftLeftOp(const Tensor &lhs, const Tensor &rhs,
+                       ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto resultIt = result.index_begin(); resultIt != result.index_end();
+       ++resultIt)
+    result.set(*resultIt, shiftLeft(lhs.get(*resultIt), rhs.get(*resultIt)));
   return result;
 }
 

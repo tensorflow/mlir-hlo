@@ -75,15 +75,20 @@ Tensor evalOrOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalPadOp(const Tensor &operand, const Tensor &paddingValue,
                  Sizes edgePaddingLow, Sizes interiorPadding,
                  ShapedType resultType);
+Tensor evalPopulationCountOp(const Tensor &operand, ShapedType resultType);
 Tensor evalPowerOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalRealOp(const Tensor &operand, ShapedType resultType);
 Tensor evalRemOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalReshapeOp(const Tensor &operand, ShapedType resultType);
 Tensor evalReverseOp(const Tensor &operand, Axes dimensions,
                      ShapedType resultType);
+Tensor evalRoundOp(const Tensor &operand, ShapedType resultType);
+Tensor evalRoundNearestEvenOp(const Tensor &operand, ShapedType resultType);
 Tensor evalRsqrtOp(const Tensor &operand, ShapedType resultType);
 Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
                     const Tensor &onFalse, ShapedType resultType);
+Tensor evalShiftLeftOp(const Tensor &lhs, const Tensor &rhs,
+                       ShapedType resultType);
 Tensor evalSignOp(const Tensor &operand, ShapedType resultType);
 Tensor evalSineOp(const Tensor &operand, ShapedType resultType);
 Tensor evalSliceOp(const Tensor &operand, Index startIndices, Sizes strides,

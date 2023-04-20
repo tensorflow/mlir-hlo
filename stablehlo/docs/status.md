@@ -113,7 +113,7 @@ one of the following tracking labels.
 | outfeed                  | yes           | yes          | yes            | no              | no          |
 | pad                      | yes           | yes          | yes            | yes             | yes         |
 | partition_id             | yes           | yes          | yes            | yes             | no          |
-| popcnt                   | yes           | yes          | yes            | yes             | no          |
+| popcnt                   | yes           | yes          | yes            | yes             | yes         |
 | power                    | yes           | yes          | yes            | yes             | yes         |
 | real                     | yes           | yes          | yes            | yes             | yes         |
 | real_dynamic_slice       | no            | revisit      | no             | yes             | no          |
@@ -129,15 +129,15 @@ one of the following tracking labels.
 | reverse                  | yes           | yes          | yes            | yes             | yes         |
 | rng                      | yes           | yes          | yes            | yes             | no          |
 | rng_bit_generator        | yes           | revisit      | infeasible     | yes             | no          |
-| round_nearest_afz        | yes           | yes          | yes            | yes             | no          |
-| round_nearest_even       | yes           | yes          | yes            | yes             | no          |
+| round_nearest_afz        | yes           | yes          | yes            | yes             | yes         |
+| round_nearest_even       | yes           | yes          | yes            | yes             | yes         |
 | rsqrt                    | yes           | yes          | yes            | yes             | yes         |
 | scatter                  | yes           | revisit      | yes            | no              | no          |
 | select                   | yes           | yes          | yes            | yes             | yes         |
 | select_and_scatter       | yes           | revisit      | yes            | no              | no          |
 | send                     | yes           | revisit      | yes            | no              | no          |
 | set_dimension_size       | no            | yes\*        | yes\*          | yes             | no          |
-| shift_left               | yes           | yes          | yes            | yes             | no          |
+| shift_left               | yes           | yes          | yes            | yes             | yes         |
 | shift_right_arithmetic   | yes           | yes          | yes            | yes             | no          |
 | shift_right_logical      | yes           | yes          | yes            | yes             | no          |
 | sign                     | yes           | yes          | yes            | yes             | yes         |

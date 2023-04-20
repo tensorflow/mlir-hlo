@@ -695,6 +695,14 @@ Element min(const Element &e1, const Element &e2) {
       });
 }
 
+Element popcnt(const Element &el) {
+  auto type = el.getType();
+  if (!isSupportedIntegerType(type))
+    report_fatal_error(invalidArgument("Unsupported element type: %s",
+                                       debugString(el.getType()).c_str()));
+  return Element(type, static_cast<int64_t>(el.getIntegerValue().popcount()));
+}
+
 Element power(const Element &e1, const Element &e2) {
   Type type = e1.getType();
 
@@ -757,10 +765,38 @@ Element rem(const Element &e1, const Element &e2) {
       });
 }
 
+Element roundNearestAfz(const Element &el) {
+  auto type = el.getType();
+  if (!isSupportedFloatType(type))
+    report_fatal_error(invalidArgument("Unsupported element type: %s",
+                                       debugString(type).c_str()));
+  auto val = el.getFloatValue();
+  val.roundToIntegral(llvm::RoundingMode::NearestTiesToAway);
+  return Element(type, val);
+}
+
+Element roundNearestEven(const Element &el) {
+  auto type = el.getType();
+  if (!isSupportedFloatType(type))
+    report_fatal_error(invalidArgument("Unsupported element type: %s",
+                                       debugString(type).c_str()));
+  auto val = el.getFloatValue();
+  val.roundToIntegral(llvm::RoundingMode::NearestTiesToEven);
+  return Element(type, val);
+}
+
 Element rsqrt(const Element &el) {
   return mapWithUpcastToDouble(
       el, [](double e) { return 1.0 / std::sqrt(e); },
       [](std::complex<double> e) { return 1.0 / std::sqrt(e); });
+}
+
+Element shiftLeft(const Element &e1, const Element &e2) {
+  auto type = e1.getType();
+  if (!isSupportedIntegerType(type))
+    report_fatal_error(invalidArgument("Unsupported element type: %s",
+                                       debugString(type).c_str()));
+  return Element(type, e1.getIntegerValue() << e2.getIntegerValue());
 }
 
 Element sign(const Element &el) {
@@ -789,6 +825,11 @@ Element sign(const Element &el) {
     if (elVal.real().isNaN() || elVal.imag().isNaN())
       return Element(type, std::complex<APFloat>(APFloat::getNaN(elSemantics),
                                                  APFloat::getNaN(elSemantics)));
+
+    if (elVal.real().isZero() && elVal.imag().isZero())
+      return Element(type,
+                     std::complex<APFloat>(APFloat::getZero(elSemantics),
+                                           APFloat::getZero(elSemantics)));
 
     return el / Element(type, abs(el).getFloatValue().convertToDouble());
   }

@@ -181,6 +181,9 @@ Element max(const Element &e1, const Element &e2);
 /// Returns the minimum between two Element objects.
 Element min(const Element &e1, const Element &e2);
 
+/// Returns the population count of Element object.
+Element popcnt(const Element &el);
+
 /// Returns the exponentiation of first element to the power of second element.
 Element power(const Element &e1, const Element &e2);
 
@@ -191,8 +194,19 @@ Element real(const Element &e);
 /// Returns the remainder for two Element objects.
 Element rem(const Element &e1, const Element &e2);
 
+/// Returns the value rounded to the nearest integer, breaking ties away from
+/// zero, of Element object.
+Element roundNearestAfz(const Element &el);
+
+/// Returns the value rounded to nearest integer, breaking ties towards the
+/// even, of Element object.
+Element roundNearestEven(const Element &el);
+
 /// Returns reverse square root of Element object.
 Element rsqrt(const Element &e);
+
+/// Returns left-shift of Element object e1 by e2.
+Element shiftLeft(const Element &e1, const Element &e2);
 
 /// Returns sign of Element object.
 Element sign(const Element &e);
