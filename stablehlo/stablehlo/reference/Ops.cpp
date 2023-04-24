@@ -619,7 +619,8 @@ Tensor evalMapOp(ArrayRef<Tensor> inputs, Region &computation, Scope &scope,
        resultIt != inputs[0].index_end(); ++resultIt) {
     SmallVector<Tensor> args;
     for (size_t i = 0; i < inputs.size(); ++i) {
-      auto tensor = Tensor(computation.getArgument(i).getType());
+      auto tensor =
+          Tensor(cast<ShapedType>(computation.getArgument(i).getType()));
       tensor.set({}, inputs[i].get(*resultIt));
       args.push_back(tensor);
     }
