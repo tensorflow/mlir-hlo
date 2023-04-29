@@ -92,7 +92,7 @@ one of the following tracking labels.
 | fft                      | yes           | revisit      | yes            | yes             | no          |
 | floor                    | yes           | yes          | yes            | yes             | yes         |
 | gather                   | yes           | yes          | yes            | no              | no          |
-| get_dimension_size       | yes           | yes          | yes            | yes             | no          |
+| get_dimension_size       | yes           | yes          | yes            | yes             | yes         |
 | get_tuple_element        | yes           | yes          | yes            | yes             | no          |
 | if                       | yes           | revisit      | yes            | no              | yes         |
 | imag                     | yes           | yes          | yes            | yes             | yes         |
@@ -138,12 +138,12 @@ one of the following tracking labels.
 | send                     | yes           | revisit      | yes            | no              | no          |
 | set_dimension_size       | no            | yes\*        | yes\*          | yes             | no          |
 | shift_left               | yes           | yes          | yes            | yes             | yes         |
-| shift_right_arithmetic   | yes           | yes          | yes            | yes             | no          |
-| shift_right_logical      | yes           | yes          | yes            | yes             | no          |
+| shift_right_arithmetic   | yes           | yes          | yes            | yes             | yes         |
+| shift_right_logical      | yes           | yes          | yes            | yes             | yes         |
 | sign                     | yes           | yes          | yes            | yes             | yes         |
 | sine                     | yes           | yes          | yes            | yes             | yes         |
 | slice                    | yes           | yes          | yes            | no              | yes         |
-| sort                     | yes           | yes          | yes            | no              | no          |
+| sort                     | yes           | yes          | yes            | no              | yes         |
 | sqrt                     | yes           | yes          | yes            | yes             | yes         |
 | subtract                 | yes           | yes          | yes            | yes             | yes         |
 | tanh                     | yes           | yes          | yes            | yes             | yes         |

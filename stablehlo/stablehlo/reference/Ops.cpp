@@ -15,6 +15,9 @@ limitations under the License.
 
 #include "stablehlo/reference/Ops.h"
 
+#include <algorithm>
+#include <numeric>
+
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/Errc.h"
@@ -155,6 +158,12 @@ SmallVector<Tensor> eval(
       Tensor runtimeOperand = scope.find(floorOp.getOperand());
       Tensor runtimeResult = evalFloorOp(runtimeOperand, floorOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto getDimensionSizeOp = dyn_cast<GetDimensionSizeOp>(op)) {
+      Tensor runtimeOperand = scope.find(getDimensionSizeOp.getOperand());
+      auto runtimeResults = evalGetDimensionSizeOp(
+          runtimeOperand, getDimensionSizeOp.getDimension(),
+          getDimensionSizeOp.getType());
+      scope.add(op.getResults(), runtimeResults);
     } else if (auto ifOp = dyn_cast<IfOp>(op)) {
       Tensor runtimePred = scope.find(ifOp.getPred());
       auto runtimeResults = evalIfOp(runtimePred, ifOp.getTrueBranch(),
@@ -283,6 +292,19 @@ SmallVector<Tensor> eval(
       Tensor runtimeResult =
           evalShiftLeftOp(runtimeLhs, runtimeRhs, shiftLeftOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto shiftRightArithmeticOp =
+                   dyn_cast<ShiftRightArithmeticOp>(op)) {
+      Tensor runtimeLhs = scope.find(shiftRightArithmeticOp.getLhs());
+      Tensor runtimeRhs = scope.find(shiftRightArithmeticOp.getRhs());
+      Tensor runtimeResult = evalShiftRightArithmeticOp(
+          runtimeLhs, runtimeRhs, shiftRightArithmeticOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
+    } else if (auto shiftRightLogicalOp = dyn_cast<ShiftRightLogicalOp>(op)) {
+      Tensor runtimeLhs = scope.find(shiftRightLogicalOp.getLhs());
+      Tensor runtimeRhs = scope.find(shiftRightLogicalOp.getRhs());
+      Tensor runtimeResult = evalShiftRightLogicalOp(
+          runtimeLhs, runtimeRhs, shiftRightLogicalOp.getType());
+      scope.add(op.getResults(), {runtimeResult});
     } else if (auto signOp = dyn_cast<SignOp>(op)) {
       Tensor runtimeOperand = scope.find(signOp.getOperand());
       Tensor runtimeResult = evalSignOp(runtimeOperand, signOp.getType());
@@ -298,6 +320,12 @@ SmallVector<Tensor> eval(
       Tensor runtimeResult =
           evalSliceOp(runtimeOperand, startIndices, strides, sliceOp.getType());
       scope.add(op.getResults(), {runtimeResult});
+    } else if (auto sortOp = dyn_cast<SortOp>(op)) {
+      SmallVector<Tensor> runtimeOperands = scope.find(sortOp.getInputs());
+      auto runtimeResults =
+          evalSortOp(runtimeOperands, sortOp.getDimension(),
+                     sortOp.getIsStable(), sortOp.getComparator(), scope);
+      scope.add(op.getResults(), {runtimeResults});
     } else if (auto sqrtOp = dyn_cast<SqrtOp>(op)) {
       Tensor runtimeOperand = scope.find(sqrtOp.getOperand());
       Tensor runtimeResult = evalSqrtOp(runtimeOperand, sqrtOp.getType());
@@ -556,6 +584,14 @@ Tensor evalFloorOp(const Tensor &operand, ShapedType resultType) {
   return result;
 }
 
+Tensor evalGetDimensionSizeOp(const Tensor &operand, Axis dimension,
+                              ShapedType resultType) {
+  Tensor result(resultType);
+  result.set(
+      {}, Element(resultType.getElementType(), operand.getShape()[dimension]));
+  return result;
+}
+
 SmallVector<Tensor> evalIfOp(const Tensor &pred, Region &trueBranch,
                              Region &falseBranch, Scope &scope) {
   return pred.get({}).getBooleanValue() ? eval(trueBranch, {}, &scope)
@@ -620,7 +656,7 @@ Tensor evalMapOp(ArrayRef<Tensor> inputs, Region &computation, Scope &scope,
     SmallVector<Tensor> args;
     for (size_t i = 0; i < inputs.size(); ++i) {
       auto tensor =
-          Tensor(cast<ShapedType>(computation.getArgument(i).getType()));
+          Tensor(computation.getArgument(i).getType().cast<ShapedType>());
       tensor.set({}, inputs[i].get(*resultIt));
       args.push_back(tensor);
     }
@@ -786,6 +822,26 @@ Tensor evalShiftLeftOp(const Tensor &lhs, const Tensor &rhs,
   return result;
 }
 
+Tensor evalShiftRightArithmeticOp(const Tensor &lhs, const Tensor &rhs,
+                                  ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto resultIt = result.index_begin(); resultIt != result.index_end();
+       ++resultIt)
+    result.set(*resultIt,
+               shiftRightArithmetic(lhs.get(*resultIt), rhs.get(*resultIt)));
+  return result;
+}
+
+Tensor evalShiftRightLogicalOp(const Tensor &lhs, const Tensor &rhs,
+                               ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto resultIt = result.index_begin(); resultIt != result.index_end();
+       ++resultIt)
+    result.set(*resultIt,
+               shiftRightLogical(lhs.get(*resultIt), rhs.get(*resultIt)));
+  return result;
+}
+
 Tensor evalSignOp(const Tensor &operand, ShapedType resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
@@ -808,6 +864,68 @@ Tensor evalSliceOp(const Tensor &operand, Index startIndices, Sizes strides,
     result.set(*resultIt, operand.get(startIndices + *resultIt * strides));
   }
   return result;
+}
+
+SmallVector<Tensor> evalSortOp(ArrayRef<Tensor> inputs, Axis dimension,
+                               bool isStable, Region &comparator,
+                               Scope &scope) {
+  SmallVector<Tensor> results;
+  for (auto input : inputs) results.push_back(Tensor(input.getType()));
+  auto adjustedDimension =
+      dimension >= 0 ? dimension : dimension + inputs[0].getRank();
+
+  for (auto resultIt = results[0].index_begin();
+       resultIt != results[0].index_end(); ++resultIt) {
+    // resultIt iterates through all indices in the index space, but sorting
+    // only needs to be done once per slice.
+    if ((*resultIt)[adjustedDimension] != 0) continue;
+
+    // Instead of literally putting the slices together into a vector of tuples,
+    // we're representing these tuples with integer handles, with each handle
+    // being an index within the slice.
+    // Then, instead of sorting a vector of tuples, we're sorting a vector of
+    // handles, and the comparator knows how to use these handles to fetch
+    // the actual input elements being compared.
+    Index inputsTogether(inputs[0].getShape()[adjustedDimension]);
+    std::iota(inputsTogether.begin(), inputsTogether.end(), 0);
+    auto comparatorTogether = [&](int64_t lhsHandle, int64_t rhsHandle) {
+      SmallVector<Tensor> args;
+      auto lhsIndex = *resultIt;
+      auto rhsIndex = *resultIt;
+      lhsIndex[adjustedDimension] = lhsHandle;
+      rhsIndex[adjustedDimension] = rhsHandle;
+      for (const auto &input : inputs) {
+        auto argType = RankedTensorType::get({}, input.getElementType());
+        auto lhsEl = Tensor(argType);
+        auto rhsEl = Tensor(argType);
+        lhsEl.set({}, input.get(lhsIndex));
+        rhsEl.set({}, input.get(rhsIndex));
+        args.push_back(lhsEl);
+        args.push_back(rhsEl);
+      }
+      auto cmpResult = eval(comparator, args, &scope);
+      return cmpResult[0].get({}).getBooleanValue();
+    };
+    if (isStable)
+      std::stable_sort(inputsTogether.begin(), inputsTogether.end(),
+                       comparatorTogether);
+    else
+      std::sort(inputsTogether.begin(), inputsTogether.end(),
+                comparatorTogether);
+
+    // After the vector of handles has been sorted, we apply the results of
+    // this sort by reshuffling input elements into result elements.
+    for (auto [inputHandle, resultHandle] : llvm::enumerate(inputsTogether)) {
+      for (auto [input, result] : llvm::zip(inputs, results)) {
+        auto inputIdx = *resultIt;
+        auto resultIdx = *resultIt;
+        inputIdx[adjustedDimension] = inputHandle;
+        resultIdx[adjustedDimension] = resultHandle;
+        result.set(resultIdx, input.get(inputIdx));
+      }
+    }
+  }
+  return results;
 }
 
 Tensor evalSqrtOp(const Tensor &operand, ShapedType resultType) {

@@ -142,10 +142,11 @@ Attribute convertGeneric(Attribute vhloAttr, TypeConverter* typeConverter) {
     return StringAttr::get(attr.getContext(), attr.getValue());
   }
   if (auto attr = vhloAttr.dyn_cast<vhlo::TensorV1Attr>()) {
-    auto builtinType = typeConverter->convertType(attr.getType());
+    auto builtinType =
+        typeConverter->convertType(attr.getType()).cast<ShapedType>();
     if (!builtinType) return {};
-    return DenseIntOrFPElementsAttr::getFromRawBuffer(
-        cast<ShapedType>(builtinType), attr.getData());
+    return DenseIntOrFPElementsAttr::getFromRawBuffer(builtinType,
+                                                      attr.getData());
   }
   if (auto attr = vhloAttr.dyn_cast<vhlo::TransposeV1Attr>()) {
     RETURN_CONVERTED_ENUM_ATTR(Transpose, V1);

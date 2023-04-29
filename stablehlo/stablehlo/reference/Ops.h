@@ -56,6 +56,8 @@ Tensor evalDynamicUpdateSliceOp(const Tensor &operand, const Tensor &update,
                                 ShapedType resultType);
 Tensor evalExponentialOp(const Tensor &operand, ShapedType resultType);
 Tensor evalFloorOp(const Tensor &operand, ShapedType resultType);
+Tensor evalGetDimensionSizeOp(const Tensor &operand, Axis dimension,
+                              ShapedType resultType);
 SmallVector<Tensor> evalIfOp(const Tensor &pred, Region &trueBranch,
                              Region &falseBranch, Scope &scope);
 Tensor evalImagOp(const Tensor &operand, ShapedType resultType);
@@ -89,10 +91,16 @@ Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
                     const Tensor &onFalse, ShapedType resultType);
 Tensor evalShiftLeftOp(const Tensor &lhs, const Tensor &rhs,
                        ShapedType resultType);
+Tensor evalShiftRightArithmeticOp(const Tensor &lhs, const Tensor &rhs,
+                                  ShapedType resultType);
+Tensor evalShiftRightLogicalOp(const Tensor &lhs, const Tensor &rhs,
+                               ShapedType resultType);
 Tensor evalSignOp(const Tensor &operand, ShapedType resultType);
 Tensor evalSineOp(const Tensor &operand, ShapedType resultType);
 Tensor evalSliceOp(const Tensor &operand, Index startIndices, Sizes strides,
                    ShapedType resultType);
+SmallVector<Tensor> evalSortOp(ArrayRef<Tensor> inputs, Axis dimension,
+                               bool isStable, Region &comparator, Scope &scope);
 Tensor evalSqrtOp(const Tensor &operand, ShapedType resultType);
 Tensor evalSubtractOp(const Tensor &lhs, const Tensor &rhs,
                       ShapedType resultType);

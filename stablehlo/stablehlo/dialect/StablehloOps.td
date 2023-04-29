@@ -867,7 +867,8 @@ def StableHLO_ShiftLeftOp : StableHLO_BinaryElementwiseOp<"shift_left",
 }
 
 def StableHLO_ShiftRightArithmeticOp : StableHLO_BinaryElementwiseOp<"shift_right_arithmetic",
-      [Pure, HLO_CompatibleOperandsAndResultType], HLO_IntTensor> {
+      [Pure, HLO_CompatibleOperandsAndResultType /*shift_right_arithmetic_c1*/],
+      HLO_IntTensor /*shift_right_arithmetic_i1, shift_right_arithmetic_i2*/> { /*shift_right_arithmetic_c1*/
   let summary = "ShiftRightArithmetic operation";
   let description = [{
     Performs element-wise arithmetic right-shift operation on the `lhs` tensor
@@ -878,13 +879,14 @@ def StableHLO_ShiftRightArithmeticOp : StableHLO_BinaryElementwiseOp<"shift_righ
 
     Example:
     ```mlir
-    %result = stablehlo.shift_right_arithmetic %lhs, %rhs : tensor<6xi8>
+    %result = stablehlo.shift_right_arithmetic %lhs, %rhs : tensor<3xi64>
     ```
   }];
 }
 
 def StableHLO_ShiftRightLogicalOp : StableHLO_BinaryElementwiseOp<"shift_right_logical",
-      [Pure, HLO_CompatibleOperandsAndResultType], HLO_IntTensor> {
+      [Pure, HLO_CompatibleOperandsAndResultType /*shift_right_logical_c1*/],
+      HLO_IntTensor /*shift_right_logical_i1, shift_right_logical_i2*/> { /*shift_right_logical_c1*/
   let summary = "ShiftRightLogical operation";
   let description = [{
     Performs element-wise logical right-shift operation on the `lhs` tensor by
@@ -895,7 +897,7 @@ def StableHLO_ShiftRightLogicalOp : StableHLO_BinaryElementwiseOp<"shift_right_l
 
     Example:
     ```mlir
-    %result = stablehlo.shift_right_logical %lhs, %rhs : tensor<6xi8>
+    %result = stablehlo.shift_right_logical %lhs, %rhs : tensor<3xi64>
     ```
   }];
 }
@@ -2357,17 +2359,17 @@ def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size",
   let description = [{
     Produces the size of the given `dimension` of the `operand`.
 
-    See
+    See:
     https://github.com/openxla/stablehlo/blob/main/docs/spec.md#get_dimension_size
 
     Example:
     ```mlir
-    %result = stablehlo.get_dimension_size %operand, dim = 1 : (tensor<2x3xf32>) -> tensor<i32>
+    %result = stablehlo.get_dimension_size %operand, dim = 1 : (tensor<2x3xi64>) -> tensor<i32>
     ```
   }];
   let arguments = (ins
-    HLO_Tensor:$operand,
-    I64Attr:$dimension
+    HLO_Tensor:$operand, /*get_dimension_size_i1*/
+    I64Attr:$dimension /*get_dimension_size_i2*/
   );
   // TODO(hinsu): Allow 64-bit result types once XLA HLO dialect based on the
   // XLA semantics is available. This limitation is because of the current XLA
@@ -2606,7 +2608,8 @@ def StableHLO_SetDimensionSizeOp: StableHLO_Op<"set_dimension_size", [Pure,
 }
 
 def StableHLO_SortOp : StableHLO_Op<"sort",
-      [RecursiveMemoryEffects, SameOperandsAndResultShape, InferTensorType]> {
+      [RecursiveMemoryEffects, SameOperandsAndResultShape /*sort_c1, sort_c3*/,
+      InferTensorType /*sort_c2*/]> {
   let summary = "Sort operation";
   let description = [{
     Sorts a variadic number of tensors in `inputs` together, according to a
@@ -2619,26 +2622,23 @@ def StableHLO_SortOp : StableHLO_Op<"sort",
     Example:
     ```mlir
     %result0, %result1 = "stablehlo.sort"(%input0, %input1) ({
-      ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>, %arg2: tensor<i32>, %arg3: tensor<i32>):
-        %predicate = "stablehlo.compare"(%arg0, %arg1) {
-          comparison_direction = #stablehlo<comparison_direction GT>
-          } : (tensor<i32>, tensor<i32>) -> tensor<i1>
-        "stablehlo.return"(%predicate) : (tensor<i1>) -> ()
+      ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>, %arg2: tensor<i64>, %arg3: tensor<i64>):
+        %predicate = stablehlo.compare GT, %arg0, %arg1 : (tensor<i64>, tensor<i64>) -> tensor<i1>
+        stablehlo.return %predicate : tensor<i1>
     }) {
       dimension = 0 : i64,
       is_stable = true
-    } : (tensor<2x3xi32>, tensor<2x3xi32>) -> (tensor<2x3xi32>, tensor<2x3xi32>)
-    ```
+    } : (tensor<2x3xi64>, tensor<2x3xi64>) -> (tensor<2x3xi64>, tensor<2x3xi64>)
   }];
   let arguments = (ins
-    Variadic<HLO_Tensor>:$inputs,
-    DefaultValuedOptionalAttr<I64Attr, "-1">:$dimension,
-    DefaultValuedOptionalAttr<BoolAttr, "false">:$is_stable
+    Variadic<HLO_Tensor>:$inputs /*sort_i1*/,
+    DefaultValuedOptionalAttr<I64Attr, "-1">:$dimension /*sort_i2*/,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$is_stable /*sort_i3*/
   );
 
   let results = (outs Variadic<HLO_Tensor>);
 
-  let regions = (region SizedRegion<1>:$comparator);
+  let regions = (region SizedRegion<1>:$comparator /*sort_i4*/);
 
   let builders = [
     OpBuilder<(ins "ValueRange":$inputs, CArg<"int64_t", "-1">:$dimension,
