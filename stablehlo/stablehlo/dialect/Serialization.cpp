@@ -57,7 +57,8 @@ LogicalResult serializePortableArtifact(ModuleOp module,
 
   // TODO(#1282): Consider adding a header to identify StableHLO portable
   // artifact versions.
-  return writeBytecodeToFile(module, os);
+  (void)writeBytecodeToFile(module, os);
+  return success();
 }
 
 OwningOpRef<ModuleOp> deserializePortableArtifact(StringRef sourceStr,
