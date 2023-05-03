@@ -31,7 +31,6 @@ limitations under the License.
 
 // Include order matters
 #include "stablehlo/dialect/ChloEnums.cpp.inc"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/OperationSupport.h"
 #define GET_ATTRDEF_CLASSES
 #include "stablehlo/dialect/ChloAttrs.cpp.inc"
 
