@@ -218,7 +218,8 @@ def StableHLO_AbsOp: StableHLO_UnaryElementwiseOp<"abs",
 }
 
 def StableHLO_CbrtOp: StableHLO_UnaryElementwiseOp<"cbrt",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
+    [Pure, HLO_CompatibleOperandsAndResultType /*cbrt_c1*/],
+    HLO_FpOrComplexTensor /*cbrt_i1*/> { /*cbrt_c1*/
   let summary = "Cbrt operation";
   let description = [{
     Performs element-wise cubic root operation on `operand` tensor and produces
@@ -229,7 +230,7 @@ def StableHLO_CbrtOp: StableHLO_UnaryElementwiseOp<"cbrt",
 
     Example:
     ```mlir
-    %result = stablehlo.cbrt %operand : tensor<4xf32>
+    %result = stablehlo.cbrt %operand : tensor<4xf64>
     ```
   }];
 }
@@ -323,7 +324,8 @@ def StableHLO_ExpOp: StableHLO_UnaryElementwiseOp<"exponential",
 }
 
 def StableHLO_Expm1Op: StableHLO_UnaryElementwiseOp<"exponential_minus_one",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
+    [Pure, HLO_CompatibleOperandsAndResultType], /*exponential_minus_one_c1*/
+    HLO_FpOrComplexTensor /*exponential_minus_one_i1*/> { /*exponential_minus_one_c1*/
   let summary = "Expm1 operation";
   let description = [{
     Performs element-wise exponential minus one operation on `operand` tensor
@@ -334,7 +336,7 @@ def StableHLO_Expm1Op: StableHLO_UnaryElementwiseOp<"exponential_minus_one",
 
     Example:
     ```mlir
-    %result = stablehlo.exponential_minus_one %operand : tensor<2xf32>
+    %result = stablehlo.exponential_minus_one %operand : tensor<2xf64>
     ```
   }];
 }
@@ -417,7 +419,8 @@ def StableHLO_LogOp: StableHLO_UnaryElementwiseOp<"log",
 }
 
 def StableHLO_Log1pOp: StableHLO_UnaryElementwiseOp<"log_plus_one",
-    [Pure, HLO_CompatibleOperandsAndResultType], HLO_FpOrComplexTensor> {
+    [Pure, HLO_CompatibleOperandsAndResultType /*log_plus_one_c1*/],
+    HLO_FpOrComplexTensor /*log_plus_one_i1*/> { /*log_plus_one_c1*/
   let summary = "Log1p operation";
   let description = [{
     Performs element-wise logarithm plus one operation on `operand` tensor and
@@ -428,7 +431,7 @@ def StableHLO_Log1pOp: StableHLO_UnaryElementwiseOp<"log_plus_one",
 
     Example:
     ```mlir
-    %result = stablehlo.log_plus_one %operand : tensor<6xf32>
+    %result = stablehlo.log_plus_one %operand : tensor<5xf64>
     ```
   }];
 }
@@ -719,23 +722,27 @@ def StableHLO_Atan2Op : StableHLO_BinaryElementwiseOp<"atan2",
 }
 
 def StableHLO_ComplexOp: StableHLO_BinaryElementwiseOp<"complex", [Pure,
-    SameOperandsElementType, SameOperandsAndResultShape,
-    DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+    SameOperandsElementType /*complex_c1*/,
+    SameOperandsAndResultShape /*complex_c2*/,
+    DeclareOpInterfaceMethods<InferTypeOpInterface> /*complex_c3*/]> {
   let summary = "Complex operation";
   let description = [{
     Performs element-wise conversion to a complex value from a pair of real and
     imaginary values, `lhs` and `rhs`, and produces a `result` tensor.
-
     See:
     https://github.com/openxla/stablehlo/blob/main/docs/spec.md#complex
-
     Example:
     ```mlir
-    %result = stablehlo.complex %lhs, %rhs : tensor<2xcomplex<f32>>
+    %result = stablehlo.complex %lhs, %rhs : tensor<2xcomplex<f64>>
     ```
   }];
-  let arguments = (ins HLO_Fp32Or64Tensor:$lhs, HLO_Fp32Or64Tensor:$rhs);
-  let results = (outs HLO_ComplexTensor:$result);
+  let arguments = (ins
+     HLO_Fp32Or64Tensor:$lhs /*complex_i1*/,
+     HLO_Fp32Or64Tensor:$rhs /*complex_i2*/
+  );
+  let results = (outs
+     HLO_ComplexTensor:$result
+  );
 
   let assemblyFormat = [{
     operands attr-dict

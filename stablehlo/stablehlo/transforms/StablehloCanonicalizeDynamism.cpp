@@ -64,9 +64,8 @@ struct CanonicalizeCustomCallOpPattern : public OpRewritePattern<CustomCallOp> {
           if (indices.contains(i)) continue;
           newOperandLayouts.push_back(operandLayouts[i]);
         }
-        attr = NamedAttribute(
-            attr.getName(),
-            rewriter.getArrayAttr(newOperandLayouts));
+        attr = NamedAttribute(attr.getName(),
+                              rewriter.getArrayAttr(newOperandLayouts));
       }
       newAttrs.push_back(attr);
     }
@@ -106,8 +105,7 @@ struct CanonicalizeDynamicBroadcastInDimOpPattern
     // with the result type.
     if (!op.getOperand().getType().hasStaticShape())
       return rewriter.notifyMatchFailure(op, "expected static operand type");
-    SmallVector<int64_t> outputDimensions;
-    if (!succeeded(hlo::matchInts(op.getOutputDimensions(), outputDimensions)))
+    if (!succeeded(hlo::matchInts(op.getOutputDimensions())))
       return rewriter.notifyMatchFailure(op,
                                          "expected static output_dimensions");
     if (!op.getType().hasStaticShape())
@@ -207,8 +205,7 @@ struct CanonicalizeDynamicReshapeOpPattern
                                 PatternRewriter& rewriter) const override {
     // This pattern ignores and discards the output_shape operand. We rely on
     // the verifier to make sure that its value is consistent with result type.
-    SmallVector<int64_t> outputShape;
-    if (!succeeded(hlo::matchInts(op.getOutputShape(), outputShape)))
+    if (!succeeded(hlo::matchInts(op.getOutputShape())))
       return rewriter.notifyMatchFailure(op, "expected static output_shape");
     if (!op.getType().hasStaticShape())
       return rewriter.notifyMatchFailure(op, "expected static result type");

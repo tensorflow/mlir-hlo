@@ -40,10 +40,10 @@ func.func @custom_call_success_mixed_positions(%arg0: tensor<4xf32>) -> (tensor<
 
 // CHECK-LABEL: func @custom_call_success_mixed_positions_layouts
 func.func @custom_call_success_mixed_positions_layouts(%arg0: tensor<4x3xf32>) -> (tensor<1x2xf32>, tensor<3x4xf32>) {
-  // CHECK: stablehlo.custom_call @foo(%arg0)
-  // CHECK-SAME: operand_layouts = [dense<[1, 0]> : tensor<2xindex>]
-  // CHECK-SAME: result_layouts = [dense<[1, 0]> : tensor<2xindex>, dense<[1, 0]> : tensor<2xindex>]
-  // CHECK-SAME: : (tensor<4x3xf32>) -> (tensor<1x2xf32>, tensor<3x4xf32>)
+  //      CHECK: stablehlo.custom_call @foo(%arg0) {
+  // CHECK-SAME:   operand_layouts = [dense<[1, 0]> : tensor<2xindex>],
+  // CHECK-SAME:   result_layouts = [dense<[1, 0]> : tensor<2xindex>, dense<[1, 0]> : tensor<2xindex>]
+  // CHECK-SAME: } : (tensor<4x3xf32>) -> (tensor<1x2xf32>, tensor<3x4xf32>)
   %0 = stablehlo.constant dense<[1, 2]> : tensor<2xi64>
   %1 = stablehlo.constant dense<[3, 4]> : tensor<2xi64>
   %2:2 = stablehlo.custom_call @foo(%0, %arg0, %1) {

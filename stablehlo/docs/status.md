@@ -57,13 +57,13 @@ one of the following tracking labels.
 | broadcast                | no            | yes\*        | yes\*          | yes             | no          |
 | broadcast_in_dim         | yes           | yes          | infeasible     | yes             | yes         |
 | case                     | yes           | revisit      | yes            | no              | yes         |
-| cbrt                     | yes           | yes          | yes            | yes             | no          |
+| cbrt                     | yes           | yes          | yes            | yes             | yes         |
 | ceil                     | yes           | yes          | yes            | yes             | yes         |
 | cholesky                 | yes           | yes          | yes            | yes             | no          |
 | clamp                    | yes           | revisit      | yes            | yes             | yes         |
 | collective_permute       | yes           | revisit      | yes            | no              | no          |
 | compare                  | yes           | yes          | yes            | yes             | yes         |
-| complex                  | yes           | yes          | yes            | yes             | no          |
+| complex                  | yes           | yes          | yes            | yes             | yes         |
 | compute_reshape_shape    | no            | revisit      | no             | yes             | no          |
 | concatenate              | yes           | yes          | yes            | yes             | yes         |
 | constant                 | yes           | yes          | yes            | yes             | yes         |
@@ -88,7 +88,7 @@ one of the following tracking labels.
 | dynamic_update_slice     | yes           | yes          | yes            | yes             | yes         |
 | einsum                   | no            | revisit      | no             | yes             | no          |
 | exponential              | yes           | yes          | yes            | yes             | yes         |
-| exponential_minus_one    | yes           | yes          | yes            | yes             | no          |
+| exponential_minus_one    | yes           | yes          | yes            | yes             | yes         |
 | fft                      | yes           | revisit      | yes            | yes             | no          |
 | floor                    | yes           | yes          | yes            | yes             | yes         |
 | gather                   | yes           | yes          | yes            | no              | no          |
@@ -100,7 +100,7 @@ one of the following tracking labels.
 | iota                     | yes           | yes          | infeasible     | yes             | yes         |
 | is_finite                | yes           | yes          | yes            | yes             | yes         |
 | log                      | yes           | yes          | yes            | yes             | yes         |
-| log_plus_one             | yes           | yes          | yes            | yes             | no          |
+| log_plus_one             | yes           | yes          | yes            | yes             | yes         |
 | logistic                 | yes           | yes          | yes            | yes             | yes         |
 | map                      | yes           | revisit      | yes            | no              | yes         |
 | maximum                  | yes           | yes          | yes            | yes             | yes         |

@@ -55,6 +55,27 @@ namespace stablehlo {
 
 namespace {
 
+// DenseElementsAttr can be constructed from ArrayRef<APInt> but not from
+// ArrayRef<APSInt>. This helper bridges the gap.
+DenseIntElementsAttr getTensorAttr(ShapedType type, ArrayRef<APSInt> values) {
+  SmallVector<APInt> supportedValues(values);
+  return DenseIntElementsAttr::get(type, supportedValues);
+}
+
+APSInt getAPSInt(Type type, uint64_t value) {
+  unsigned numBits;
+  bool isUnsigned;
+  if (auto integerType = type.dyn_cast<IntegerType>()) {
+    numBits = integerType.getWidth();
+    // Signless types are treated as signed, per StableHLO convention.
+    isUnsigned = integerType.isUnsignedInteger();
+  } else {
+    llvm::report_fatal_error("expected integer type");
+  }
+  return APSInt({/*numBits=*/numBits, value},
+                /*isUnsigned=*/isUnsigned);
+}
+
 // The patterns below implement partial evaluation of shape computations which
 // is a critical part of implementing type refinement for ops like
 // dynamic_broadcast_in_dim, dynamic_iota and dynamic_reshape whose shape
@@ -66,19 +87,20 @@ LogicalResult evalUnary(PatternRewriter& rewriter, OpType op, FuncType fn) {
     llvm::report_fatal_error("expected one operand");
 
   auto resultType = op.getType();
-  if (!resultType.hasRank() || !resultType.getElementType().isIntOrIndex())
-    return rewriter.notifyMatchFailure(
-        op, "expected integer or index result tensor type");
+  if (!resultType.hasRank() ||
+      !resultType.getElementType().template isa<IntegerType>())
+    return rewriter.notifyMatchFailure(op,
+                                       "expected integer result tensor type");
 
-  SmallVector<APInt> operand, result;
+  SmallVector<APSInt> operand, result;
   if (failed(hlo::matchInts(op.getOperand(), operand)))
     return rewriter.notifyMatchFailure(op, "expected constant operand");
   for (const auto& operandEl : operand) {
     result.push_back(fn(operandEl));
   }
 
-  rewriter.replaceOpWithNewOp<ConstantOp>(
-      op, DenseIntElementsAttr::get(resultType, result));
+  rewriter.replaceOpWithNewOp<ConstantOp>(op,
+                                          getTensorAttr(resultType, result));
   return success();
 }
 
@@ -88,11 +110,12 @@ LogicalResult evalBinary(PatternRewriter& rewriter, OpType op, FuncType fn) {
     llvm::report_fatal_error("expected two operands");
 
   auto resultType = op.getType();
-  if (!resultType.hasRank() || !resultType.getElementType().isIntOrIndex())
-    return rewriter.notifyMatchFailure(
-        op, "expected integer or index result tensor type");
+  if (!resultType.hasRank() ||
+      !resultType.getElementType().template isa<IntegerType>())
+    return rewriter.notifyMatchFailure(op,
+                                       "expected integer result tensor type");
 
-  SmallVector<APInt> lhs, rhs, result;
+  SmallVector<APSInt> lhs, rhs, result;
   if (failed(hlo::matchInts(op.getLhs(), lhs)) ||
       failed(hlo::matchInts(op.getRhs(), rhs)))
     return rewriter.notifyMatchFailure(op, "expected constant operands");
@@ -100,8 +123,8 @@ LogicalResult evalBinary(PatternRewriter& rewriter, OpType op, FuncType fn) {
     result.push_back(fn(lhsEl, rhsEl));
   }
 
-  rewriter.replaceOpWithNewOp<ConstantOp>(
-      op, DenseIntElementsAttr::get(resultType, result));
+  rewriter.replaceOpWithNewOp<ConstantOp>(op,
+                                          getTensorAttr(resultType, result));
   return success();
 }
 
@@ -110,7 +133,7 @@ struct EvalAddOpPattern : public OpRewritePattern<AddOp> {
   LogicalResult matchAndRewrite(AddOp op,
                                 PatternRewriter& rewriter) const override {
     return evalBinary(rewriter, op,
-                      [&](APInt lhs, APInt rhs) { return lhs + rhs; });
+                      [&](APSInt lhs, APSInt rhs) { return lhs + rhs; });
   }
 };
 
@@ -122,9 +145,8 @@ struct EvalAndOpPattern : public OpRewritePattern<AndOp> {
     if (!resultType.getElementType().isInteger(1))
       return rewriter.notifyMatchFailure(op, "expected boolean element type");
 
-    return evalBinary(rewriter, op, [&](APInt lhsInt, APInt rhsInt) {
-      auto result = lhsInt != 0 && rhsInt != 0;
-      return APInt(/*numBits=*/1, result);
+    return evalBinary(rewriter, op, [&](APSInt lhsInt, APSInt rhsInt) {
+      return getAPSInt(resultType.getElementType(), lhsInt != 0 && rhsInt != 0);
     });
   }
 };
@@ -137,13 +159,13 @@ struct EvalBroadcastInDimOpPattern : public OpRewritePattern<BroadcastInDimOp> {
     if (!operandType.hasRank() || operandType.getRank() != 0)
       return rewriter.notifyMatchFailure(op, "expected 0-dimensional type");
 
-    SmallVector<APInt> operand;
+    SmallVector<APSInt> operand;
     if (failed(hlo::matchInts(op.getOperand(), operand)))
       return rewriter.notifyMatchFailure(op, "expected constant operands");
     auto scalar = operand[0];
 
     rewriter.replaceOpWithNewOp<ConstantOp>(
-        op, DenseIntElementsAttr::get(op.getType(), scalar));
+        op, getTensorAttr(op.getType(), scalar));
     return success();
   }
 };
@@ -153,8 +175,7 @@ struct EvalCompareOpPattern : public OpRewritePattern<CompareOp> {
   LogicalResult matchAndRewrite(CompareOp op,
                                 PatternRewriter& rewriter) const override {
     auto resultType = op.getType();
-    auto isResultUnsigned = resultType.getElementType().isUnsignedInteger();
-    return evalBinary(rewriter, op, [&](APInt lhs, APInt rhs) {
+    return evalBinary(rewriter, op, [&](APSInt lhs, APSInt rhs) {
       bool result;
       switch (op.getComparisonDirection()) {
         case ComparisonDirection::EQ:
@@ -164,19 +185,19 @@ struct EvalCompareOpPattern : public OpRewritePattern<CompareOp> {
           result = lhs != rhs;
           break;
         case ComparisonDirection::GE:
-          result = isResultUnsigned ? lhs.uge(rhs) : lhs.sge(rhs);
+          result = lhs >= rhs;
           break;
         case ComparisonDirection::GT:
-          result = isResultUnsigned ? lhs.ugt(rhs) : lhs.sgt(rhs);
+          result = lhs > rhs;
           break;
         case ComparisonDirection::LE:
-          result = isResultUnsigned ? lhs.ule(rhs) : lhs.sle(rhs);
+          result = lhs <= rhs;
           break;
         case ComparisonDirection::LT:
-          result = isResultUnsigned ? lhs.ult(rhs) : lhs.slt(rhs);
+          result = lhs < rhs;
           break;
       }
-      return APInt(/*numBits=*/1, result);
+      return getAPSInt(resultType.getElementType(), result);
     });
   }
 };
@@ -189,14 +210,14 @@ struct EvalConcatenateOpPattern : public OpRewritePattern<ConcatenateOp> {
     if (!resultType.hasRank() || op.getDimension() != 0)
       return rewriter.notifyMatchFailure(op, "expected dimension = 0");
 
-    SmallVector<APInt> result;
+    SmallVector<APSInt> result;
     for (Value operand : op->getOperands()) {
       if (failed(hlo::matchInts(operand, result)))
         return rewriter.notifyMatchFailure(op, "expected constant operands");
     }
 
-    rewriter.replaceOpWithNewOp<ConstantOp>(
-        op, DenseIntElementsAttr::get(resultType, result));
+    rewriter.replaceOpWithNewOp<ConstantOp>(op,
+                                            getTensorAttr(resultType, result));
     return success();
   }
 };
@@ -205,15 +226,13 @@ struct EvalConvertOpPattern : public OpRewritePattern<ConvertOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(ConvertOp op,
                                 PatternRewriter& rewriter) const override {
-    auto operandType = op.getOperand().getType();
-    auto isOperandUnsigned = operandType.getElementType().isUnsignedInteger();
     auto resultType = op.getType();
-    if (!resultType.getElementType().isIntOrIndex())
+    if (!resultType.getElementType().isa<IntegerType>())
       return rewriter.notifyMatchFailure(op,
                                          "expected integer result tensor type");
     auto resultBitwidth = resultType.getElementType().getIntOrFloatBitWidth();
-    return evalUnary(rewriter, op, [&](APInt operand) {
-      return APSInt(operand, isOperandUnsigned).extOrTrunc(resultBitwidth);
+    return evalUnary(rewriter, op, [&](APSInt operand) {
+      return operand.extOrTrunc(resultBitwidth);
     });
   }
 };
@@ -222,11 +241,8 @@ struct EvalDivOpPattern : public OpRewritePattern<DivOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(DivOp op,
                                 PatternRewriter& rewriter) const override {
-    auto resultType = op.getType();
-    auto isResultUnsigned = resultType.getElementType().isUnsignedInteger();
-    return evalBinary(rewriter, op, [&](APInt lhs, APInt rhs) {
-      return isResultUnsigned ? lhs.udiv(rhs) : lhs.sdiv(rhs);
-    });
+    return evalBinary(rewriter, op,
+                      [&](APSInt lhs, APSInt rhs) { return lhs / rhs; });
   }
 };
 
@@ -252,11 +268,8 @@ struct EvalMaxOpPattern : public OpRewritePattern<MaxOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(MaxOp op,
                                 PatternRewriter& rewriter) const override {
-    auto resultType = op.getType();
-    auto isResultUnsigned = resultType.getElementType().isUnsignedInteger();
-    return evalBinary(rewriter, op, [&](APInt lhs, APInt rhs) {
-      return isResultUnsigned ? llvm::APIntOps::umax(lhs, rhs)
-                              : llvm::APIntOps::smax(lhs, rhs);
+    return evalBinary(rewriter, op, [&](APSInt lhs, APSInt rhs) {
+      return lhs >= rhs ? lhs : rhs;
     });
   }
 };
@@ -266,7 +279,7 @@ struct EvalMulOpPattern : public OpRewritePattern<MulOp> {
   LogicalResult matchAndRewrite(MulOp op,
                                 PatternRewriter& rewriter) const override {
     return evalBinary(rewriter, op,
-                      [&](APInt lhs, APInt rhs) { return lhs * rhs; });
+                      [&](APSInt lhs, APSInt rhs) { return lhs * rhs; });
   }
 };
 
@@ -274,11 +287,8 @@ struct EvalRemOpPattern : public OpRewritePattern<RemOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(RemOp op,
                                 PatternRewriter& rewriter) const override {
-    auto resultType = op.getType();
-    auto isResultUnsigned = resultType.getElementType().isUnsignedInteger();
-    return evalBinary(rewriter, op, [&](APInt lhs, APInt rhs) {
-      return isResultUnsigned ? lhs.urem(rhs) : lhs.srem(rhs);
-    });
+    return evalBinary(rewriter, op,
+                      [&](APSInt lhs, APSInt rhs) { return lhs % rhs; });
   }
 };
 
@@ -298,20 +308,20 @@ struct EvalSelectOpPattern : public OpRewritePattern<SelectOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(SelectOp op,
                                 PatternRewriter& rewriter) const override {
-    SmallVector<APInt> pred, onTrue, onFalse;
+    SmallVector<APSInt> pred, onTrue, onFalse;
     if (failed(hlo::matchInts(op.getPred(), pred)) ||
         failed(hlo::matchInts(op.getOnTrue(), onTrue)) ||
         failed(hlo::matchInts(op.getOnFalse(), onFalse)))
       return rewriter.notifyMatchFailure(op, "expected constant operands");
 
-    SmallVector<APInt> result;
+    SmallVector<APSInt> result;
     for (auto [predEl, onTrueEl, onFalseEl] :
          llvm::zip(pred, onTrue, onFalse)) {
       result.push_back(predEl != 0 ? onTrueEl : onFalseEl);
     }
 
     rewriter.replaceOpWithNewOp<ConstantOp>(
-        op, DenseIntElementsAttr::get(op.getType(), result));
+        op, getTensorAttr(op.getType(), result));
     return success();
   }
 };
@@ -321,11 +331,10 @@ struct EvalSignOpPattern : public OpRewritePattern<SignOp> {
   LogicalResult matchAndRewrite(SignOp op,
                                 PatternRewriter& rewriter) const override {
     auto resultType = op.getType();
-    if (!resultType.getElementType().isIntOrIndex())
+    if (!resultType.getElementType().isa<IntegerType>())
       return rewriter.notifyMatchFailure(op,
                                          "expected integer result tensor type");
-    auto resultBitwidth = resultType.getElementType().getIntOrFloatBitWidth();
-    return evalUnary(rewriter, op, [&](APInt operand) {
+    return evalUnary(rewriter, op, [&](APSInt operand) {
       int64_t result;
       if (operand.isNegative())
         result = -1;
@@ -333,7 +342,7 @@ struct EvalSignOpPattern : public OpRewritePattern<SignOp> {
         result = 0;
       else
         result = 1;
-      return APInt(resultBitwidth, result, /*isSigned=*/true);
+      return getAPSInt(resultType.getElementType(), result);
     });
   }
 };
@@ -346,20 +355,20 @@ struct EvalSliceOpPattern : public OpRewritePattern<SliceOp> {
     if (!resultType.hasRank() || resultType.getRank() != 1)
       return rewriter.notifyMatchFailure(op, "expected 1-dimensional type");
 
-    SmallVector<int64_t> operand;
+    SmallVector<APSInt> operand;
     if (failed(hlo::matchInts(op.getOperand(), operand)))
       return rewriter.notifyMatchFailure(op, "expected constant operand");
 
     int64_t start = op.getStartIndices().getValues<int64_t>()[0];
     int64_t limit = op.getLimitIndices().getValues<int64_t>()[0];
     int64_t stride = op.getStrides().getValues<int64_t>()[0];
-    SmallVector<int64_t> result;
+    SmallVector<APSInt> result;
     for (auto i = start; i < limit; i += stride) {
       result.push_back(operand[i]);
     }
 
-    rewriter.replaceOpWithNewOp<ConstantOp>(
-        op, DenseIntElementsAttr::get(resultType, result));
+    rewriter.replaceOpWithNewOp<ConstantOp>(op,
+                                            getTensorAttr(resultType, result));
     return success();
   }
 };
@@ -369,7 +378,7 @@ struct EvalSubtractOpPattern : public OpRewritePattern<SubtractOp> {
   LogicalResult matchAndRewrite(SubtractOp op,
                                 PatternRewriter& rewriter) const override {
     return evalBinary(rewriter, op,
-                      [&](APInt lhs, APInt rhs) { return lhs - rhs; });
+                      [&](APSInt lhs, APSInt rhs) { return lhs - rhs; });
   }
 };
 

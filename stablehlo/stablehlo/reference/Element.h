@@ -150,14 +150,23 @@ Element atan2(const Element &e1, const Element &e2);
 /// individually equal modulo the tolerance.
 Element areApproximatelyEqual(const Element &e1, const Element &e2);
 
+/// Returns cube root of Element object.
+Element cbrt(const Element &e);
+
 /// Returns ceil of Element object.
 Element ceil(const Element &e);
+
+/// Returns a complex type Element object.
+Element complex(const Element &e1, const Element &e2);
 
 /// Returns cosine of Element object.
 Element cosine(const Element &e);
 
 /// Returns exponential of Element object.
 Element exponential(const Element &el);
+
+/// Returns exponential_minus_one of Element object.
+Element exponentialMinusOne(const Element &el);
 
 /// Returns floor of Element object.
 Element floor(const Element &e);
@@ -171,6 +180,9 @@ Element isFinite(const Element &el);
 
 /// Returns log of Element object.
 Element log(const Element &el);
+
+/// Returns log1p of Element object.
+Element logPlusOne(const Element &el);
 
 /// Returns logistic of Element object.
 Element logistic(const Element &el);

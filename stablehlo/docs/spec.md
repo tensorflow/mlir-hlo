@@ -1471,9 +1471,11 @@ Performs element-wise cubic root operation on `operand` tensor and produces a
 
 ```mlir
 // %operand: [0.0, 1.0, 8.0, 27.0]
-%result = "stablehlo.cbrt"(%operand) : (tensor<4xf32>) -> tensor<4xf32>
+%result = "stablehlo.cbrt"(%operand) : (tensor<4xf64>) -> tensor<4xf64>
 // %result: [0.0, 1.0, 2.0, 3.0]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_cbrt.mlir)
 
 ### ceil
 
@@ -1786,9 +1788,11 @@ imaginary values, `lhs` and `rhs`, and produces a `result` tensor.
 ```mlir
 // %lhs: [1.0, 3.0]
 // %rhs: [2.0, 4.0]
-%result = "stablehlo.complex"(%lhs, %rhs) : (tensor<2xf32>, tensor<2xf32>) -> tensor<2xcomplex<f32>>
+%result = "stablehlo.complex"(%lhs, %rhs) : (tensor<2xf64>, tensor<2xf64>) -> tensor<2xcomplex<f64>>
 // %result: [(1.0, 2.0), (3.0, 4.0)]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_complex.mlir)
 
 ### concatenate
 
@@ -2594,9 +2598,11 @@ produces a `result` tensor. Depending on the element type, does the following:
 
 ```mlir
 // %operand: [0.0, 1.0]
-%result = "stablehlo.exponential_minus_one"(%operand) : (tensor<2xf32>) -> tensor<2xf32>
+%result = "stablehlo.exponential_minus_one"(%operand) : (tensor<2xf64>) -> tensor<2xf64>
 // %result: [0.0, 1.71828187]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_exponential_minus_one.mlir)
 
 ### fft
 
@@ -3216,10 +3222,12 @@ produces a `result` tensor. Depending on the element type, does the following:
 #### Examples
 
 ```mlir
-// %operand: [-2.0, -0.0, -0.999, 7.0, 6.38905621, 15.0]
-%result = "stablehlo.log_plus_one"(%operand) : (tensor<6xf32>) -> tensor<6xf32>
-// %result: [-nan, 0.0, -6.90776825, 2.07944155, 2.0, 2.77258873]
+// %operand: [0.0, -0.999, 7.0, 6.38905621, 15.0]
+%result = "stablehlo.log_plus_one"(%operand) : (tensor<5xf64>) -> tensor<5xf64>
+// %result: [0.0, -6.90776825, 2.07944155, 2.0, 2.77258873]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_log_plus_one.mlir)
 
 ### logistic
 

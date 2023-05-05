@@ -86,6 +86,10 @@ SmallVector<Tensor> eval(
       auto branches = caseOp.getBranches();
       auto results = evalCaseOp(index, branches, scope);
       scope.add(op.getResults(), {results});
+    } else if (auto cbrtOp = dyn_cast<CbrtOp>(op)) {
+      auto operand = scope.find(cbrtOp.getOperand());
+      auto result = evalCbrtOp(operand, cbrtOp.getType());
+      scope.add(op.getResults(), {result});
     } else if (auto ceilOp = dyn_cast<CeilOp>(op)) {
       auto operand = scope.find(ceilOp.getOperand());
       auto result = evalCeilOp(operand, ceilOp.getType());
@@ -106,6 +110,11 @@ SmallVector<Tensor> eval(
       auto comparisonDirection = compareOp.getComparisonDirection();
       auto result =
           evalCompareOp(lhs, rhs, comparisonDirection, compareOp.getType());
+      scope.add(op.getResults(), {result});
+    } else if (auto complexOp = dyn_cast<ComplexOp>(op)) {
+      auto lhs = scope.find(complexOp.getLhs());
+      auto rhs = scope.find(complexOp.getRhs());
+      auto result = evalComplexOp(lhs, rhs, complexOp.getType());
       scope.add(op.getResults(), {result});
     } else if (auto concatenateOp = dyn_cast<ConcatenateOp>(op)) {
       auto operands = scope.find(concatenateOp.getOperands());
@@ -146,6 +155,10 @@ SmallVector<Tensor> eval(
       auto operand = scope.find(expOp.getOperand());
       auto result = evalExponentialOp(operand, expOp.getType());
       scope.add(op.getResults(), {result});
+    } else if (auto expm1Op = dyn_cast<Expm1Op>(op)) {
+      auto operand = scope.find(expm1Op.getOperand());
+      auto result = evalExpm1Op(operand, expm1Op.getType());
+      scope.add(op.getResults(), {result});
     } else if (auto floorOp = dyn_cast<FloorOp>(op)) {
       auto operand = scope.find(floorOp.getOperand());
       auto result = evalFloorOp(operand, floorOp.getType());
@@ -177,6 +190,10 @@ SmallVector<Tensor> eval(
     } else if (auto logOp = dyn_cast<LogOp>(op)) {
       auto operand = scope.find(logOp.getOperand());
       auto result = evalLogOp(operand, logOp.getType());
+      scope.add(op.getResults(), {result});
+    } else if (auto log1pOp = dyn_cast<Log1pOp>(op)) {
+      auto operand = scope.find(log1pOp.getOperand());
+      auto result = evalLog1pOp(operand, log1pOp.getType());
       scope.add(op.getResults(), {result});
     } else if (auto logisticOp = dyn_cast<LogisticOp>(op)) {
       auto operand = scope.find(logisticOp.getOperand());
@@ -408,6 +425,13 @@ SmallVector<Tensor> evalCaseOp(const Tensor &index, RegionRange branches,
   return eval(*branches[idx], {}, &scope);
 }
 
+Tensor evalCbrtOp(const Tensor &operand, ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it)
+    result.set(*it, cbrt(operand.get(*it)));
+  return result;
+}
+
 Tensor evalCeilOp(const Tensor &operand, ShapedType resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
@@ -453,6 +477,14 @@ Tensor evalCompareOp(const Tensor &lhs, const Tensor &rhs,
         break;
     }
   }
+  return result;
+}
+
+Tensor evalComplexOp(const Tensor &lhs, const Tensor &rhs,
+                     ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it)
+    result.set(*it, complex(lhs.get(*it), rhs.get(*it)));
   return result;
 }
 
@@ -541,6 +573,13 @@ Tensor evalDynamicUpdateSliceOp(const Tensor &operand, const Tensor &update,
   return result;
 }
 
+Tensor evalExpm1Op(const Tensor &operand, ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it)
+    result.set(*it, exponentialMinusOne(operand.get(*it)));
+  return result;
+}
+
 Tensor evalExponentialOp(const Tensor &operand, ShapedType resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
@@ -602,6 +641,13 @@ Tensor evalIsFiniteOp(const Tensor &operand, ShapedType resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
     result.set(*it, isFinite(operand.get(*it)));
+  return result;
+}
+
+Tensor evalLog1pOp(const Tensor &operand, ShapedType resultType) {
+  Tensor result(resultType);
+  for (auto it = result.index_begin(); it != result.index_end(); ++it)
+    result.set(*it, logPlusOne(operand.get(*it)));
   return result;
 }
 

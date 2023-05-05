@@ -35,12 +35,15 @@ Tensor evalBroadcastInDimOp(const Tensor &operand, Axes broadcastDimensions,
                             ShapedType resultType);
 SmallVector<Tensor> evalCaseOp(const Tensor &index, RegionRange branches,
                                Scope &scope);
+Tensor evalCbrtOp(const Tensor &operand, ShapedType resultType);
 Tensor evalCeilOp(const Tensor &operand, ShapedType resultType);
 Tensor evalClampOp(const Tensor &min, const Tensor &operand, const Tensor &max,
                    ShapedType resultType);
 Tensor evalClzOp(const Tensor &operand, ShapedType resultType);
 Tensor evalCompareOp(const Tensor &lhs, const Tensor &rhs,
                      ComparisonDirection comparisonDirection,
+                     ShapedType resultType);
+Tensor evalComplexOp(const Tensor &lhs, const Tensor &rhs,
                      ShapedType resultType);
 Tensor evalConcatenateOp(ArrayRef<Tensor> inputs, Axis dimension,
                          ShapedType resultType);
@@ -54,6 +57,7 @@ Tensor evalDynamicSliceOp(const Tensor &operand, ArrayRef<Tensor> startIndices,
 Tensor evalDynamicUpdateSliceOp(const Tensor &operand, const Tensor &update,
                                 ArrayRef<Tensor> startIndices,
                                 ShapedType resultType);
+Tensor evalExpm1Op(const Tensor &operand, ShapedType resultType);
 Tensor evalExponentialOp(const Tensor &operand, ShapedType resultType);
 Tensor evalFloorOp(const Tensor &operand, ShapedType resultType);
 Tensor evalGetDimensionSizeOp(const Tensor &operand, Axis dimension,
@@ -63,6 +67,7 @@ SmallVector<Tensor> evalIfOp(const Tensor &pred, Region &trueBranch,
 Tensor evalImagOp(const Tensor &operand, ShapedType resultType);
 Tensor evalIotaOp(Axis iotaDimension, ShapedType resultType);
 Tensor evalIsFiniteOp(const Tensor &operand, ShapedType resultType);
+Tensor evalLog1pOp(const Tensor &operand, ShapedType resultType);
 Tensor evalLogOp(const Tensor &operand, ShapedType resultType);
 Tensor evalLogisticOp(const Tensor &operand, ShapedType resultType);
 Tensor evalMapOp(ArrayRef<Tensor> inputs, Region &computation, Scope &scope,
