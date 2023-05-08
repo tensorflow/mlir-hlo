@@ -1,7 +1,6 @@
 // RUN: mlir-hlo-opt %s --legalize-mhlo-to-thlo \
-// RUN: --xla-cpu-transform-elementwise --gml-st-rewrite-forall-ops --scalarize \
+// RUN: --gml-tile-by-one --gml-st-rewrite-forall-ops --scalarize \
 // RUN: --empty-tensor-to-alloc-tensor --hlo-one-shot-bufferize \
-// RUN: --gml-st-inline-fusion-clusters \
 // RUN: --convert-scf-to-cf --generic-host-to-llvm | \
 // RUN: mlir-cpu-runner \
 // RUN: -e main -entry-point-result=void \
