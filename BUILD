@@ -761,6 +761,7 @@ cc_library(
         ":thlo_bufferizable_op_interface",
         ":type_conversion",
         ":unfuse_batch_norm",
+        "//stablehlo:base",
         "//stablehlo:chlo_ops",
         "//stablehlo:stablehlo_ops",
         "@llvm-project//llvm:Support",
