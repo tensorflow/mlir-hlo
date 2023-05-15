@@ -23,4 +23,6 @@ def get_earliest_forward_compatible_version():
   """Return the earliest StableHLO version that the current StableHLO version
     is still forward compatible with.
   """
-  return "0.9.0"
+  # TODO(b/282232437): Delete this TensorFlow-only API, now that we have an OSS
+  # equivalent that does the same thing.
+  return get_minimum_version()

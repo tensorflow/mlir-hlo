@@ -1474,7 +1474,7 @@ func.func @cholesky_invalid_rank(%arg0: tensor<1xf32>) -> tensor<1xf32> {
 // -----
 
 func.func @cholesky_invalid_elt(%arg0: tensor<1x2x2xi32>) -> tensor<1x2x2xi32> {
-  // expected-error@+1 {{operand #0 must be tensor of f8E4M3B11FNUZ type or f8E4M3FN type or f8E4M3FNUZ type or f8E5M2 type or f8E5M2FNUZ type or 16-bit float or 32-bit float or 64-bit float or bfloat16 type or complex type with 32-bit float or 64-bit float elements values, but got 'tensor<1x2x2xi32>}}
+  // expected-error@+1 {{operand #0 must be tensor of f8E4M3B11FNUZ type or f8E4M3FN type or f8E4M3FNUZ type or f8E5M2 type or f8E5M2FNUZ type or 16-bit float or 32-bit float or 64-bit float or bfloat16 type or complex type with 32-bit float or 64-bit float elements values, but got 'tensor<1x2x2xi32>'}}
   %0 = "stablehlo.cholesky"(%arg0) { lower = true } : (tensor<1x2x2xi32>) -> tensor<1x2x2xi32>
   func.return %0: tensor<1x2x2xi32>
 }
@@ -4805,9 +4805,10 @@ func.func @error_batch_norm_train(%input: tensor<2x2x2x2xf32>, %scale: tensor<3x
 
 // CHECK-LABEL: @batch_norm_inference
 func.func @batch_norm_inference(%input: tensor<4x256xf32>, %scale: tensor<256xf32>, %offset: tensor<256xf32>, %mean: tensor<256xf32>, %variance: tensor<256xf32>) -> (tensor<4x256xf32>) {
-  %0 = "stablehlo.batch_norm_inference" (%input, %scale, %offset, %mean, %variance) {epsilon = 1.001000e-05 : f32, feature_index = 1 : i64} :
-      (tensor<4x256xf32>, tensor<256xf32>, tensor<256xf32>, tensor<256xf32>,
-        tensor<256xf32>) -> tensor<4x256xf32>
+  %0 = "stablehlo.batch_norm_inference" (%input, %scale, %offset, %mean, %variance) {
+    epsilon = 1.001000e-05 : f32,
+    feature_index = 1 : i64
+  } : (tensor<4x256xf32>, tensor<256xf32>, tensor<256xf32>, tensor<256xf32>, tensor<256xf32>) -> tensor<4x256xf32>
   func.return %0 : tensor<4x256xf32>
 }
 
@@ -4816,41 +4817,45 @@ func.func @batch_norm_inference(%input: tensor<4x256xf32>, %scale: tensor<256xf3
 // CHECK-LABEL: @batch_norm_inference_dynamic
 func.func @batch_norm_inference_dynamic(%input: tensor<4x?xf32>, %scale: tensor<?xf32>, %offset: tensor<?xf32>, %mean: tensor<?xf32>, %variance: tensor<?xf32>) -> (tensor<4x?xf32>) {
   %0 = "stablehlo.batch_norm_inference" (%input, %scale, %offset, %mean, %variance) {
-    epsilon = 1.001000e-05 : f32, feature_index = 1 : i64
+    epsilon = 1.001000e-05 : f32,
+    feature_index = 1 : i64
   } : (tensor<4x?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>, tensor<?xf32>) -> tensor<4x?xf32>
   func.return %0 : tensor<4x?xf32>
 }
 
 // -----
 
-func.func @error_batch_norm_inference(%input: tensor<4x256xf32>, %scale: tensor<256xf32>, %offset: tensor<256xf32>, %mean: tensor<256xf32>, %variance: tensor<256xf32>) -> (tensor<4x256xf32>) {
-  // expected-error@+2 {{failed to infer returned types}}
-  // expected-error@+1 {{expects featureIndex to be smaller than the rank of multi-dimensional operands; got featureIndex 2, and rank 2.}}
-  %0 = "stablehlo.batch_norm_inference" (%input, %scale, %offset, %mean, %variance) {epsilon = 1.001000e-05 : f32, feature_index = 2 : i64} :
-      (tensor<4x256xf32>, tensor<256xf32>, tensor<256xf32>, tensor<256xf32>,
-        tensor<256xf32>) -> tensor<4x256xf32>
-  func.return %0 : tensor<4x256xf32>
-}
-
-// -----
-
-func.func @error_batch_norm_inference(%input: tensor<4x256xf32>, %scale: tensor<256xf32>, %offset: tensor<256xf32>, %mean: tensor<256xf32>, %variance: tensor<256xf32>) -> (tensor<4x256xf32>) {
+func.func @batch_norm_inference_c1(%input: tensor<4x256xf32>, %scale: tensor<256xf32>, %offset: tensor<256xf32>, %mean: tensor<256xf32>, %variance: tensor<256xf32>) -> (tensor<4x256xf32>) {
   // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{expects featureIndex to be a non-negative number, got -1.}}
-  %0 = "stablehlo.batch_norm_inference" (%input, %scale, %offset, %mean, %variance) {epsilon = 1.001000e-05 : f32, feature_index = -1 : i64} :
-      (tensor<4x256xf32>, tensor<256xf32>, tensor<256xf32>, tensor<256xf32>,
-        tensor<256xf32>) -> tensor<4x256xf32>
+  %0 = "stablehlo.batch_norm_inference" (%input, %scale, %offset, %mean, %variance) {
+    epsilon = 1.001000e-05 : f32,
+    feature_index = -1 : i64
+  } : (tensor<4x256xf32>, tensor<256xf32>, tensor<256xf32>, tensor<256xf32>, tensor<256xf32>) -> tensor<4x256xf32>
   func.return %0 : tensor<4x256xf32>
 }
 
 // -----
 
-func.func @error_batch_norm_inference(%input: tensor<4x256xf32>, %scale: tensor<25xf32>, %offset: tensor<25xf32>, %mean: tensor<25xf32>, %variance: tensor<25xf32>) -> (tensor<4x256xf32>) {
+func.func @batch_norm_inference_c1(%input: tensor<4x256xf32>, %scale: tensor<256xf32>, %offset: tensor<256xf32>, %mean: tensor<256xf32>, %variance: tensor<256xf32>) -> (tensor<4x256xf32>) {
+  // expected-error@+2 {{failed to infer returned types}}
+  // expected-error@+1 {{expects featureIndex to be smaller than the rank of multi-dimensional operands; got featureIndex 2, and rank 2.}}
+  %0 = "stablehlo.batch_norm_inference" (%input, %scale, %offset, %mean, %variance) {
+    epsilon = 1.001000e-05 : f32,
+    feature_index = 2 : i64
+  } : (tensor<4x256xf32>, tensor<256xf32>, tensor<256xf32>, tensor<256xf32>, tensor<256xf32>) -> tensor<4x256xf32>
+  func.return %0 : tensor<4x256xf32>
+}
+
+// -----
+
+func.func @error_batch_norm_inference_c3_c4_c5_c6(%input: tensor<4x256xf32>, %scale: tensor<25xf32>, %offset: tensor<25xf32>, %mean: tensor<25xf32>, %variance: tensor<25xf32>) -> (tensor<4x256xf32>) {
   // expected-error@+2 {{failed to infer returned types}}
   // expected-error@+1 {{expects the size of single-dimensional operands to be compatible with feature count, but the size of single-dimensional operands is 25 and the feature count is 256.}}
-  %0 = "stablehlo.batch_norm_inference" (%input, %scale, %offset, %mean, %variance) {epsilon = 1.001000e-05 : f32, feature_index = 1 : i64} :
-      (tensor<4x256xf32>, tensor<25xf32>, tensor<25xf32>, tensor<25xf32>,
-        tensor<25xf32>) -> tensor<4x256xf32>
+  %0 = "stablehlo.batch_norm_inference" (%input, %scale, %offset, %mean, %variance) {
+    epsilon = 1.001000e-05 : f32,
+    feature_index = 1 : i64
+  } : (tensor<4x256xf32>, tensor<25xf32>, tensor<25xf32>, tensor<25xf32>, tensor<25xf32>) -> tensor<4x256xf32>
   func.return %0 : tensor<4x256xf32>
 }
 
@@ -5732,16 +5737,24 @@ func.func @invalid_dimension_attr(%arg0: tensor<?x?xf32, #stablehlo.type_extensi
 
 // -----
 
-// CHECK-LABEL: func @f8e4m3fn
-func.func @f8e4m3fn(%arg0: tensor<f16>) -> tensor<f8E4M3FN> {
+// CHECK-LABEL: func @convert
+func.func @convert(%arg0: tensor<f64>) -> tensor<bf16> {
+  %0 = "stablehlo.convert"(%arg0) : (tensor<f64>) -> tensor<bf16>
+  func.return %0 : tensor<bf16>
+}
+
+// -----
+
+// CHECK-LABEL: func @convert_f8e4m3fn
+func.func @convert_f8e4m3fn(%arg0: tensor<f16>) -> tensor<f8E4M3FN> {
   %0 = "stablehlo.convert"(%arg0) : (tensor<f16>) -> tensor<f8E4M3FN>
   func.return %0 : tensor<f8E4M3FN>
 }
 
 // -----
 
-// CHECK-LABEL: func @f8e5m2
-func.func @f8e5m2(%arg0: tensor<f16>) -> tensor<f8E5M2> {
+// CHECK-LABEL: func @convert_f8e5m2
+func.func @convert_f8e5m2(%arg0: tensor<f16>) -> tensor<f8E5M2> {
   %0 = "stablehlo.convert"(%arg0) : (tensor<f16>) -> tensor<f8E5M2>
   func.return %0 : tensor<f8E5M2>
 }
