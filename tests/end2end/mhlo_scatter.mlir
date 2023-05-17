@@ -3,8 +3,8 @@
 // RUN: --hlo-legalize-to-linalg  --gml-tile-by-one \
 // RUN: --gml-st-rewrite-forall-ops --scalarize -cse --canonicalize |\
 // RUN: mlir-hlo-opt \
-// RUN: --hlo-one-shot-bufferize --canonicalize -cse \
-// RUN: --convert-bufferization-to-memref --convert-linalg-to-loops \
+// RUN: --empty-tensor-to-alloc-tensor --hlo-one-shot-bufferize --canonicalize \
+// RUN: --cse --convert-bufferization-to-memref --convert-linalg-to-loops \
 // RUN: --buffer-results-to-out-params --convert-scf-to-cf \
 // RUN: --generic-host-to-llvm -cse --canonicalize |\
 // RUN: mlir-cpu-runner \
