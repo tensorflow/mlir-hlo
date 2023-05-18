@@ -18,6 +18,7 @@ limitations under the License.
 #include "stablehlo/integrations/c/StablehloAttributes.h"
 #include "stablehlo/integrations/c/StablehloDialect.h"
 #include "stablehlo/integrations/c/StablehloTypes.h"
+#include "stablehlo/integrations/python/PortableApi.h"
 
 namespace py = pybind11;
 
@@ -480,10 +481,7 @@ PYBIND11_MODULE(_stablehlo, m) {
   //
   // Portable APIs
   //
-  // TODO(b/282235236): Replace with `stablehlo::AddPortableApi(m)`.
-  // Cannot use AddPortableApi right away because that would break JAX.
-  m.def("get_current_version", []() { return "0.11.3"; });
-  m.def("get_minimum_version", []() { return "0.9.0"; });
+  mlir::stablehlo::AddPortableApi(m);
 
   //
   // Serialization APIs.
