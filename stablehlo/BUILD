@@ -858,8 +858,10 @@ cc_binary(
         ":register",
         ":stablehlo_passes",
         ":test_utils",
+        ":tosa_passes",
         "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:MlirOptLib",
+        "@llvm-project//mlir:TosaDialect",
     ],
 )
 
@@ -922,6 +924,65 @@ cc_library(
         "@llvm-project//mlir:ShapeDialect",
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:Transforms",
+    ],
+)
+
+gentbl_cc_library(
+    name = "tosa_pass_inc_gen",
+    strip_include_prefix = ".",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=StablehloTOSATransforms",
+            ],
+            "stablehlo/conversions/tosa/transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "stablehlo/conversions/tosa/transforms/Passes.td",
+    deps = ["@llvm-project//mlir:PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "tosa_passes",
+    srcs = [
+        "stablehlo/conversions/tosa/transforms/StablehloLegalizeToTosa.cpp",
+        "stablehlo/conversions/tosa/transforms/StablehloPrepareForTosa.cpp",
+    ],
+    hdrs = [
+        "stablehlo/conversions/tosa/transforms/Passes.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":stablehlo_ops",
+        ":tosa_pass_inc_gen",
+        ":tosa_pdll_inc_gen",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Parser",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:QuantOps",
+        "@llvm-project//mlir:TosaDialect",
+        "@llvm-project//mlir:Transforms",
+    ],
+)
+
+gentbl_cc_library(
+    name = "tosa_pdll_inc_gen",
+    strip_include_prefix = ".",
+    tbl_outs = [
+        (
+            ["-x=cpp"],
+            "stablehlo/conversions/tosa/transforms/StablehloLegalizeToTosa.pdll.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-pdll",
+    td_file = "stablehlo/conversions/tosa/transforms/StablehloLegalizeToTosa.pdll",
+    deps = [
+        ":stablehlo_ops_td_files",
+        "@llvm-project//mlir:OpBaseTdFiles",
+        "@llvm-project//mlir:TosaDialectTdFiles",
     ],
 )
 
