@@ -133,9 +133,4 @@ add_dependencies(check-stablehlo-ci check-stablehlo-slow)
 add_custom_target(check-stablehlo-quick)
 add_dependencies(check-stablehlo-ci check-stablehlo-quick)
 
-# TODO(burmako): This target is here for compatibility with the integrate CI.
-# Should be cleaned up in the near future.
-add_custom_target(check-stablehlo)
-add_dependencies(check-stablehlo check-stablehlo-ci)
-
 add_subdirectory(stablehlo)
