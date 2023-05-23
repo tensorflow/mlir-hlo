@@ -762,6 +762,7 @@ cc_library(
     deps = [
         ":stablehlo_ops",
         ":stablehlo_passes",
+        ":version",
         ":vhlo_ops",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:BytecodeReader",
@@ -844,7 +845,9 @@ cc_binary(
         "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:Transforms",
         "@llvm-project//mlir:TranslateLib",
     ],
 )
@@ -872,6 +875,7 @@ filegroup(
         ":stablehlo-opt",
         ":stablehlo-translate",
         "@llvm-project//llvm:FileCheck",
+        "@llvm-project//llvm:not",
     ],
 )
 
