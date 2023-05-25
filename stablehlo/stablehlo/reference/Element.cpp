@@ -621,9 +621,25 @@ Element complex(const Element &e1, const Element &e2) {
                                      debugString(complexType).c_str()));
 }
 
+Element convert(Type type, const Element &e) {
+  if (isSupportedBooleanType(e.getType()))
+    return convert(type, e.getBooleanValue());
+  if (isSupportedSignedIntegerType(e.getType()))
+    return convert(type, e.getIntegerValue().getSExtValue());
+  if (isSupportedUnsignedIntegerType(e.getType()))
+    return convert(type, e.getIntegerValue().getZExtValue());
+  if (isSupportedFloatType(e.getType()))
+    return convert(type, e.getFloatValue());
+  if (isSupportedComplexType(e.getType()))
+    return convert(type, e.getComplexValue());
+  report_fatal_error(invalidArgument("Unsupported element type: %s",
+                                     debugString(e.getType()).c_str()));
+}
+
 Element convert(Type type, bool value) {
   if (isSupportedBooleanType(type)) return Element(type, value);
-  return convert(type, value ? 1UL : 0UL);
+  return convert(type,
+                 value ? static_cast<uint64_t>(1) : static_cast<uint64_t>(0));
 }
 
 Element convert(Type type, APSInt value) {
@@ -813,7 +829,7 @@ Element power(const Element &e1, const Element &e2) {
       if (base.abs().isOne())
         exponent = exponent.abs();
       else
-        return convert(type, 0L);
+        return convert(type, static_cast<int64_t>(0));
     }
     APInt result(base.getBitWidth(), 1, isSigned);
     while (!exponent.isZero()) {
@@ -901,9 +917,9 @@ Element sign(const Element &el) {
 
   if (isSupportedIntegerType(type)) {
     auto elVal = el.getIntegerValue();
-    if (elVal.isNegative()) return convert(type, -1L);
-    if (elVal.isZero()) return convert(type, 0L);
-    return convert(type, 1L);
+    if (elVal.isNegative()) return convert(type, static_cast<int64_t>(-1));
+    if (elVal.isZero()) return convert(type, static_cast<int64_t>(0));
+    return convert(type, static_cast<int64_t>(1));
   }
 
   if (isSupportedFloatType(type)) {

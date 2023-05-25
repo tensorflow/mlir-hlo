@@ -457,6 +457,7 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":reference_axes",
         ":reference_element",
         ":reference_errors",
         ":reference_index",
