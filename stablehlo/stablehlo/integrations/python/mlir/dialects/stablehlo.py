@@ -17,12 +17,3 @@
 # pylint: disable=wildcard-import,relative-beyond-top-level,g-import-not-at-top
 from ._stablehlo_ops_gen import *
 from .._mlir_libs._stablehlo import *
-
-
-def get_earliest_forward_compatible_version():
-  """Return the earliest StableHLO version that the current StableHLO version
-    is still forward compatible with.
-  """
-  # TODO(b/282232437): Delete this TensorFlow-only API, now that we have an OSS
-  # equivalent that does the same thing.
-  return get_minimum_version()
