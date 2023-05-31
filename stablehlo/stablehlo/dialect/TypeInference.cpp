@@ -219,19 +219,21 @@ LogicalResult verifyBatchNorm(std::optional<Location> location,
                               ValueRange multiDimOperands,
                               ValueRange singleDimOperands,
                               int64_t featureIndex) {
+  // batch_norm_grad_c3
   if (failed(verifyPairwiseCompatibleShapes(multiDimOperands.getTypes())))
     return emitOptionalError(
         location,
         "expects multi-dimensional operands to have compatible shapes.");
 
-  // batch_norm_inference_c3...batch_norm_inference_c6
+  // batch_norm_grad_c4, batch_norm_inference_c3...batch_norm_inference_c6,
+  // batch_norm_training_c3, batch_norm_training_c4
   if (failed(verifyPairwiseCompatibleShapes(singleDimOperands.getTypes())))
     return emitOptionalError(
         location,
         "expects single-dimensional operands to have compatible shapes.");
 
   auto multiDimType = multiDimOperands[0].getType().cast<RankedTensorType>();
-  // batch_norm_inference_c1, batch_norm_training_c1
+  // batch_norm_grad_c1, batch_norm_inference_c1, batch_norm_training_c1
   if (featureIndex >= multiDimType.getRank())
     return emitOptionalError(
         location,
@@ -239,7 +241,7 @@ LogicalResult verifyBatchNorm(std::optional<Location> location,
         "multi-dimensional operands; got featureIndex ",
         featureIndex, ", and rank ", multiDimType.getRank(), ".");
 
-  // batch_norm_inference_c1, batch_norm_training_c1
+  // batch_norm_grad_c1, batch_norm_inference_c1, batch_norm_training_c1
   if (featureIndex < 0)
     return emitOptionalError(location, "expects featureIndex to be a ",
                              "non-negative number, got ", featureIndex, ".");
@@ -248,8 +250,8 @@ LogicalResult verifyBatchNorm(std::optional<Location> location,
   const int64_t singleDimSize =
       singleDimOperands[0].getType().cast<RankedTensorType>().getDimSize(0);
 
-  // batch_norm_inference_c3...batch_norm_inference_c6, batch_norm_training_c3,
-  // batch_norm_training_c4
+  // batch_norm_grad_c5, batch_norm_inference_c3...batch_norm_inference_c6,
+  // batch_norm_training_c3, batch_norm_training_c4
   if (!verifyCompatibleDims(singleDimSize, featureCount))
     return emitOptionalError(
         location,
@@ -272,7 +274,7 @@ LogicalResult inferBatchNormOp(
 
   // Batch norm ops require operands to be ranked.
   auto multiDimType = multiDimOperands[0].getType().cast<RankedTensorType>();
-  // batch_norm_inference_c7, batch_norm_training_c7
+  // batch_norm_grad_c3, batch_norm_inference_c7, batch_norm_training_c7
   inferredReturnShapes.emplace_back(multiDimType.getShape(),
                                     multiDimType.getElementType(),
                                     multiDimType.getEncoding());
@@ -292,9 +294,9 @@ LogicalResult inferBatchNormOp(
       singleDimBounds.empty()
           ? nullptr
           : boundsToEncoding(multiDimType.getEncoding(), singleDimBounds));
-  // batch_norm_training_c5
+  // batch_norm_grad_c4, batch_norm_training_c5
   inferredReturnShapes.emplace_back(singleDimReturnShape);
-  // batch_norm_training_c6
+  // batch_norm_grad_c4, batch_norm_training_c6
   inferredReturnShapes.emplace_back(singleDimReturnShape);
   return success();
 }
@@ -533,18 +535,18 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
                                  ArrayRef<int64_t> allowedDimensions) {
   int64_t numInputs = inputTypes.size();
 
-  // reduce_c6, reduce_window_c13
+  // reduce_c6, reduce_window_c13, scatter_c15
   if (static_cast<int64_t>(block.getArguments().size()) != numInputs * 2)
     return emitOptionalError(loc, "Reduction-region must take ", numInputs * 2,
                              " parameters, but takes ",
                              block.getArguments().size(), " parameter(s)");
 
-  // reduce_c6, reduce_window_c13
+  // reduce_c6, reduce_window_c13, scatter_c15
   if (block.getTerminator()->getOperands().empty())
     return emitOptionalError(
         loc, "The reduction-region expected to return some value(s)");
 
-  // reduce_c6, reduce_window_c13
+  // reduce_c6, reduce_window_c13, scatter_c15
   if (static_cast<int64_t>(block.getTerminator()->getOperands().size()) !=
       numInputs)
     return emitOptionalError(loc, "Reduction-region here must produce ",
@@ -552,7 +554,7 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
                              block.getTerminator()->getOperands().size(),
                              " instead");
 
-  // reduce_c6, reduce_window_c13
+  // reduce_c6, reduce_window_c13, scatter_c15
   SmallVector<ShapedType> accumulatorSubShapes;
   for (Value retOperand : block.getTerminator()->getOperands()) {
     auto shapedTy = retOperand.getType().dyn_cast<ShapedType>();
@@ -566,7 +568,7 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
   }
 
   for (int64_t inputIdx = 0; inputIdx < numInputs; ++inputIdx) {
-    // reduce_c2, reduce_window_c13
+    // reduce_c2, reduce_window_c13, scatter_c15
     if (!compatibleShapeAndElementType(accumulatorSubShapes[inputIdx],
                                        block.getArgument(inputIdx).getType()))
       return emitOptionalError(
@@ -575,7 +577,7 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
           block.getArgument(inputIdx).getType(), " vs ",
           accumulatorSubShapes[inputIdx]);
 
-    // reduce_c2, reduce_window_c13
+    // reduce_c2, reduce_window_c13, scatter_c15
     if (!compatibleShapeAndElementType(
             accumulatorSubShapes[inputIdx],
             block.getArgument(numInputs + inputIdx).getType(),
@@ -587,7 +589,7 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
           block.getArgument(numInputs + inputIdx).getType(), " vs ",
           accumulatorSubShapes[inputIdx]);
 
-    // reduce_c6, reduce_window_c13, reduce_window_i2
+    // reduce_c6, reduce_window_c13, reduce_window_i2, scatter_c6, scatter_c15
     if (!compatibleShapeAndElementType(accumulatorSubShapes[inputIdx],
                                        initValueTypes[inputIdx],
                                        /*ignoreFpPrecision=*/true))
@@ -596,7 +598,7 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
           " differs from the op's corresponding init-value type: ",
           accumulatorSubShapes[inputIdx], " vs ", initValueTypes[inputIdx]);
 
-    // reduce_c6, reduce_window_c3
+    // reduce_c6, reduce_window_c3, scatter_c6, scatter_c15
     if (!tensorsHaveSameElType(
             inputTypes[inputIdx],
             block.getArgument(numInputs + inputIdx).getType(), true))
@@ -938,16 +940,6 @@ LogicalResult verifyConvolutionAttributes(
   return success();
 }
 
-/*
- * We intend to verify the following properties:
- * P1. The 'update_window_dims' must be valid indices of 'updates' tensor.
- * P2. The 'inserted_window_dims' must be valid indices of 'operand' tensor.
- * P3. Check if the rank-of('operand') == size-of('update_window_dims') +
- *     size-of('inserted_window_dims')
- * P4. size-of('scatter_dims_to_operand_dims') =
- *         'scatter_indices'['index_vector_dim'] &
- *     'scatter_dims_to_operand_dims' must be valid indices of 'operand' tensor.
- */
 LogicalResult validateScatterDimensionNumbers(
     ShapedType operandType, ArrayRef<int64_t> scatterIndicesShape,
     ShapedType updateType, bool operandTypeRanked,
@@ -955,17 +947,31 @@ LogicalResult validateScatterDimensionNumbers(
     ArrayRef<int64_t> updateWindowDims, ArrayRef<int64_t> insertedWindowDims,
     ArrayRef<int64_t> scatterDimsToOperandDims, int64_t indexVectorDim,
     std::optional<Location> loc) {
-  // P1.
+  // scatter_c2
+  if (operandTypeRanked) {
+    auto windowSize = updateWindowDims.size() + insertedWindowDims.size();
+    if (operandType.getRank() != static_cast<int64_t>(windowSize))
+      return emitOptionalError(loc,
+                               "Expects rank-of operand to match "
+                               "size-of('update_window_dims')  + "
+                               "size-of('inserted_window_dims') i.e. ",
+                               windowSize, " but got ", operandType.getRank(),
+                               ".");
+  }
+
+  // scatter_c7
   if (!llvm::is_sorted(updateWindowDims))
     return emitOptionalError(loc,
                              "Expects update_window_dims to be sorted; got: [",
                              updateWindowDims, "].");
 
+  // scatter_c7
   if (hasDuplicates(updateWindowDims))
     return emitOptionalError(loc,
                              "Expects update_window_dims to not repeat; got: [",
                              updateWindowDims, "].");
 
+  // scatter_c8
   if (updatesTypeRanked) {
     for (int64_t windowDim : updateWindowDims) {
       if (windowDim < 0 || windowDim >= updateType.getRank())
@@ -978,17 +984,19 @@ LogicalResult validateScatterDimensionNumbers(
     }
   }
 
-  // P2.
+  // scatter_c9
   if (!llvm::is_sorted(insertedWindowDims))
     return emitOptionalError(
         loc, "Expects inserted_window_dims to be sorted; got: [",
         insertedWindowDims, "].");
 
+  // scatter_c9
   if (hasDuplicates(insertedWindowDims))
     return emitOptionalError(
         loc, "Expects inserted_window_dims to not repeat; got: [",
         insertedWindowDims, "].)");
 
+  // scatter_c10
   if (operandTypeRanked) {
     for (int64_t insertedDim : insertedWindowDims)
       if (insertedDim < 0 || insertedDim >= operandType.getRank())
@@ -999,20 +1007,17 @@ LogicalResult validateScatterDimensionNumbers(
             operandType.getRank(), "). got: ", insertedDim, ".");
   }
 
-  // P3.
-  if (operandTypeRanked) {
-    auto windowSize = updateWindowDims.size() + insertedWindowDims.size();
-    if (operandType.getRank() != static_cast<int64_t>(windowSize))
-      return emitOptionalError(loc,
-                               "Expects rank-of operand to match "
-                               "size-of('update_window_dims')  + "
-                               "size-of('inserted_window_dims') i.e. ",
-                               windowSize, " but got ", operandType.getRank(),
-                               ".");
-  }
-
-  // P4.
+  // scatter_c11
   if (scatterIndicesTypeRanked) {
+    if (indexVectorDim == static_cast<int64_t>(scatterIndicesShape.size()) &&
+        scatterDimsToOperandDims.size() != 1)
+      return emitOptionalError(
+          loc, "Scatter op has ", scatterDimsToOperandDims.size(),
+          " elements in scatter_dims_to_operand_dims and "
+          "the bound of dimension index_vector_dim=",
+          indexVectorDim,
+          " of scatter_indices is 1. These two numbers must be equal.");
+
     if (!isDynamicDimSize(scatterIndicesShape[indexVectorDim]) &&
         static_cast<int64_t>(scatterDimsToOperandDims.size()) !=
             scatterIndicesShape[indexVectorDim])
@@ -1025,6 +1030,13 @@ LogicalResult validateScatterDimensionNumbers(
                                ". These two numbers must be equal.");
   }
 
+  // scatter_c12
+  if (hasDuplicates(scatterDimsToOperandDims))
+    return emitOptionalError(
+        loc, "Expects scatter_dims_to_operand_dims to not repeat; got: [",
+        scatterDimsToOperandDims, "].");
+
+  // scatter_c13
   if (operandTypeRanked) {
     for (int64_t i = 0;
          i < static_cast<int64_t>(scatterDimsToOperandDims.size()); ++i) {
@@ -1038,38 +1050,21 @@ LogicalResult validateScatterDimensionNumbers(
     }
   }
 
-  if (hasDuplicates(scatterDimsToOperandDims))
-    return emitOptionalError(
-        loc, "Expects scatter_dims_to_operand_dims to not repeat; got: [",
-        scatterDimsToOperandDims, "].");
-
   return success();
 }
 
-// Verify the following properties:
-//  P1. Verify no repeat in start_index_map.
-//  P2. Verify 0 <= start_index_map[i] < rank(operand), for every i.
-//  P3. Verify 0 <= index_vector_dim <= rank(start_indices).
-//  P4. Verify size(start_index_map) == shape(start_indices)[index_vector_dim].
-//  P5. Verify offset_dims is_sorted and not repeated.
-//  P6. Verify collapsed_slice_dims is_sorted and not repeated.
-//  P7. Verify rank(operand) == size(offset_dims) + size(collapsed_slice_dims).
-//  P8. Verify slice_sizes has rank of 1.
-//  P9. Verify size(slice_sizes) == rank(operand).
-//  P10. Verify 0 <= collapsed_slice_dims[i] < size(slice_sizes) for all items.
 static LogicalResult verifyGather(
     std::optional<Location> location, ShapeAdaptor operandShape,
     ShapeAdaptor startIndicesShape, ShapeAdaptor sliceSizesShape,
     ArrayRef<int64_t> offsetDims, ArrayRef<int64_t> collapsedSliceDims,
     ArrayRef<int64_t> startIndexMap, int64_t indexVectorDim) {
-  // P1.
-  // Check startIndexMap
+  // gather_c9
   if (hasDuplicates(startIndexMap))
     return emitOptionalError(location,
                              "expects start_index_map to not repeat, got: [",
                              startIndexMap, "]");
 
-  // P2.
+  // gather_c10
   for (int64_t i = 0; i < static_cast<int64_t>(startIndexMap.size()); ++i)
     if (startIndexMap[i] < 0 ||
         (operandShape.hasRank() && startIndexMap[i] >= operandShape.getRank()))
@@ -1078,7 +1073,7 @@ static LogicalResult verifyGather(
           " is out of bounds for ", "operand rank ", operandShape.getRank());
 
   if (startIndicesShape.hasRank()) {
-    // P3.
+    // gather_c2
     // index_vector_dim == start_indices.rank implies a trailing 1 on the shape
     // of start_indices.
     if (indexVectorDim > startIndicesShape.getRank() || indexVectorDim < 0)
@@ -1086,6 +1081,7 @@ static LogicalResult verifyGather(
                                " is out of bounds for start indices with rank ",
                                startIndicesShape.getRank());
 
+    // gather_c3
     bool impliedTrailingDim = indexVectorDim == startIndicesShape.getRank();
     if (impliedTrailingDim || !startIndicesShape.isDynamicDim(indexVectorDim)) {
       int64_t effectiveDimSize;
@@ -1093,7 +1089,6 @@ static LogicalResult verifyGather(
         effectiveDimSize = 1;
       else
         effectiveDimSize = startIndicesShape.getDimSize(indexVectorDim);
-      // P4.
       if (effectiveDimSize != static_cast<int64_t>(startIndexMap.size()))
         return emitOptionalError(
             location, "start_index_map size (", startIndexMap.size(),
@@ -1102,7 +1097,7 @@ static LogicalResult verifyGather(
     }
   }
 
-  // P5.
+  // gather_c4
   if (!llvm::is_sorted(offsetDims))
     return emitOptionalError(
         location, "expects offset_dims to be sorted, got: [", offsetDims, "]");
@@ -1110,7 +1105,7 @@ static LogicalResult verifyGather(
     return emitOptionalError(
         location, "expects offset_dims to not repeat, got: [", offsetDims, "]");
 
-  // P6.
+  // gather_c6
   if (!llvm::is_sorted(collapsedSliceDims))
     return emitOptionalError(
         location, "expects collapsed_slice_dims to be sorted, got: [",
@@ -1120,7 +1115,7 @@ static LogicalResult verifyGather(
         location, "expects collapsed_slice_dims to not repeat, got: [",
         collapsedSliceDims, "]");
 
-  // P7.
+  // gather_c1
   int64_t impliedOperandRank = offsetDims.size() + collapsedSliceDims.size();
   if (operandShape.hasRank() && operandShape.getRank() != impliedOperandRank)
     return emitOptionalError(
@@ -1128,21 +1123,19 @@ static LogicalResult verifyGather(
         ") plus collapse_slice_dims size (", collapsedSliceDims.size(),
         ") is not equal to operand rank (", operandShape.getRank(), ")");
 
-  // P8.
-  // This should be fully expressible with type constraints, but it isn't
-  // obvious how to do that with the current infrastructure.
+  // gather_i7
   if (sliceSizesShape.hasRank() && sliceSizesShape.getRank() != 1)
     return emitOptionalError(location, "slice_sizes.rank != 1");
   if (sliceSizesShape.hasStaticShape()) {
     int64_t sliceSize = sliceSizesShape.getNumElements();
 
-    // P9.
+    // gather_c11
     if (sliceSize != impliedOperandRank)
       return emitOptionalError(location, "slice_sizes size (", sliceSize,
                                ") not equal to (implied) operand rank (",
                                impliedOperandRank, ")");
 
-    // P10.
+    // gather_c7
     for (auto dim : collapsedSliceDims)
       if (dim < 0 || dim >= sliceSize)
         return emitOptionalError(location, "collapsed dimension ", dim,
@@ -1221,9 +1214,6 @@ void reifyGatherDimSizes(int64_t resultRank,
                           indexVectorDim, shape);
 }
 
-// Verify the following properties:
-//  P1. Verify 0 <= offset_dims[i] < output_shape_rank, for every i.
-//      (output_shape_rank = size(offset_dims) + rank(start_indices) -1)
 static LogicalResult inferGatherReturnTypeComponents(
     std::optional<Location> location, ShapeAdaptor operandShape,
     Value startIndices, llvm::function_ref<int64_t(int64_t)> getSliceDim,
@@ -1245,7 +1235,7 @@ static LogicalResult inferGatherReturnTypeComponents(
   // appended to start_indices shape.
   if (indexVectorDim == startIndicesRank) ++startIndicesRank;
   int64_t resultRank = offsetDims.size() + startIndicesRank - 1;
-  // P1.
+  // gather_c5
   for (int64_t i = 0; i < static_cast<int64_t>(offsetDims.size()); ++i)
     if (offsetDims[i] < 0 || offsetDims[i] >= resultRank)
       return emitOptionalError(location, "offset_dims[", i,
@@ -1256,6 +1246,7 @@ static LogicalResult inferGatherReturnTypeComponents(
     return startIndicesShape.getDimSize(index);
   };
 
+  // gather_c13
   SmallVector<int64_t> shape;
   inferGatherShape<int64_t>(resultRank, getStartIndicesDim, getSliceDim,
                             offsetDims, collapsedSliceDims, startIndexMap,
@@ -2238,13 +2229,6 @@ LogicalResult inferFftOp(
   return success();
 }
 
-// The following properties are already enforced by the ODS:
-//  P0. Verify the start_indices has element type of integer.
-// Verify the following properties:
-//  P1. Verifications by verifyGather().
-//  P2. Verify slice_sizes[i] <= 1 for i in collapsed_slice_dims.
-//  P3. Verify 0 <= slice_sizes[i] < shape(operand)[i], for every i.
-//  Verifications by inferGatherReturnTypeComponents().
 LogicalResult inferGatherOp(
     std::optional<Location> location, Value operand, Value startIndices,
     ArrayRef<int64_t> offsetDims, ArrayRef<int64_t> collapsedSliceDims,
@@ -2254,7 +2238,6 @@ LogicalResult inferGatherOp(
   ShapeAdaptor operandShape(operand.getType());
   ShapeAdaptor startIndicesShape(startIndices.getType());
 
-  // P1.
   // For some reason the getType call is necessary here
   if (failed(verifyGather(location,
                           /*operandShape=*/operandShape,
@@ -2263,7 +2246,7 @@ LogicalResult inferGatherOp(
                           collapsedSliceDims, startIndexMap, indexVectorDim)))
     return failure();
 
-  // P2.
+  // gather_c8
   for (auto dim : collapsedSliceDims) {
     int64_t sliceDimSize = sliceSizes.getValues<int64_t>()[dim];
     if (sliceDimSize > 1)
@@ -2271,7 +2254,7 @@ LogicalResult inferGatherOp(
                                dim, " should <= 1 but got ", sliceDimSize);
   }
 
-  // P3.
+  // gather_c12
   if (operandShape.hasRank()) {
     for (const auto& it : llvm::enumerate(sliceSizes.getValues<int64_t>())) {
       if (operandShape.isDynamicDim(it.index())) continue;
@@ -3832,19 +3815,6 @@ LogicalResult verifyRngBitGeneratorOp(std::optional<Location> location,
   return success();
 }
 
-// We intend to verify the following properties:
-//  P0. scatter_indices argument must be an integral tensor. Enforced by ODS.
-//  P1. Scatter index leaf dimension must be within [0, rank(scatter_indices)"
-//      " + 1).
-//  P2. Verify reducer shape.
-//  P3. rank-of('updates[i]') == size-of('update_window_dims') +
-//      rank-of('scatter_indices') - 1, where 'scatter_indices' is expanded by a
-//      trailing 1 dimension if 'index_vector_dim' == rank-of('scatter_indices')
-//      for all values of `i`.
-//  P4. Validate the scatter-dimensions-numbers.
-//  P5. Valide the bounds of each of the 'updates' w.r.t the operands.
-//  P6. Validate the bounds of each of the 'updates' w.r.t the
-//      'scatter_indices'.
 LogicalResult verifyScatterOp(std::optional<Location> location,
                               ValueRange inputs, Value scatterIndices,
                               ValueRange updates,
@@ -3864,7 +3834,21 @@ LogicalResult verifyScatterOp(std::optional<Location> location,
       updates.getTypes(), [](Type type) { return type.cast<ShapedType>(); }));
   bool scatterIndicesTypeRanked = scatterIndicesType.isa<RankedTensorType>();
 
-  // P1.
+  // scatter_c1
+  for (auto operandType : operandTypes)
+    if (failed(verifyCompatibleShape(operandTypes[0].getShape(),
+                                     operandType.getShape())))
+      return emitOptionalError(location,
+                               "Not all inputs have compatible shapes.");
+
+  // scatter_c3
+  for (auto updateType : updatesTypes)
+    if (failed(verifyCompatibleShape(updatesTypes[0].getShape(),
+                                     updateType.getShape())))
+      return emitOptionalError(location,
+                               "Not all updates have compatible shapes.");
+
+  // scatter_c14
   if (scatterIndicesTypeRanked) {
     if (indexVectorDim > scatterIndicesType.getRank() || indexVectorDim < 0)
       return emitOptionalError(
@@ -3874,19 +3858,23 @@ LogicalResult verifyScatterOp(std::optional<Location> location,
           scatterIndicesType.getRank(), " and scatter index leaf dimension is ",
           indexVectorDim, ".");
   }
-  // P2.
+
   SmallVector<ShapedType> inputTypes, initValueTypes;
   for (int64_t i = 0; i < static_cast<int64_t>(numOperands); i++) {
     inputTypes.push_back(operandTypes[i]);
     initValueTypes.push_back(
         RankedTensorType::get({}, updatesTypes[i].getElementType()));
   }
+  // scatter_c6, scatter_c15
   if (failed(verifyReducerShape(location, updateComputation.front(), inputTypes,
                                 initValueTypes,
                                 /*allowedDimensions=*/{})))
     return failure();
 
-  // P3.
+  // rank-of('updates[i]') == size-of('update_window_dims') +
+  // rank-of('scatter_indices') - 1, where 'scatter_indices' is expanded by a
+  // trailing 1 dimension if 'index_vector_dim' == rank-of('scatter_indices')
+  // for all values of `i`.
   SmallVector<int64_t> expandedScatterIndicesShape;
   if (scatterIndicesTypeRanked) {
     expandedScatterIndicesShape =
@@ -3896,6 +3884,7 @@ LogicalResult verifyScatterOp(std::optional<Location> location,
       expandedScatterIndicesShape.push_back(1);
   }
 
+  // scatter_c4
   for (int64_t i = 0; i < static_cast<int64_t>(numOperands); i++) {
     if (scatterIndicesTypeRanked && updatesTypes[i].isa<RankedTensorType>()) {
       int64_t expectedUpdatesRank =
@@ -3912,7 +3901,7 @@ LogicalResult verifyScatterOp(std::optional<Location> location,
     }
   }
 
-  // P4.
+  // scatter_c2, scatter_c7...scatter_c13
   for (int64_t i = 0; i < static_cast<int64_t>(numOperands); i++) {
     if (failed(validateScatterDimensionNumbers(
             operandTypes[i], expandedScatterIndicesShape, updatesTypes[i],
@@ -3923,7 +3912,6 @@ LogicalResult verifyScatterOp(std::optional<Location> location,
       return failure();
   }
 
-  // P5.
   for (int64_t i = 0; i < static_cast<int64_t>(numOperands); i++) {
     if (updatesTypes[i].isa<RankedTensorType>()) {
       auto updatesShape = updatesTypes[i].getShape();
@@ -3951,6 +3939,7 @@ LogicalResult verifyScatterOp(std::optional<Location> location,
               isDynamicDimSize(maxUpdateSliceSizes[i]))
             continue;
 
+          // scatter_c4
           if (updatesShape[updateWindowDim] > maxUpdateSliceSizes[i]) {
             return emitOptionalError(
                 location,
@@ -3964,7 +3953,6 @@ LogicalResult verifyScatterOp(std::optional<Location> location,
         }
       }
 
-      // P6.
       if (scatterIndicesTypeRanked) {
         int64_t scatterDimsSeen = 0;
         for (int64_t i = 0; i < static_cast<int64_t>(updatesShape.size());
@@ -3975,6 +3963,7 @@ LogicalResult verifyScatterOp(std::optional<Location> location,
           if (isUpdateWindowDim) continue;
           if (scatterDimsSeen == indexVectorDim) ++scatterDimsSeen;
 
+          // scatter_c4
           if (!verifyCompatibleDims(
                   updatesShape[i],
                   expandedScatterIndicesShape[scatterDimsSeen]))

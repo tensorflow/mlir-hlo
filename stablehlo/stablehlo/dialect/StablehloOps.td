@@ -1688,8 +1688,9 @@ def StableHLO_DynamicUpdateSliceOp: StableHLO_Op<"dynamic_update_slice",
 //===----------------------------------------------------------------------===//
 
 def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [Pure,
-    AllElementTypesMatch<["operand", "grad_operand", "grad_scale", "grad_offset"]>,
-    InferTensorType]> {
+    AllElementTypesMatch<["operand", "scale", "mean", "variance", "grad_output",
+    "grad_operand", "grad_scale", "grad_offset"] /*batch_norm_grad_c2*/>,
+    InferTensorType /*batch_norm_grad_c3, batch_norm_grad_c4*/]> {
   let summary = "BatchNormGrad operation";
   let description = [{
     Computes gradients of several inputs of BatchNormTrainingOp backpropagating
@@ -1705,19 +1706,19 @@ def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [Pure,
     "stablehlo.batch_norm_grad"(%operand, %scale, %mean, %variance, %grad_output) {
       epsilon = 0.0 : f32,
       feature_index = 2 : i64
-    } : (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>, tensor<2xf32>,
-        tensor<2x2x2xf32>) -> (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>)
+    } : (tensor<2x2x2xf64>, tensor<2xf64>, tensor<2xf64>, tensor<2xf64>,
+         tensor<2x2x2xf64>) -> (tensor<2x2x2xf64>, tensor<2xf64>, tensor<2xf64>)
     ```
   }];
 
   let arguments = (ins
-    RankedTensorOf<[HLO_Float]>:$operand,
-    1DTensorOf<[HLO_Float]>:$scale,
-    1DTensorOf<[HLO_Float]>:$mean,
-    1DTensorOf<[HLO_Float]>:$variance,
-    RankedTensorOf<[HLO_Float]>:$grad_output,
-    F32Attr:$epsilon,
-    I64Attr:$feature_index
+    RankedTensorOf<[HLO_Float]>:$operand, /*batch_norm_grad_i1*/
+    1DTensorOf<[HLO_Float]>:$scale, /*batch_norm_grad_i2*/
+    1DTensorOf<[HLO_Float]>:$mean, /*batch_norm_grad_i3*/
+    1DTensorOf<[HLO_Float]>:$variance, /*batch_norm_grad_i4*/
+    RankedTensorOf<[HLO_Float]>:$grad_output, /*batch_norm_grad_i5*/
+    F32Attr:$epsilon, /*batch_norm_grad_i6*/
+    I64Attr:$feature_index /*batch_norm_grad_i7*/
   );
 
   let results = (outs
@@ -2328,7 +2329,8 @@ def StableHLO_FftOp: StableHLO_Op<"fft", [InferTensorType, Pure]> {
   }];
 }
 
-def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify, Pure]> {
+def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify /*gather_c13*/,
+    AllElementTypesMatch<["operand", "result"]> /*gather_c14*/, Pure]> {
   let summary = "Gather operation";
   let description = [{
     Gathers slices from `operand` tensor from offsets specified in
@@ -2343,23 +2345,23 @@ def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify, Pure]>
       dimension_numbers = #stablehlo.gather<
         offset_dims = [2, 3],
         collapsed_slice_dims = [0],
-        start_index_map = [0, 2],
+        start_index_map = [1, 0],
         index_vector_dim = 2>,
-      slice_sizes = dense<[0, 2, 2]> : tensor<3xi64>,
+      slice_sizes = dense<[1, 2, 2]> : tensor<3xi64>,
       indices_are_sorted = false
     } : (tensor<3x4x2xi32>, tensor<2x3x2xi64>) -> tensor<2x3x2x2xi32>
     ```
   }];
 
   let arguments = (ins
-    HLO_Tensor:$operand,
-    HLO_IntTensor:$start_indices,
-    StableHLO_GatherDimensionNumbers:$dimension_numbers,
-    I64ElementsAttr:$slice_sizes,
-    DefaultValuedOptionalAttr<BoolAttr, "false">:$indices_are_sorted
+    HLO_Tensor:$operand /*gather_i1*/,
+    HLO_IntTensor:$start_indices /*gather_i2*/,
+    StableHLO_GatherDimensionNumbers:$dimension_numbers /*gather_i3, gather_i4, gather_i5, gather_i6*/,
+    I64ElementsAttr:$slice_sizes /*gather_i7*/,
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$indices_are_sorted /*gather_i8*/
   );
 
-  let results = (outs HLO_Tensor);
+  let results = (outs HLO_Tensor:$result);
 }
 
 def StableHLO_GetDimensionSizeOp: StableHLO_Op<"get_dimension_size",
@@ -2467,9 +2469,9 @@ def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape", [
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
 }
 
-def StableHLO_ScatterOp: StableHLO_Op<"scatter",
-      [SameVariadicOperandSize, RecursiveMemoryEffects,
-      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+def StableHLO_ScatterOp: StableHLO_Op<"scatter", [RecursiveMemoryEffects,
+      SameVariadicOperandSize /*scatter_c5*/,
+      DeclareOpInterfaceMethods<InferTypeOpInterface> /*scatter_c16*/]> {
   let summary = "Scatter operation";
   let description = [{
     Produces `results` tensors which are equal to `inputs` tensors except that
@@ -2480,33 +2482,32 @@ def StableHLO_ScatterOp: StableHLO_Op<"scatter",
     https://github.com/openxla/stablehlo/blob/main/docs/spec.md#scatter
 
    Example:
-
    ```mlir
    %result = "stablehlo.scatter"(%input, %scatter_indices, %update) ({
-     ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
-       %0 = stablehlo.add %arg0, %arg1 : tensor<i32>
-       stablehlo.return %0 : tensor<i32>
+     ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>):
+       %0 = stablehlo.add %arg0, %arg1 : tensor<i64>
+       stablehlo.return %0 : tensor<i64>
    }) {
      scatter_dimension_numbers = #stablehlo.scatter<
-       update_window_dims = [2,3],
+       update_window_dims = [2, 3],
        inserted_window_dims = [0],
        scatter_dims_to_operand_dims = [1, 0],
        index_vector_dim = 2>,
      indices_are_sorted = false,
      unique_indices = false
-   } : (tensor<3x4x2xi32>, tensor<2x3x2xi64>, tensor<2x3x2x2xi32>) -> tensor<3x4x2xi32>
+   } : (tensor<3x4x2xi64>, tensor<2x3x2xi64>, tensor<2x3x2x2xi64>) -> tensor<3x4x2xi64>
    ```
   }];
   let arguments = (ins
-    Variadic<HLO_Tensor>:$inputs,
-    TensorOf<[AnyInteger, Index]>:$scatter_indices,
-    Variadic<HLO_Tensor>:$updates,
-    StableHLO_ScatterDimensionNumbers:$scatter_dimension_numbers,
-    DefaultValuedOptionalAttr<BoolAttr, "false">:$indices_are_sorted,
-    DefaultValuedOptionalAttr<BoolAttr, "false">:$unique_indices
+    Variadic<HLO_Tensor>:$inputs, /*scatter_i1*/
+    TensorOf<[AnyInteger, Index]>:$scatter_indices, /*scatter_i2*/
+    Variadic<HLO_Tensor>:$updates, /*scatter_i3*/
+    StableHLO_ScatterDimensionNumbers:$scatter_dimension_numbers, /*scatter_i4...scatter_i7*/
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$indices_are_sorted, /*scatter_i8*/
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$unique_indices /*scatter_i9*/
   );
 
-  let regions = (region SizedRegion<1>:$update_computation);
+  let regions = (region SizedRegion<1>:$update_computation /*scatter_i10*/);
 
   let results = (outs Variadic<HLO_Tensor>);
 

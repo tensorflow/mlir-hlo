@@ -29,7 +29,7 @@ Below is an example program with a function `@main` which has 3 inputs
 has 6 ops.
 
 ```mlir
-stablehlo.func @main(
+func.func @main(
   %image: tensor<28x28xf32>,
   %weights: tensor<784x10xf32>,
   %bias: tensor<1x10xf32>
@@ -39,14 +39,14 @@ stablehlo.func @main(
   %2 = "stablehlo.add"(%1, %bias) : (tensor<1x10xf32>, tensor<1x10xf32>) -> tensor<1x10xf32>
   %3 = "stablehlo.constant"() { value = dense<0.0> : tensor<1x10xf32> } : () -> tensor<1x10xf32>
   %4 = "stablehlo.maximum"(%2, %3) : (tensor<1x10xf32>, tensor<1x10xf32>) -> tensor<1x10xf32>
-  "stablehlo.return"(%4): (tensor<1x10xf32>) -> ()
+  "func.return"(%4): (tensor<1x10xf32>) -> ()
 }
 ```
 
 ### Functions
 
 ```ebnf
-Func        ::= 'stablehlo' '.' 'func' FuncId FuncInputs FuncOutputs '{' FuncBody '}'
+Func        ::= 'func' '.' 'func' FuncId FuncInputs FuncOutputs '{' FuncBody '}'
 FuncInputs  ::= '(' [FuncInput {',' FuncInput}] `)`
 FuncInput   ::= '%' ValueId ':' ValueType
 FuncOutputs ::= ['->' FuncOutput, {',' FuncOutput}]
@@ -1021,14 +1021,15 @@ existing StableHLO operations using Python-like syntax as follows:
 def compute_sum(operand, feature_index):
   (sum,) = reduce(
       inputs=[operand],
-      init_values=[0.0],
+      init_values=[constant(0.0, element_type(operand))],
       dimensions=[i for i in range(rank(operand)) if i != feature_index],
       body=lambda x, y: add(x, y))
   return sum
 
 def compute_mean(operand, feature_index):
   sum = compute_sum(operand, feature_index)
-  divisor = constant(num_elements(operand) / dim(operand, feature_index))
+  divisor = constant(num_elements(operand) / dim(operand, feature_index),
+                     element_type(operand))
   divisor_bcast = broadcast_in_dim(divisor, [], shape(sum))
   return divide(sum, divisor_bcast)
 
@@ -1037,7 +1038,8 @@ def batch_norm_grad(operand, scale, mean, variance, grad_output, epsilon, featur
   scale_bcast = broadcast_in_dim(scale, [feature_index], shape(operand))
   mean_bcast = broadcast_in_dim(mean, [feature_index], shape(operand))
   variance_bcast = broadcast_in_dim(variance, [feature_index], shape(operand))
-  epsilon_bcast = broadcast_in_dim(constant(epsilon), [], shape(operand))
+  epsilon_bcast = broadcast_in_dim(constant(epsilon, element_type(operand)), [],
+                                   shape(operand))
 
   # Perform normalization using the provided `mean` and `variance`
   # Intermediate values will be useful for computing gradients
@@ -1047,25 +1049,26 @@ def batch_norm_grad(operand, scale, mean, variance, grad_output, epsilon, featur
 
   # Use the implementation from batchnorm_expander.cc in XLA
   # Temporary variables have exactly the same names as in the C++ code
-  elements_per_feature = constant(
-    divide(size(operand), dim(operand, feature_index)))
-  i1 = multiply(
-    grad_output,
-    broadcast_in_dim(elements_per_feature, [], shape(operand)))
+  elements_per_feature = broadcast_in_dim(
+      constant(divide(num_elements(operand), dim(operand, feature_index)),
+               element_type(grad_output)),
+      [], shape(operand))
+  i1 = multiply(grad_output, elements_per_feature)
   i2 = broadcast_in_dim(
-    compute_sum(grad_output, feature_index),
-    [feature_index], shape(operand))
+      compute_sum(grad_output, feature_index), [feature_index], shape(operand))
   i3 = broadcast_in_dim(
-    compute_sum(multiply(grad_output, centered_operand)),
-    [feature_index], shape(operand))
+      compute_sum(multiply(grad_output, centered_operand), feature_index),
+      [feature_index], shape(operand))
   i4 = multiply(i3, centered_operand)
   i5 = divide(i4, add(variance_bcast, epsilon_bcast))
-  grad_operand = multiply(
-    divide(divide(scale_bcast, stddev), elements_per_feature),
-    subtract(subtract(i1, i2), i5))
-  grad_scale = compute_sum(
-    multiply(grad_output, normalized_operand), feature_index)
+  i6 = subtract(subtract(i1, i2), i5)
+
+  grad_operand =
+      multiply(divide(divide(scale_bcast, stddev), elements_per_feature), i6)
+  grad_scale =
+      compute_sum(multiply(grad_output, normalized_operand), feature_index)
   grad_offset = compute_sum(grad_output, feature_index)
+
   return grad_operand, grad_scale, grad_offset
 ```
 
@@ -1117,8 +1120,8 @@ def batch_norm_grad(operand, scale, mean, variance, grad_output, epsilon, featur
 "stablehlo.batch_norm_grad"(%operand, %scale, %mean, %variance, %grad_output) {
   epsilon = 0.0 : f32,
   feature_index = 2 : i64
-} : (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>, tensor<2xf32>,
-     tensor<2x2x2xf32>) -> (tensor<2x2x2xf32>, tensor<2xf32>, tensor<2xf32>)
+} : (tensor<2x2x2xf64>, tensor<2xf64>, tensor<2xf64>, tensor<2xf64>,
+     tensor<2x2x2xf64>) -> (tensor<2x2x2xf64>, tensor<2xf64>, tensor<2xf64>)
 // %grad_operand: [
 //                 [[0.0, 0.0], [0.0, 0.0]],
 //                 [[0.0, 0.0], [0.0, 0.0]]
@@ -1126,6 +1129,8 @@ def batch_norm_grad(operand, scale, mean, variance, grad_output, epsilon, featur
 // %grad_scale:  [0.0, 0.0]
 // %grad_offset: [0.4, 0.4]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_batch_norm_grad.mlir)
 
 ### batch_norm_inference
 
@@ -2803,13 +2808,14 @@ More formally, `result[result_index] = operand[operand_index]` where:
 * `batch_dims` = [`d` for `d` in `axes(result)` and `d` not in `offset_dims`].
 * `batch_index` = [`result_index[d]` for `d` in `batch_dims`].
 * `start_index` =
-  * `start_indices[bi0, ..., :, ..., biN]` where `bi` are individual
-      elements in `batch_index` and `:` is inserted at the `index_vector_dim`
-      index, if `index_vector_dim` < `rank(start_indices)`.
+  * `start_indices[bi0, ..., :, ..., biN]` where `bi` are individual elements in
+    `batch_index` and `:` is inserted at the `index_vector_dim` index, if
+    `index_vector_dim` < `rank(start_indices)`.
   * `[start_indices[batch_index]]` otherwise.
-* For `do` in `axes(operand)`,
-  * `full_start_index[do]` = `start_index[ds]` if `do = start_index_map[ds]`.
-  * `full_start_index[do]` = `0` otherwise.
+* For `d_operand` in `axes(operand)`,
+  * `full_start_index[d_operand]` = `start_index[d_start]` if
+    `d_operand = start_index_map[d_start]`.
+  * `full_start_index[d_operand]` = `0` otherwise.
 * `offset_index` = [`result_index[d]` for `d` in `offset_dims`].
 * `full_offset_index` = `[oi0, ..., 0, ..., oiN]` where `oi` are individual
   elements in `offset_index`, and `0` is inserted at indices from
@@ -2827,7 +2833,7 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
 
 | Label | Name                   | Type                                         | Constraints                   |
 |-------|------------------------|----------------------------------------------|-------------------------------|
-| (I1)  | `operand`              | tensor                                       | (C1), (C10-C12), (C15)        |
+| (I1)  | `operand`              | tensor                                       | (C1), (C10-C12), (C14)        |
 | (I2)  | `start_indices`        | tensor of integer type                       | (C2), (C3), (C13)             |
 | (I3)  | `offset_dims`          | 1-dimensional tensor constant of type `si64` | (C1), (C4), (C5), (C13)       |
 | (I4)  | `collapsed_slice_dims` | 1-dimensional tensor constant of type `si64` | (C1), (C6), (C7), (C8), (C13) |
@@ -2873,7 +2879,7 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
     in `slice_sizes` corresponding to `collapsed_slice_dims` are not included.
   * `combine` puts `batch_dim_sizes` at axes corresponding to `batch_dims` and
    `offset_dim_sizes` at axes corresponding to `offset_dims`.
-* (C15) `operand` and `result` have the same element type.
+* (C14) `operand` and `result` have the same element type.
 
 #### Examples
 
@@ -2909,6 +2915,8 @@ behavior is undefined. More formally, for all `id < jd` from `indices(result)`,
 //            ]
 //          ]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_gather.mlir)
 
 ### get_dimension_size
 
@@ -4640,12 +4648,12 @@ More formally, for all `update_index` from the index space of `updates[0]`:
       `index_vector_dim` index, if `index_vector_dim` <
       `rank(scatter_indices)`.
   * `[scatter_indices[update_scatter_index]]` otherwise.
-* For `do` in `axes(inputs[0])`,
-  * `full_start_index[do]` = `start_index[ds]` if
-      `do = scatter_dims_to_operand_dims[ds]`.
-  * `full_start_index[do]` = `0` otherwise.
+* For `d_input` in `axes(inputs[0])`,
+  * `full_start_index[d_input]` = `start_index[d_start]` if
+      `d_input = scatter_dims_to_operand_dims[d_start]`.
+  * `full_start_index[d_input]` = `0` otherwise.
 * `update_window_index` = [`update_index[d]` for `d` in `update_window_dims`].
-* `full_window_index` = `[oi0, ..., 0, ..., oiN]` where `oi` are individual
+* `full_window_index` = `[wi0, ..., 0, ..., wiN]` where `wi` are individual
   elements in `update_window_index`, and `0` is inserted at indices from
   `inserted_window_dims`.
 * `result_index` = `add(full_start_index, full_window_index)`.
@@ -4713,7 +4721,7 @@ undefined.
    `update_scatter_dims` and `update_window_dim_sizes` at axes corresponding
    to `update_window_dims`.
 * (C5) N $=$ size(`inputs`) = size(`updates`) and N $\ge$ 1.
-* (C6) `element_type(updates[k]) = element_type(inputs[k])` for any k $\in$
+* (C6) `element_type(updates[k]) = element_type(inputs[k])` for all k $\in$
        [0, N).
 * (C7) All dimensions in `update_window_dims` are unique and sorted.
 * (C8) For all i $\in$ [0, size(`update_window_dims`)), $0 \le$
@@ -4729,8 +4737,8 @@ undefined.
       `scatter_dims_to_operand_dims`[i] $\lt$ rank(`inputs`[0]).
 * (C14) $0 \le$ `index_vector_dim` $\le$ rank(`scatter_indices`).
 * (C15) `update_computation` has type `(tensor<E0>, ..., tensor<EN-1>, tensor<E0>, ..., tensor<EN-1>) -> (tensor<E0>, ..., tensor<EN-1>)`
-        where `Ek = element_type(inputs[k])` for any k $\in$ [0, N).
-* (C16) `inputs[k]` and `result[k]` have the same type for any k $\in$ [0, N).
+        where `Ek = element_type(inputs[k])` for all k $\in$ [0, N).
+* (C16) `inputs[k]` and `result[k]` have the same type for all k $\in$ [0, N).
 <!-- markdownlint-enable line-length -->
 
 #### Examples
@@ -4747,24 +4755,26 @@ undefined.
 //           [[[1, 1], [1, 1]], [[1, 1], [1, 1]], [[1, 1], [1, 1]]]
 //          ]
 %result = "stablehlo.scatter"(%input, %scatter_indices, %update) ({
-  ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
-    %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
-    "stablehlo.return"(%0) : (tensor<i32>) -> ()
+  ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>):
+    %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<i64>, tensor<i64>) -> tensor<i64>
+    "stablehlo.return"(%0) : (tensor<i64>) -> ()
 }) {
   scatter_dimension_numbers = #stablehlo.scatter<
-    update_window_dims = [2,3],
+    update_window_dims = [2, 3],
     inserted_window_dims = [0],
     scatter_dims_to_operand_dims = [1, 0],
     index_vector_dim = 2>,
   indices_are_sorted = false,
   unique_indices = false
-} : (tensor<3x4x2xi32>, tensor<2x3x2xi64>, tensor<2x3x2x2xi32>) -> tensor<3x4x2xi32>
+} : (tensor<3x4x2xi64>, tensor<2x3x2xi64>, tensor<2x3x2x2xi64>) -> tensor<3x4x2xi64>
 // %result: [
 //           [[1, 2], [5, 6], [8, 9], [8, 9]],
 //           [[10, 11], [12, 13], [14, 15], [16, 17]],
 //           [[18, 19], [20, 21], [21, 22], [23, 24]]
 //          ]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_scatter.mlir)
 
 ### select
 

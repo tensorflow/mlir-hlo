@@ -50,7 +50,7 @@ one of the following tracking labels.
 | all_to_all               | yes           | revisit      | yes            | no              | no          |
 | and                      | yes           | yes          | yes            | yes             | yes         |
 | atan2                    | yes           | yes          | yes            | yes             | yes         |
-| batch_norm_grad          | yes           | revisit      | yes            | no              | no          |
+| batch_norm_grad          | yes           | revisit      | yes            | no              | yes         |
 | batch_norm_inference     | yes           | revisit      | yes            | no              | yes         |
 | batch_norm_training      | yes           | revisit      | yes            | no              | yes         |
 | bitcast_convert          | yes           | yes          | infeasible     | yes             | no          |
@@ -91,7 +91,7 @@ one of the following tracking labels.
 | exponential_minus_one    | yes           | yes          | yes            | yes             | yes         |
 | fft                      | yes           | revisit      | yes            | yes             | no          |
 | floor                    | yes           | yes          | yes            | yes             | yes         |
-| gather                   | yes           | yes          | yes            | no              | no          |
+| gather                   | yes           | yes          | yes            | no              | yes         |
 | get_dimension_size       | yes           | yes          | yes            | yes             | yes         |
 | get_tuple_element        | yes           | yes          | yes            | yes             | no          |
 | if                       | yes           | revisit      | yes            | no              | yes         |
@@ -132,7 +132,7 @@ one of the following tracking labels.
 | round_nearest_afz        | yes           | yes          | yes            | yes             | yes         |
 | round_nearest_even       | yes           | yes          | yes            | yes             | yes         |
 | rsqrt                    | yes           | yes          | yes            | yes             | yes         |
-| scatter                  | yes           | revisit      | yes            | no              | no          |
+| scatter                  | yes           | revisit      | yes            | no              | yes         |
 | select                   | yes           | yes          | yes            | yes             | yes         |
 | select_and_scatter       | yes           | revisit      | yes            | no              | no          |
 | send                     | yes           | revisit      | yes            | no              | no          |

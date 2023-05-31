@@ -16,7 +16,6 @@ limitations under the License.
 #include "stablehlo/reference/Ops.h"
 
 #include <algorithm>
-#include <numeric>
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -34,11 +33,18 @@ namespace mlir {
 namespace stablehlo {
 namespace {
 
-Index evalIndices(ArrayRef<Tensor> indices) {
-  Index index(indices.size());
-  for (size_t i = 0; i < indices.size(); ++i)
-    index[i] = indices[i].get({}).getIntegerValue().getSExtValue();
-  return index;
+Index evalIndex(ArrayRef<Tensor> scalars) {
+  Index result(scalars.size());
+  for (size_t i = 0; i < scalars.size(); ++i)
+    result[i] = scalars[i].get({}).getIntegerValue().getSExtValue();
+  return result;
+}
+
+Index evalIndex(Tensor tensor) {
+  Index result;
+  for (auto it = tensor.index_begin(); it != tensor.index_end(); ++it)
+    result.push_back(tensor.get(*it).getIntegerValue().getSExtValue());
+  return result;
 }
 
 Tensor evalPadOp(const Tensor &operand, const Tensor &paddingValue,
@@ -102,9 +108,13 @@ Tensor evalSliceOp(const Tensor &operand, const Sizes &startIndices,
                      inferredTypes[0].cast<ShapedType>());
 }
 
-Tensor computeSum(const Tensor &input, const Tensor &initValue,
-                  const Axes &dimensions, ShapedType resultType) {
-  Tensor result(resultType, initValue.get({}));
+Tensor computeSum(const Tensor &input, Axis featureIndex,
+                  ShapedType resultType) {
+  Tensor result(resultType, convert(input.getElementType(), 0.0));
+
+  auto dimensions = input.getAxes();
+  dimensions.erase(dimensions.begin() + featureIndex);
+
   for (auto inputIt = input.index_begin(); inputIt != input.index_end();
        ++inputIt) {
     Index resultIndex;
@@ -119,14 +129,7 @@ Tensor computeSum(const Tensor &input, const Tensor &initValue,
 
 Tensor computeMean(const Tensor &operand, Axis featureIndex,
                    ShapedType resultType) {
-  auto dimensions = operand.getAxes();
-  dimensions.erase(dimensions.begin() + featureIndex);
-
-  auto sum =
-      computeSum(operand,
-                 Tensor(RankedTensorType::get({}, operand.getElementType()),
-                        convert(operand.getElementType(), 0.0)),
-                 dimensions, resultType);
+  auto sum = computeSum(operand, featureIndex, resultType);
 
   auto divisor = Tensor(RankedTensorType::get({}, operand.getElementType()),
                         convert(operand.getElementType(),
@@ -147,6 +150,24 @@ Tensor computeVariance(const Tensor &operand, Axis featureIndex,
   return computeMean(evalMultiplyOp(centeredOperand, centeredOperand,
                                     centeredOperand.getType()),
                      featureIndex, resultType);
+}
+
+// Experimental notation for slices, roughly following the spec notation.
+// TODO(#1401): Might evolve in the future together with the spec.
+constexpr int64_t kColon = -1;
+Tensor evalSliceOp(const Tensor &operand, const Index &index) {
+  Sizes start, limit;
+  for (auto i = 0; i < operand.getRank(); ++i) {
+    if (index[i] == -1) {
+      start.push_back(0);
+      limit.push_back(operand.getShape()[i]);
+    } else {
+      start.push_back(index[i]);
+      limit.push_back(index[i] + 1);
+    }
+  }
+  Sizes strides(operand.getRank(), 1);
+  return evalSliceOp(operand, start, limit, strides);
 }
 
 }  // namespace
@@ -183,6 +204,19 @@ SmallVector<Tensor> eval(
       auto rhs = scope.find(atan2Op.getRhs());
       auto result = evalAtan2Op(lhs, rhs, atan2Op.getType());
       scope.add(op.getResults(), {result});
+    } else if (auto batchNormGradOp = dyn_cast<BatchNormGradOp>(op)) {
+      auto operand = scope.find(batchNormGradOp.getOperand());
+      auto scale = scope.find(batchNormGradOp.getScale());
+      auto mean = scope.find(batchNormGradOp.getMean());
+      auto variance = scope.find(batchNormGradOp.getVariance());
+      auto gradOutput = scope.find(batchNormGradOp.getGradOutput());
+      auto results = evalBatchNormGradOp(
+          operand, scale, mean, variance, gradOutput,
+          batchNormGradOp.getEpsilon(), batchNormGradOp.getFeatureIndex(),
+          {batchNormGradOp.getGradOperand().getType(),
+           batchNormGradOp.getGradScale().getType(),
+           batchNormGradOp.getGradOffset().getType()});
+      scope.add(op.getResults(), {results});
     } else if (auto batchNormInferenceOp = dyn_cast<BatchNormInferenceOp>(op)) {
       auto operand = scope.find(batchNormInferenceOp.getOperand());
       auto scale = scope.find(batchNormInferenceOp.getScale());
@@ -299,6 +333,18 @@ SmallVector<Tensor> eval(
     } else if (auto floorOp = dyn_cast<FloorOp>(op)) {
       auto operand = scope.find(floorOp.getOperand());
       auto result = evalFloorOp(operand, floorOp.getType());
+      scope.add(op.getResults(), {result});
+    } else if (auto gatherOp = dyn_cast<GatherOp>(op)) {
+      auto operand = scope.find(gatherOp.getOperand());
+      auto startIndices = scope.find(gatherOp.getStartIndices());
+      auto result = evalGatherOp(
+          operand, startIndices,
+          Axes(gatherOp.getDimensionNumbers().getOffsetDims()),
+          Axes(gatherOp.getDimensionNumbers().getCollapsedSliceDims()),
+          Axes(gatherOp.getDimensionNumbers().getStartIndexMap()),
+          Axis(gatherOp.getDimensionNumbers().getIndexVectorDim()),
+          Sizes(gatherOp.getSliceSizes()), gatherOp.getIndicesAreSorted(),
+          gatherOp.getType());
       scope.add(op.getResults(), {result});
     } else if (auto getDimensionSizeOp = dyn_cast<GetDimensionSizeOp>(op)) {
       auto operand = scope.find(getDimensionSizeOp.getOperand());
@@ -472,6 +518,23 @@ SmallVector<Tensor> eval(
       auto operand = scope.find(rsqrtOp.getOperand());
       auto result = evalRsqrtOp(operand, rsqrtOp.getType());
       scope.add(op.getResults(), {result});
+    } else if (auto scatterOp = dyn_cast<ScatterOp>(op)) {
+      auto inputs = scope.find(scatterOp.getInputs());
+      auto scatterIndices = scope.find(scatterOp.getScatterIndices());
+      auto updates = scope.find(scatterOp.getUpdates());
+      auto scatterDimensionNumbers = scatterOp.getScatterDimensionNumbersAttr();
+      Axes updateWindowDims(scatterDimensionNumbers.getUpdateWindowDims());
+      Axes insertedWindowDims(scatterDimensionNumbers.getInsertedWindowDims());
+      Axes scatterDimsToOperandDims(
+          scatterDimensionNumbers.getScatterDimsToOperandDims());
+      Axis indexVectorDim(scatterDimensionNumbers.getIndexVectorDim());
+      auto &updateComputation = scatterOp.getUpdateComputation();
+      SmallVector<ShapedType> resultTypes(scatterOp->getResultTypes());
+      auto results =
+          evalScatterOp(inputs, scatterIndices, updates, updateWindowDims,
+                        insertedWindowDims, scatterDimsToOperandDims,
+                        indexVectorDim, updateComputation, scope, resultTypes);
+      scope.add(op.getResults(), {results});
     } else if (auto selectOp = dyn_cast<SelectOp>(op)) {
       auto pred = scope.find(selectOp.getPred());
       auto onTrue = scope.find(selectOp.getOnTrue());
@@ -590,6 +653,74 @@ Tensor evalAtan2Op(const Tensor &lhs, const Tensor &rhs,
   return result;
 }
 
+SmallVector<Tensor> evalBatchNormGradOp(const Tensor &operand,
+                                        const Tensor &scale, const Tensor &mean,
+                                        const Tensor &variance,
+                                        const Tensor &gradOutput,
+                                        APFloat epsilon, Axis featureIndex,
+                                        ArrayRef<ShapedType> resultTypes) {
+  auto scaleBroadcast =
+      evalBroadcastInDimOp(scale, {featureIndex}, operand.getType());
+  auto meanBroadcast =
+      evalBroadcastInDimOp(mean, {featureIndex}, operand.getType());
+  auto varianceBroadcast =
+      evalBroadcastInDimOp(variance, {featureIndex}, operand.getType());
+  auto epsilonBroadcast = evalBroadcastInDimOp(
+      makeTensor(DenseElementsAttr::get(
+          RankedTensorType::get({}, operand.getElementType()), {epsilon})),
+      {}, operand.getType());
+
+  auto centeredOperand =
+      evalSubtractOp(operand, meanBroadcast, operand.getType());
+  auto stddev = evalSqrtOp(evalAddOp(varianceBroadcast, epsilonBroadcast,
+                                     varianceBroadcast.getType()),
+                           varianceBroadcast.getType());
+  auto normalizedOperand =
+      evalDivideOp(centeredOperand, stddev, centeredOperand.getType());
+
+  auto elementsPerFeature = evalBroadcastInDimOp(
+      Tensor(RankedTensorType::get({}, gradOutput.getElementType()),
+             convert(gradOutput.getElementType(),
+                     static_cast<double>(operand.getNumElements()) /
+                         operand.getShape()[featureIndex])),
+      {}, operand.getType());
+
+  auto i1 =
+      evalMultiplyOp(gradOutput, elementsPerFeature, gradOutput.getType());
+
+  auto i2 =
+      evalBroadcastInDimOp(computeSum(gradOutput, featureIndex, resultTypes[1]),
+                           {featureIndex}, operand.getType());
+
+  auto i3 = evalBroadcastInDimOp(
+      computeSum(
+          evalMultiplyOp(gradOutput, centeredOperand, gradOutput.getType()),
+          featureIndex, resultTypes[1]),
+      {featureIndex}, operand.getType());
+
+  auto i4 = evalMultiplyOp(i3, centeredOperand, i3.getType());
+
+  auto i5 = evalDivideOp(i4,
+                         evalAddOp(varianceBroadcast, epsilonBroadcast,
+                                   varianceBroadcast.getType()),
+                         i4.getType());
+
+  auto i6 =
+      evalSubtractOp(evalSubtractOp(i1, i2, i1.getType()), i5, i1.getType());
+
+  auto gradOperand = evalMultiplyOp(
+      evalDivideOp(
+          evalDivideOp(scaleBroadcast, stddev, scaleBroadcast.getType()),
+          elementsPerFeature, scaleBroadcast.getType()),
+      i6, scaleBroadcast.getType());
+  auto gradScale = computeSum(
+      evalMultiplyOp(gradOutput, normalizedOperand, gradOutput.getType()),
+      featureIndex, resultTypes[1]);
+  auto gradOffset = computeSum(gradOutput, featureIndex, resultTypes[2]);
+
+  return {gradOperand, gradScale, gradOffset};
+}
+
 Tensor evalBatchNormInferenceOp(const Tensor &operand, const Tensor &scale,
                                 const Tensor &offset, const Tensor &mean,
                                 const Tensor &variance, APFloat epsilon,
@@ -639,21 +770,21 @@ Tensor evalBroadcastInDimOp(const Tensor &operand,
   auto operandShape = operand.getShape();
   for (auto resultIt = result.index_begin(); resultIt != result.index_end();
        ++resultIt) {
-    Index operandIdx(operandShape.size());
+    Index operandIndex(operandShape.size());
     for (auto [operandDim, resultDim] : llvm::enumerate(broadcastDimensions))
-      operandIdx[operandDim] =
+      operandIndex[operandDim] =
           operandShape[operandDim] == 1 ? 0 : (*resultIt)[resultDim];
-    result.set(*resultIt, operand.get(operandIdx));
+    result.set(*resultIt, operand.get(operandIndex));
   }
   return result;
 }
 
 SmallVector<Tensor> evalCaseOp(const Tensor &index, RegionRange branches,
                                Scope &scope) {
-  int64_t idx = index.get({}).getIntegerValue().getSExtValue();
-  if (idx < 0 || idx >= static_cast<int64_t>(branches.size()))
-    idx = branches.size() - 1;
-  return eval(*branches[idx], {}, &scope);
+  int64_t indexValue = index.get({}).getIntegerValue().getSExtValue();
+  if (indexValue < 0 || indexValue >= static_cast<int64_t>(branches.size()))
+    indexValue = branches.size() - 1;
+  return eval(*branches[indexValue], {}, &scope);
 }
 
 Tensor evalCbrtOp(const Tensor &operand, ShapedType resultType) {
@@ -802,9 +933,9 @@ Tensor evalConcatenateOp(ArrayRef<Tensor> inputs, Axis dimension,
   for (const auto &input : inputs) {
     for (auto inputIt = input.index_begin(); inputIt != input.index_end();
          ++inputIt) {
-      Index resultIdx(*inputIt);
-      resultIdx[dimension] += dimensionOffset;
-      result.set(resultIdx, input.get(*inputIt));
+      Index resultIndex(*inputIt);
+      resultIndex[dimension] += dimensionOffset;
+      result.set(resultIndex, input.get(*inputIt));
     }
     dimensionOffset += input.getShape()[dimension];
   }
@@ -853,7 +984,7 @@ Tensor evalDynamicSliceOp(const Tensor &operand, ArrayRef<Tensor> startIndices,
                           const Sizes &sliceSizes, ShapedType resultType) {
   Tensor result(resultType);
   auto adjustedStartIndices =
-      clamp(0, evalIndices(startIndices), operand.getShape() - sliceSizes);
+      clamp(0, evalIndex(startIndices), operand.getShape() - sliceSizes);
   for (auto resultIt = result.index_begin(); resultIt != result.index_end();
        ++resultIt) {
     result.set(*resultIt, operand.get(adjustedStartIndices + *resultIt));
@@ -865,8 +996,8 @@ Tensor evalDynamicUpdateSliceOp(const Tensor &operand, const Tensor &update,
                                 ArrayRef<Tensor> startIndices,
                                 ShapedType resultType) {
   Tensor result(resultType);
-  auto adjustedStartIndices = clamp(0, evalIndices(startIndices),
-                                    operand.getShape() - update.getShape());
+  auto adjustedStartIndices =
+      clamp(0, evalIndex(startIndices), operand.getShape() - update.getShape());
   for (auto resultIt = result.index_begin(); resultIt != result.index_end();
        ++resultIt)
     result.set(*resultIt, operand.get(*resultIt));
@@ -894,6 +1025,53 @@ Tensor evalFloorOp(const Tensor &operand, ShapedType resultType) {
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
     result.set(*it, floor(operand.get(*it)));
+  return result;
+}
+
+Tensor evalGatherOp(const Tensor &operand, const Tensor &startIndices,
+                    const Axes &offsetDims, const Axes &collapsedSliceDims,
+                    const Axes &startIndexMap, Axis indexVectorDim,
+                    const Sizes &sliceSizes, bool indicesAreSorted,
+                    ShapedType resultType) {
+  Tensor result(resultType);
+  Axes batchDims;
+  for (auto d : result.getAxes())
+    if (!llvm::is_contained(offsetDims, d)) batchDims.push_back(d);
+
+  for (auto resultIt = result.index_begin(); resultIt != result.index_end();
+       ++resultIt) {
+    auto resultIndex = *resultIt;
+
+    Index batchIndex;
+    for (auto d : batchDims) batchIndex.push_back(resultIndex[d]);
+
+    auto startIndicesIndex = batchIndex;
+    if (indexVectorDim < startIndices.getRank())
+      startIndicesIndex.insert(startIndicesIndex.begin() + indexVectorDim,
+                               kColon);
+    auto startIndex = evalIndex(evalSliceOp(startIndices, startIndicesIndex));
+
+    Index fullStartIndex(operand.getRank(), 0);
+    for (auto dOperand : operand.getAxes()) {
+      auto dStartIt = llvm::find(startIndexMap, dOperand);
+      if (dStartIt == startIndexMap.end()) continue;
+      auto dStart = dStartIt - startIndexMap.begin();
+      fullStartIndex[dOperand] = startIndex[dStart];
+    }
+
+    Index offsetIndex;
+    for (auto d : offsetDims) offsetIndex.push_back(resultIndex[d]);
+
+    Index fullOffsetIndex(offsetIndex.size() + collapsedSliceDims.size(), 0);
+    for (size_t i = 0, oi = 0; i < fullOffsetIndex.size(); ++i) {
+      if (llvm::is_contained(collapsedSliceDims, i)) continue;
+      fullOffsetIndex[i] = offsetIndex[oi++];
+    }
+
+    auto operandIndex = fullStartIndex + fullOffsetIndex;
+    if (operandIndex.inBounds(operand.getShape()))
+      result.set(*resultIt, operand.get(operandIndex));
+  }
   return result;
 }
 
@@ -1022,11 +1200,11 @@ Tensor evalPadOp(const Tensor &operand, const Tensor &paddingValue,
     result.set(*resultIt, paddingValue.get({}));
   for (auto operandIt = operand.index_begin(); operandIt != operand.index_end();
        ++operandIt) {
-    auto resultIdx = edgePaddingLow + *operandIt * (interiorPadding + 1);
+    auto resultIndex = edgePaddingLow + *operandIt * (interiorPadding + 1);
     // Bound check is needed here because of negative padding which could
     // swallow some operand indices.
-    if (resultIdx.inBounds(result.getShape()))
-      result.set(resultIdx, operand.get(*operandIt));
+    if (resultIndex.inBounds(result.getShape()))
+      result.set(resultIndex, operand.get(*operandIt));
   }
   return result;
 }
@@ -1071,16 +1249,10 @@ SmallVector<Tensor> evalReduceOp(ArrayRef<Tensor> inputs,
     }
 
     SmallVector<Tensor> bodyArgs;
-    for (auto [result, initValue] : llvm::zip(results, initValues)) {
-      Tensor bodyArg(initValue.getType());
-      bodyArg.set({}, result.get(resultIndex));
-      bodyArgs.push_back(bodyArg);
-    }
-    for (auto [input, initValue] : llvm::zip(inputs, initValues)) {
-      Tensor bodyArg(initValue.getType());
-      bodyArg.set({}, input.get(*inputIt));
-      bodyArgs.push_back(bodyArg);
-    }
+    for (auto [result, initValue] : llvm::zip(results, initValues))
+      bodyArgs.push_back(Tensor(initValue.getType(), result.get(resultIndex)));
+    for (auto [input, initValue] : llvm::zip(inputs, initValues))
+      bodyArgs.push_back(Tensor(initValue.getType(), input.get(*inputIt)));
 
     auto bodyResult = eval(body, bodyArgs, &scope);
     for (auto [result, value] : llvm::zip(results, bodyResult))
@@ -1113,10 +1285,8 @@ SmallVector<Tensor> evalReduceWindowOp(
                                     windowStart + windowDimensions,
                                     windowDilations));
 
-    Axes dimensions(inputs[0].getRank());
-    std::iota(dimensions.begin(), dimensions.end(), 0);
     auto reducedValues =
-        evalReduceOp(windows, initValues, dimensions, body, scope);
+        evalReduceOp(windows, initValues, inputs[0].getAxes(), body, scope);
     for (auto [result, value] : llvm::zip(results, reducedValues))
       result.set(*resultIt, value.get({}));
   }
@@ -1144,10 +1314,10 @@ Tensor evalReverseOp(const Tensor &operand, const Axes &dimensions,
   auto resultShape = result.getShape();
   for (auto resultIt = result.index_begin(); resultIt != result.index_end();
        ++resultIt) {
-    Index operandIdx(*resultIt);
+    Index operandIndex(*resultIt);
     for (auto dim : dimensions)
-      operandIdx[dim] = (resultShape[dim] - 1) - operandIdx[dim];
-    result.set(*resultIt, operand.get(operandIdx));
+      operandIndex[dim] = (resultShape[dim] - 1) - operandIndex[dim];
+    result.set(*resultIt, operand.get(operandIndex));
   }
   return result;
 }
@@ -1171,6 +1341,72 @@ Tensor evalRsqrtOp(const Tensor &operand, ShapedType resultType) {
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
     result.set(*it, rsqrt(operand.get(*it)));
   return result;
+}
+
+SmallVector<Tensor> evalScatterOp(
+    ArrayRef<Tensor> inputs, const Tensor &scatterIndices,
+    ArrayRef<Tensor> updates, const Axes &updateWindowDims,
+    const Axes &insertedWindowDims, const Axes &scatterDimsToOperandDims,
+    Axis indexVectorDim, Region &updateComputation, Scope &scope,
+    ArrayRef<ShapedType> resultTypes) {
+  SmallVector<Tensor> results;
+  for (auto input : inputs) results.push_back(input);
+
+  Axes updateScatterDims;
+  for (auto d : updates[0].getAxes())
+    if (!llvm::is_contained(updateWindowDims, d))
+      updateScatterDims.push_back(d);
+
+  for (auto updateIndexIt = updates[0].index_begin();
+       updateIndexIt != updates[0].index_end(); ++updateIndexIt) {
+    auto updateIndex = *updateIndexIt;
+    Index updateScatterIndex;
+    for (auto d : updateScatterDims)
+      updateScatterIndex.push_back(updateIndex[d]);
+
+    auto startIndicesIndex = updateScatterIndex;
+    if (indexVectorDim < scatterIndices.getRank())
+      startIndicesIndex.insert(startIndicesIndex.begin() + indexVectorDim,
+                               kColon);
+    auto startIndex = evalIndex(evalSliceOp(scatterIndices, startIndicesIndex));
+
+    Index fullStartIndex(inputs[0].getRank(), 0);
+    for (auto dInput : inputs[0].getAxes()) {
+      auto dStartIt = llvm::find(scatterDimsToOperandDims, dInput);
+      if (dStartIt == scatterDimsToOperandDims.end()) continue;
+      auto dStart = dStartIt - scatterDimsToOperandDims.begin();
+      fullStartIndex[dInput] = startIndex[dStart];
+    }
+
+    Index updateWindowIndex;
+    for (auto d : updateWindowDims) updateWindowIndex.push_back(updateIndex[d]);
+
+    Index fullWindowIndex(updateWindowIndex.size() + insertedWindowDims.size(),
+                          0);
+    for (size_t i = 0, wi = 0; i < fullWindowIndex.size(); ++i) {
+      if (llvm::is_contained(insertedWindowDims, i)) continue;
+      fullWindowIndex[i] = updateWindowIndex[wi++];
+    }
+
+    auto resultIndex = fullStartIndex + fullWindowIndex;
+    if (!resultIndex.inBounds(results[0].getShape())) continue;
+
+    SmallVector<Tensor> updateComputationArgs;
+    for (auto result : results)
+      updateComputationArgs.push_back(
+          Tensor(RankedTensorType::get({}, result.getElementType()),
+                 result.get(resultIndex)));
+    for (auto update : updates)
+      updateComputationArgs.push_back(
+          Tensor(RankedTensorType::get({}, update.getElementType()),
+                 update.get(updateIndex)));
+
+    auto updatedValues = eval(updateComputation, updateComputationArgs, &scope);
+    for (auto [result, value] : llvm::zip(results, updatedValues))
+      result.set(resultIndex, value.get({}));
+  }
+
+  return results;
 }
 
 Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
@@ -1283,11 +1519,11 @@ SmallVector<Tensor> evalSortOp(ArrayRef<Tensor> inputs, Axis dimension,
     // this sort by reshuffling input elements into result elements.
     for (auto [inputHandle, resultHandle] : llvm::enumerate(inputsTogether)) {
       for (auto [input, result] : llvm::zip(inputs, results)) {
-        auto inputIdx = *resultIt;
-        auto resultIdx = *resultIt;
-        inputIdx[adjustedDimension] = inputHandle;
-        resultIdx[adjustedDimension] = resultHandle;
-        result.set(resultIdx, input.get(inputIdx));
+        auto inputIndex = *resultIt;
+        auto resultIndex = *resultIt;
+        inputIndex[adjustedDimension] = inputHandle;
+        resultIndex[adjustedDimension] = resultHandle;
+        result.set(resultIndex, input.get(inputIndex));
       }
     }
   }
@@ -1321,8 +1557,8 @@ Tensor evalTransposeOp(const Tensor &operand, const Axes &permutation,
   Tensor result(resultType);
   for (auto operandIt = operand.index_begin(); operandIt != operand.index_end();
        ++operandIt) {
-    auto resultIdx = operandIt->permute(permutation);
-    result.set(resultIdx, operand.get(*operandIt));
+    auto resultIndex = operandIt->permute(permutation);
+    result.set(resultIndex, operand.get(*operandIt));
   }
   return result;
 }
@@ -1332,14 +1568,9 @@ SmallVector<Tensor> evalWhileOp(ArrayRef<Tensor> operand, Region &cond,
   SmallVector<Tensor> results(operand);
 
   auto condResults = eval(cond, operand, &scope);
-  if (condResults.size() != 1)
-    llvm::report_fatal_error("Failed to evaluate cond");
-
   while (condResults[0].get({}).getBooleanValue()) {
     results = eval(body, results, &scope);
     condResults = eval(cond, results, &scope);
-    if (condResults.size() != 1)
-      llvm::report_fatal_error("Failed to evaluate cond");
   }
 
   return results;

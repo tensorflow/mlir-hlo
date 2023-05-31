@@ -31,6 +31,12 @@ Tensor evalAbsOp(const Tensor &operand, ShapedType resultType);
 Tensor evalAddOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalAndOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalAtan2Op(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
+SmallVector<Tensor> evalBatchNormGradOp(const Tensor &operand,
+                                        const Tensor &scale, const Tensor &mean,
+                                        const Tensor &variance,
+                                        const Tensor &gradOutput,
+                                        APFloat epsilon, Axis featureIndex,
+                                        ArrayRef<ShapedType> resultTypes);
 Tensor evalBatchNormInferenceOp(const Tensor &operand, const Tensor &scale,
                                 const Tensor &offset, const Tensor &mean,
                                 const Tensor &variance, APFloat epsilon,
@@ -71,6 +77,11 @@ Tensor evalDynamicUpdateSliceOp(const Tensor &operand, const Tensor &update,
 Tensor evalExpm1Op(const Tensor &operand, ShapedType resultType);
 Tensor evalExponentialOp(const Tensor &operand, ShapedType resultType);
 Tensor evalFloorOp(const Tensor &operand, ShapedType resultType);
+Tensor evalGatherOp(const Tensor &operand, const Tensor &startIndices,
+                    const Axes &offsetDims, const Axes &collapsedSliceDims,
+                    const Axes &startIndexMap, Axis indexVectorDim,
+                    const Sizes &sliceSizes, bool indicesAreSorted,
+                    ShapedType resultType);
 Tensor evalGetDimensionSizeOp(const Tensor &operand, Axis dimension,
                               ShapedType resultType);
 SmallVector<Tensor> evalIfOp(const Tensor &pred, Region &trueBranch,
@@ -114,6 +125,12 @@ Tensor evalReverseOp(const Tensor &operand, const Axes &dimensions,
 Tensor evalRoundOp(const Tensor &operand, ShapedType resultType);
 Tensor evalRoundNearestEvenOp(const Tensor &operand, ShapedType resultType);
 Tensor evalRsqrtOp(const Tensor &operand, ShapedType resultType);
+SmallVector<Tensor> evalScatterOp(
+    ArrayRef<Tensor> inputs, const Tensor &scatterIndices,
+    ArrayRef<Tensor> updates, const Axes &updateWindowDims,
+    const Axes &insertedWindowDims, const Axes &scatterDimsToOperandDims,
+    Axis indexVectorDim, Region &updateComputation, Scope &scope,
+    ArrayRef<ShapedType> resultTypes);
 Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
                     const Tensor &onFalse, ShapedType resultType);
 Tensor evalShiftLeftOp(const Tensor &lhs, const Tensor &rhs,
