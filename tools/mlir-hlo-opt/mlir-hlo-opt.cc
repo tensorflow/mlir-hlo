@@ -23,6 +23,7 @@ limitations under the License.
 #include "lhlo_gpu/IR/lhlo_gpu_ops.h"
 #include "mhlo/IR/register.h"
 #include "mhlo/transforms/passes.h"
+#include "mlir/Dialect/Func/Extensions/InlinerExtension.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/InitAllPasses.h"
 #include "mlir/Tools/mlir-opt/MlirOptMain.h"
@@ -59,6 +60,7 @@ int main(int argc, char** argv) {
 
   DialectRegistry registry;
   registerAllDialects(registry);
+  func::registerInlinerExtension(registry);
   mhlo::registerAllMhloDialects(registry);
   stablehlo::registerAllDialects(registry);
   registry.insert<deallocation::DeallocationDialect, lmhlo::LmhloDialect,
