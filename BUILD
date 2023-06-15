@@ -1639,6 +1639,7 @@ cc_binary(
         ":transforms_gpu_passes",
         "//stablehlo:register",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:AllExtensions",
         "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:MlirOptLib",
