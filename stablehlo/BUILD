@@ -384,8 +384,8 @@ cc_library(
     ],
     includes = ["."],
     deps = [
-        ":reference_sizes",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
     ],
 )
@@ -403,8 +403,8 @@ cc_library(
         ":reference_axes",
         ":reference_element",
         ":reference_errors",
+        ":reference_index",
         ":reference_scope",
-        ":reference_sizes",
         ":reference_tensor",
         ":reference_types",
         ":stablehlo_ops",
@@ -433,21 +433,6 @@ cc_library(
 )
 
 cc_library(
-    name = "reference_sizes",
-    srcs = [
-        "stablehlo/reference/Sizes.cpp",
-    ],
-    hdrs = [
-        "stablehlo/reference/Sizes.h",
-    ],
-    includes = ["."],
-    deps = [
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:IR",
-    ],
-)
-
-cc_library(
     name = "reference_tensor",
     srcs = [
         "stablehlo/reference/Tensor.cpp",
@@ -461,7 +446,6 @@ cc_library(
         ":reference_element",
         ":reference_errors",
         ":reference_index",
-        ":reference_sizes",
         ":reference_types",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",

@@ -557,12 +557,11 @@ func.func @after_all(%arg0: !stablehlo.token, %arg1: !stablehlo.token) -> !stabl
 
 // -----
 
-// CHECK: func @select_and_scatter
-func.func @select_and_scatter(
+// CHECK: func @select_and_scatter_c11
+func.func @select_and_scatter_c11(
   %arg0: tensor<10x24x24x64xf32>,
   %arg1: tensor<10x12x12x64xf32>) -> tensor<10x24x24x64xindex> {
   %0 = stablehlo.constant dense<0.000000e+00> : tensor<f32>
-
   %1 = "stablehlo.select_and_scatter"(%arg0, %arg1, %0) ({
   ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
     %2 = "stablehlo.compare"(%arg3, %arg4) {
@@ -1508,9 +1507,9 @@ func.func @real_dynamic_slice(%arg0: tensor<?xf32>, %arg1: tensor<1xindex>, %arg
 
 // -----
 
-// CHECK-LABEL: func @dot_general
+// CHECK-LABEL: func @dot_general_c12
 // CHECK-SAME: (%[[ARG0:.*]]: tensor<?x?x?xf32>, %[[ARG1:.*]]: tensor<?x?x?xf32>
-func.func @dot_general(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x?xf32>) -> tensor<3xindex> {
+func.func @dot_general_c12(%arg0: tensor<?x?x?xf32>, %arg1: tensor<?x?x?xf32>) -> tensor<3xindex> {
   // CHECK: %[[C0:.*]] = arith.constant 0 : index
   // CHECK: %[[C2:.*]] = arith.constant 2 : index
   // CHECK: %[[DIM:.*]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x?x?xf32>

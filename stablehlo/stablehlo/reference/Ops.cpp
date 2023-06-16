@@ -249,6 +249,22 @@ SmallVector<Tensor> eval(
       scope.add(op.getResults(), {result});
     } else if (isa<DotOp>(op)) {
       failOnDecomposableOp(op);
+    } else if (auto dotGeneralOp = dyn_cast<DotGeneralOp>(op)) {
+      auto lhs = scope.find(dotGeneralOp.getLhs());
+      auto rhs = scope.find(dotGeneralOp.getRhs());
+      auto lhsBatchingDimensions = Axes(
+          dotGeneralOp.getDotDimensionNumbers().getLhsBatchingDimensions());
+      auto rhsBatchingDimensions = Axes(
+          dotGeneralOp.getDotDimensionNumbers().getRhsBatchingDimensions());
+      auto lhsContractingDimensions = Axes(
+          dotGeneralOp.getDotDimensionNumbers().getLhsContractingDimensions());
+      auto rhsContractingDimensions = Axes(
+          dotGeneralOp.getDotDimensionNumbers().getRhsContractingDimensions());
+      auto result =
+          evalDotGeneralOp(lhs, rhs, lhsBatchingDimensions,
+                           rhsBatchingDimensions, lhsContractingDimensions,
+                           rhsContractingDimensions, dotGeneralOp.getType());
+      scope.add(op.getResults(), {result});
     } else if (auto dynamicSliceOp = dyn_cast<DynamicSliceOp>(op)) {
       auto operand = scope.find(dynamicSliceOp.getOperand());
       auto startIndices = scope.find(dynamicSliceOp.getStartIndices());
@@ -487,6 +503,39 @@ SmallVector<Tensor> eval(
       auto onTrue = scope.find(selectOp.getOnTrue());
       auto onFalse = scope.find(selectOp.getOnFalse());
       auto result = evalSelectOp(pred, onTrue, onFalse, selectOp.getType());
+      scope.add(op.getResults(), {result});
+    } else if (auto selectAndScatterOp = dyn_cast<SelectAndScatterOp>(op)) {
+      auto operand = scope.find(selectAndScatterOp.getOperand());
+      auto source = scope.find(selectAndScatterOp.getSource());
+      auto initValue = scope.find(selectAndScatterOp.getInitValue());
+      auto rank = operand.getRank();
+
+      Sizes windowDimensions(rank, 1);
+      if (auto windowDimensionsAttr =
+              selectAndScatterOp.getWindowDimensionsAttr())
+        windowDimensions.assign(
+            windowDimensionsAttr.getValues<int64_t>().begin(),
+            windowDimensionsAttr.getValues<int64_t>().end());
+
+      Sizes windowStrides(rank, 1);
+      if (auto windowStridesAttr = selectAndScatterOp.getWindowStridesAttr())
+        windowStrides.assign(windowStridesAttr.getValues<int64_t>().begin(),
+                             windowStridesAttr.getValues<int64_t>().end());
+
+      Sizes paddingLow(rank, 0);
+      if (auto padding = selectAndScatterOp.getPadding()) {
+        auto paddingOrErr = hlo::convertPaddingAttribute(padding, {});
+        if (failed(paddingOrErr))
+          report_fatal_error(invalidArgument("Invalid padding format found."));
+        for (auto i = 0; i < static_cast<int64_t>(paddingOrErr->size()); ++i) {
+          paddingLow[i] = (*paddingOrErr)[i].first;
+        }
+      }
+
+      auto result = evalSelectAndScatterOp(
+          operand, source, initValue, windowDimensions, windowStrides,
+          paddingLow, selectAndScatterOp.getSelect(),
+          selectAndScatterOp.getScatter(), scope, selectAndScatterOp.getType());
       scope.add(op.getResults(), {result});
     } else if (auto shiftLeftOp = dyn_cast<ShiftLeftOp>(op)) {
       auto lhs = scope.find(shiftLeftOp.getLhs());
@@ -748,6 +797,79 @@ Tensor evalDivideOp(const Tensor &lhs, const Tensor &rhs,
   Tensor result(resultType);
   for (auto it = result.index_begin(); it != result.index_end(); ++it)
     result.set(*it, lhs.get(*it) / rhs.get(*it));
+  return result;
+}
+
+Tensor evalDotGeneralOp(const Tensor &lhs, const Tensor &rhs,
+                        const Axes &lhsBatchingDimensions,
+                        const Axes &rhsBatchingDimensions,
+                        const Axes &lhsContractingDimensions,
+                        const Axes &rhsContractingDimensions,
+                        ShapedType resultType) {
+  Tensor result(resultType);
+  Axes lhsResultDims;
+  for (auto i = 0; i < lhs.getType().getRank(); ++i)
+    if (!llvm::is_contained(lhsBatchingDimensions, i) &&
+        !llvm::is_contained(lhsContractingDimensions, i))
+      lhsResultDims.push_back(i);
+
+  Axes rhsResultDims;
+  for (auto i = 0; i < rhs.getType().getRank(); ++i)
+    if (!llvm::is_contained(rhsBatchingDimensions, i) &&
+        !llvm::is_contained(rhsContractingDimensions, i))
+      rhsResultDims.push_back(i);
+
+  for (auto resultIt = result.index_begin(); resultIt != result.index_end();
+       ++resultIt) {
+    // Each result element is computed as dot product of slices of lhs and rhs.
+    // In this implementation, we aren't going to materialize these slices as
+    // standalone tensors, but are going to iterate through lhs and rhs
+    // via lhsIndex and rhsIndex.
+    auto resultIndex = *resultIt;
+    Index lhsIndex(lhs.getType().getRank(), 0);
+    Index rhsIndex(rhs.getType().getRank(), 0);
+
+    // Some pieces of lhsIndex and rhsIndex stay the same during iteration.
+    // These are the indices that correspond to non-contracting dimensions,
+    // and they are initialized here.
+    int64_t resultDim = 0;
+    for (size_t i = 0; i < lhsBatchingDimensions.size(); ++i, ++resultDim) {
+      lhsIndex[lhsBatchingDimensions[i]] = resultIndex[resultDim];
+      rhsIndex[rhsBatchingDimensions[i]] = resultIndex[resultDim];
+    }
+    for (size_t i = 0; i < lhsResultDims.size(); ++i, ++resultDim)
+      lhsIndex[lhsResultDims[i]] = resultIndex[resultDim];
+    for (size_t i = 0; i < rhsResultDims.size(); ++i, ++resultDim)
+      rhsIndex[rhsResultDims[i]] = resultIndex[resultDim];
+
+    // Iteration space is defined by contracting dimensions.
+    // The corresponding parts of lhsIndex and rhsIndex start at 0, 0, ..., 0.
+    // Then, we increment them lexicographically until we're out of bounds.
+    auto incrementIndices = [&]() -> LogicalResult {
+      // Implementation is heavily inspired by IndexSpaceIterator::operator++.
+      if (lhsContractingDimensions.empty()) return failure();
+      for (int64_t i = lhsContractingDimensions.size() - 1; i >= 0; --i) {
+        lhsIndex[lhsContractingDimensions[i]]++;
+        rhsIndex[rhsContractingDimensions[i]]++;
+        if (lhsIndex[lhsContractingDimensions[i]] <
+            lhs.getShape()[lhsContractingDimensions[i]])
+          return success();
+        if (i == 0) return failure();
+        lhsIndex[lhsContractingDimensions[i]] = 0;
+        rhsIndex[rhsContractingDimensions[i]] = 0;
+      }
+      return success();
+    };
+
+    // Now that the lhsIndex/rhsIndex and the iteration space are set up,
+    // we can compute the dot product of the (virtual) slices of lhs and rhs.
+    auto resultElement = convert(resultType.getElementType(), 0.0);
+    while (true) {
+      resultElement = resultElement + lhs.get(lhsIndex) * rhs.get(rhsIndex);
+      if (failed(incrementIndices())) break;
+    }
+    result.set(resultIndex, resultElement);
+  }
   return result;
 }
 
@@ -1192,6 +1314,63 @@ Tensor evalSelectOp(const Tensor &pred, const Tensor &onTrue,
     Element predValue = pred.getRank() != 0 ? pred.get(*it) : pred.get({});
     result.set(
         *it, predValue.getBooleanValue() ? onTrue.get(*it) : onFalse.get(*it));
+  }
+  return result;
+}
+
+Tensor evalSelectAndScatterOp(const Tensor &operand, const Tensor &source,
+                              const Tensor &initValue,
+                              const Sizes &windowDimensions,
+                              const Sizes &windowStrides,
+                              const Sizes &paddingLow, Region &select,
+                              Region &scatter, Scope &scope,
+                              ShapedType resultType) {
+  Tensor result(resultType, initValue.get({}));
+
+  for (auto sourceIt = source.index_begin(); sourceIt != source.index_end();
+       ++sourceIt) {
+    std::optional<Element> selectedVal;
+    std::optional<Index> selectedIndex;
+    auto iterateThroughWindow = [&](std::function<void(const Index &)> body) {
+      for (auto windowIt = windowDimensions.index_begin();
+           windowIt != windowDimensions.index_end(); ++windowIt) {
+        auto operandIndex = *sourceIt * windowStrides + *windowIt - paddingLow;
+        if (!operandIndex.inBounds(operand.getShape())) continue;
+        body(operandIndex);
+      }
+    };
+    iterateThroughWindow([&](const Index &operandIndex) {
+      auto currVal = operand.get(operandIndex);
+      if (!selectedVal) {
+        selectedVal = currVal;
+        selectedIndex = operandIndex;
+      }
+
+      Tensor selectedValTensor(
+          RankedTensorType::get({}, selectedVal.value().getType()),
+          selectedVal.value());
+      Tensor currValTensor(RankedTensorType::get({}, currVal.getType()),
+                           currVal);
+      auto selectResult =
+          eval(select, {selectedValTensor, currValTensor}, &scope);
+
+      bool selected = !selectResult[0].get({}).getBooleanValue();
+      if (selected) {
+        selectedVal = currVal;
+        selectedIndex = operandIndex;
+      }
+    });
+    iterateThroughWindow([&](const Index &operandIndex) {
+      if (operandIndex == selectedIndex) {
+        Tensor sourceValues(
+            RankedTensorType::get({2}, initValue.getElementType()));
+        sourceValues.set({0}, source.get(*sourceIt));
+        sourceValues.set({1}, result.get(operandIndex));
+        auto reducedResult =
+            evalReduceOp({sourceValues}, {initValue}, {0}, scatter, scope);
+        result.set(operandIndex, reducedResult[0].get({}));
+      }
+    });
   }
   return result;
 }
