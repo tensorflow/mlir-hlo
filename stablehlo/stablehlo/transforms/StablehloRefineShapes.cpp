@@ -43,6 +43,7 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "stablehlo/dialect/Base.h"
 #include "stablehlo/dialect/ChloOps.h"
+#include "stablehlo/dialect/ExperimentalOps.h"
 #include "stablehlo/dialect/StablehloOps.h"
 #include "stablehlo/dialect/TypeInference.h"
 #include "stablehlo/transforms/Passes.h"
@@ -844,6 +845,47 @@ struct RefineDynamicPadOpPattern : public OpRewritePattern<DynamicPadOp> {
   }
 };
 
+struct RefineDynamicReduceWindowOpPattern
+    : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto op = getDynamicReduceWindowOp(impl);
+    if (!op || failed(op->verify())) return failure();
+
+    // At the moment, we only support refining return types using fully static
+    // shape values which serves the current use cases well.
+    // Support for partially static shape values is left for future work.
+    SmallVector<int64_t> windowDimensions, windowStrides, baseDilations,
+        windowDilations, padding;
+    if (failed(hlo::matchInts(op->getWindowDimensions(), windowDimensions)))
+      return rewriter.notifyMatchFailure(impl,
+                                         "expected constant window_dimensions");
+    if (failed(hlo::matchInts(op->getWindowStrides(), windowStrides)))
+      return rewriter.notifyMatchFailure(impl,
+                                         "expected constant window_strides");
+    if (failed(hlo::matchInts(op->getBaseDilations(), baseDilations)))
+      return rewriter.notifyMatchFailure(impl,
+                                         "expected constant base_dilations");
+    if (failed(hlo::matchInts(op->getWindowDilations(), windowDilations)))
+      return rewriter.notifyMatchFailure(impl,
+                                         "expected constant window_dilations");
+    if (failed(hlo::matchInts(op->getPadding(), padding)))
+      return rewriter.notifyMatchFailure(impl, "expected constant padding");
+
+    SmallVector<ShapedTypeComponents> inferredReturnTypes;
+    if (failed(hlo::inferReduceWindowOp(
+            /*location=*/{}, op->getInputs(), op->getInitValues(),
+            rewriter.getI64TensorAttr(windowDimensions),
+            rewriter.getI64TensorAttr(windowStrides),
+            rewriter.getI64TensorAttr(baseDilations),
+            rewriter.getI64TensorAttr(windowDilations),
+            hlo::getPaddingAttr(&rewriter, padding), inferredReturnTypes)))
+      return rewriter.notifyMatchFailure(impl, "inferReduceWindowOp failed");
+    return refineReturnTypes(rewriter, impl, inferredReturnTypes);
+  }
+};
+
 struct RefineDynamicReshapeOpPattern
     : public OpRewritePattern<DynamicReshapeOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -1181,6 +1223,7 @@ struct StablehloRefineShapesPass
     patterns.add<RefineDynamicConvOpPattern>(&getContext());
     patterns.add<RefineDynamicIotaOpPattern>(&getContext());
     patterns.add<RefineDynamicPadOpPattern>(&getContext());
+    patterns.add<RefineDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<RefineDynamicReshapeOpPattern>(&getContext());
     patterns.add<RefineInferTypeOpInterfacePattern>(&getContext());
     patterns.add<RefineRealDynamicSliceOpPattern>(&getContext());

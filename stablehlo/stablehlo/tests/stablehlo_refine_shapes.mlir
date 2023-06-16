@@ -595,6 +595,27 @@ func.func @refine_dynamic_pad(%arg0: tensor<4xf32>, %arg1: tensor<f32>) -> tenso
 
 // -----
 
+// CHECK-LABEL: @main
+func.func @main(%arg0: tensor<3x2xf32>, %arg1: tensor<f32>) -> tensor<*xf32> {
+  // CHECK: stablehlo.dynamic_reduce_window{{.*}} -> tensor<2x2xf32>
+  %0 = stablehlo.constant dense<[2, 1]> : tensor<2xi64>
+  %1 = stablehlo.constant dense<[4, 1]> : tensor<2xi64>
+  %2 = stablehlo.constant dense<[2, 1]> : tensor<2xi64>
+  %3 = stablehlo.constant dense<[3, 1]> : tensor<2xi64>
+  %4 = stablehlo.constant dense<[[2, 1], [0, 0]]> : tensor<2x2xi64>
+  %5 = stablehlo.custom_call @stablehlo.dynamic_reduce_window(%arg0, %arg1, %0, %1, %2, %3, %4) {
+    called_computations = [@dynamic_reduce_window0]
+  } : (tensor<3x2xf32>, tensor<f32>, tensor<2xi64>, tensor<2xi64>, tensor<2xi64>, tensor<2xi64>, tensor<2x2xi64>) -> tensor<*xf32>
+  func.return %5 : tensor<*xf32>
+}
+
+func.func private @dynamic_reduce_window0(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
+  %0 = stablehlo.add %arg0, %arg1 : tensor<f32>
+  func.return %0 : tensor<f32>
+}
+
+// -----
+
 // CHECK-LABEL: @refine_dynamic_reshape
 func.func @refine_dynamic_reshape(%arg0: tensor<4xf32>) -> tensor<*xf32> {
   // CHECK: stablehlo.dynamic_reshape{{.*}} -> tensor<1x4xf32>

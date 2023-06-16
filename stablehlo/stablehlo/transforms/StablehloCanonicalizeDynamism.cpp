@@ -24,6 +24,7 @@ limitations under the License.
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "stablehlo/dialect/ExperimentalOps.h"
 #include "stablehlo/dialect/StablehloOps.h"
 #include "stablehlo/transforms/Passes.h"
 
@@ -198,6 +199,55 @@ struct CanonicalizeDynamicPadOpPattern : public OpRewritePattern<DynamicPadOp> {
   }
 };
 
+struct CanonicalizeDynamicReduceWindowOpPattern
+    : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto op = getDynamicReduceWindowOp(impl);
+    if (!op || failed(op->verify())) return failure();
+
+    // ReduceWindowOp supports dynamic shapes for operands and results, so we
+    // don't check for that here unlike in some other patterns in this pass.
+    SmallVector<int64_t> windowDimensions, windowStrides, baseDilations,
+        windowDilations, padding;
+    if (failed(hlo::matchInts(op->getWindowDimensions(), windowDimensions)))
+      return rewriter.notifyMatchFailure(impl,
+                                         "expected static window_dimensions");
+    if (failed(hlo::matchInts(op->getWindowStrides(), windowStrides)))
+      return rewriter.notifyMatchFailure(impl,
+                                         "expected static window_strides");
+    if (failed(hlo::matchInts(op->getBaseDilations(), baseDilations)))
+      return rewriter.notifyMatchFailure(impl,
+                                         "expected static base_dilations");
+    if (failed(hlo::matchInts(op->getWindowDilations(), windowDilations)))
+      return rewriter.notifyMatchFailure(impl,
+                                         "expected static window_dilations");
+    if (failed(hlo::matchInts(op->getPadding(), padding)))
+      return rewriter.notifyMatchFailure(impl, "expected static padding");
+    auto newOp = rewriter.create<ReduceWindowOp>(
+        impl->getLoc(), op->getResults().getTypes(), op->getInputs(),
+        op->getInitValues(), rewriter.getI64TensorAttr(windowDimensions),
+        rewriter.getI64TensorAttr(windowStrides),
+        rewriter.getI64TensorAttr(baseDilations),
+        rewriter.getI64TensorAttr(windowDilations),
+        hlo::getPaddingAttr(&rewriter, padding));
+
+    // Inline the called computation into newOp.
+    // This is somewhat annoying because we also have to rewrite the original
+    // func::ReturnOp into stablehlo::ReturnOp.
+    rewriter.cloneRegionBefore(op->getBody(), newOp.getBody(),
+                               newOp.getBody().end());
+    auto funcReturnOp =
+        cast<func::ReturnOp>(newOp.getBody().front().getTerminator());
+    rewriter.setInsertionPointToEnd(&newOp.getBody().front());
+    rewriter.replaceOpWithNewOp<stablehlo::ReturnOp>(
+        funcReturnOp, funcReturnOp.getOperands());
+    rewriter.replaceOp(impl, newOp->getResults());
+    return success();
+  }
+};
+
 struct CanonicalizeDynamicReshapeOpPattern
     : public OpRewritePattern<DynamicReshapeOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -320,6 +370,7 @@ struct StablehloCanonicalizeDynamismPass
     patterns.add<CanonicalizeDynamicGatherOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicIotaOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicPadOpPattern>(&getContext());
+    patterns.add<CanonicalizeDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicReshapeOpPattern>(&getContext());
     patterns.add<CanonicalizeRealDynamicSliceOpToDynamicSliceOpPattern>(
         &getContext());

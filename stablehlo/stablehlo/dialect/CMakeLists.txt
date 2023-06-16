@@ -79,6 +79,20 @@ target_include_directories(ChloOps INTERFACE
   $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
 )
 
+add_mlir_dialect_library(ExperimentalOps
+  PARTIAL_SOURCES_INTENDED
+  ExperimentalOps.cpp
+
+  DEPENDS
+  StablehloOpsIncGen
+
+  LINK_LIBS PUBLIC
+  MLIRFuncDialect
+  MLIRIR
+  MLIRSupport
+  StablehloOps
+)
+
 add_mlir_dialect_library(StablehloRegister
   PARTIAL_SOURCES_INTENDED
   Register.cpp
