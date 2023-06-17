@@ -895,6 +895,29 @@ struct RefineDynamicReshapeOpPattern
   }
 };
 
+struct RefineDynamicRngBitGeneratorOpPattern
+    : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto op = getDynamicRngBitGeneratorOp(impl);
+    if (!op || failed(op->verify())) return failure();
+
+    // At the moment, we only support refining return types using fully static
+    // shape values which serves the current use cases well.
+    // Support for partially static shape values is left for future work.
+    SmallVector<int64_t> outputShape;
+    if (failed(hlo::matchInts(op->getOutputShape(), outputShape)))
+      return rewriter.notifyMatchFailure(impl,
+                                         "expected constant output_shape");
+
+    // We only need to refine the shape of `output` (the second result).
+    // The shape of `output_state` (the first result) is determined by the shape
+    // of `initial_state`, so we ignore it and provide an empty refinement.
+    return refineReturnTypes(rewriter, impl, {{}, {outputShape}});
+  }
+};
+
 struct RefineInferTypeOpInterfacePattern
     : public OpInterfaceRewritePattern<InferTypeOpInterface> {
   explicit RefineInferTypeOpInterfacePattern(MLIRContext* context)
@@ -1225,6 +1248,7 @@ struct StablehloRefineShapesPass
     patterns.add<RefineDynamicPadOpPattern>(&getContext());
     patterns.add<RefineDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<RefineDynamicReshapeOpPattern>(&getContext());
+    patterns.add<RefineDynamicRngBitGeneratorOpPattern>(&getContext());
     patterns.add<RefineInferTypeOpInterfacePattern>(&getContext());
     patterns.add<RefineRealDynamicSliceOpPattern>(&getContext());
     patterns.add<RefineReduceScatterOpPattern>(&getContext());

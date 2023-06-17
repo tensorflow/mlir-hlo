@@ -488,8 +488,7 @@ func.func private @dynamic_reduce_window0(%arg0: tensor<f32>, %arg1: tensor<f32>
   func.return %0 : tensor<f32>
 }
 
-// TODO(burmako): Implement tests for verification failures.
-// It's getting late, so I'm going to sleep and will finish this tomorrow.
+// TODO(burmako): Implement tests for verification failures for dynamic_reduce_window.
 
 // -----
 
@@ -619,6 +618,44 @@ func.func @dynamic_reshape_inapplicable_dynamic_result_type(%arg0: tensor<4xf32>
   %0 = stablehlo.constant dense<[1, 4]> : tensor<2xi64>
   %1 = stablehlo.dynamic_reshape %arg0, %0 : (tensor<4xf32>, tensor<2xi64>) -> tensor<1x?xf32>
   return %1 : tensor<1x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @dynamic_rng_bit_generator_success
+func.func @dynamic_rng_bit_generator_success(%arg0: tensor<2xui64>) -> tensor<1x4xf32> {
+  // CHECK-NOT: stablehlo.dynamic_rng_bit_generator
+  // CHECK: stablehlo.rng_bit_generator %arg0, algorithm = DEFAULT : (tensor<2xui64>) -> (tensor<2xui64>, tensor<1x4xf32>)
+  %0 = stablehlo.constant dense<[1, 4]> : tensor<2xi64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_rng_bit_generator(%arg0, %0) {
+    rng_algorithm = #stablehlo<rng_algorithm DEFAULT>
+  } : (tensor<2xui64>, tensor<2xi64>) -> (tensor<2xui64>, tensor<1x4xf32>)
+  return %1#1 : tensor<1x4xf32>
+}
+
+// TODO(burmako): Implement tests for verification failures for dynamic_rng_bit_generator.
+
+// -----
+
+// CHECK-LABEL: func @dynamic_rng_bit_generator_inapplicable_dynamic_output_shape
+func.func @dynamic_rng_bit_generator_inapplicable_dynamic_output_shape(%arg0: tensor<2xui64>, %arg1: tensor<2xi64>) -> tensor<1x4xf32> {
+  // CHECK: stablehlo.dynamic_rng_bit_generator
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_rng_bit_generator(%arg0, %arg1) {
+    rng_algorithm = #stablehlo<rng_algorithm DEFAULT>
+  } : (tensor<2xui64>, tensor<2xi64>) -> (tensor<2xui64>, tensor<1x4xf32>)
+  return %1#1 : tensor<1x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @dynamic_rng_bit_generator_inapplicable_dynamic_output_type
+func.func @dynamic_rng_bit_generator_inapplicable_dynamic_output_type(%arg0: tensor<2xui64>) -> tensor<?x?xf32> {
+  // CHECK: stablehlo.dynamic_rng_bit_generator
+  %0 = stablehlo.constant dense<[1, 4]> : tensor<2xi64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_rng_bit_generator(%arg0, %0) {
+    rng_algorithm = #stablehlo<rng_algorithm DEFAULT>
+  } : (tensor<2xui64>, tensor<2xi64>) -> (tensor<2xui64>, tensor<?x?xf32>)
+  return %1#1 : tensor<?x?xf32>
 }
 
 // -----

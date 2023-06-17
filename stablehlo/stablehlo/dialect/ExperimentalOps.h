@@ -90,6 +90,69 @@ class DynamicReduceWindowOpAdaptor {
 std::optional<DynamicReduceWindowOpAdaptor> getDynamicReduceWindowOp(
     CustomCallOp op);
 
+// The DynamicRngBitGeneratorOp experiment provides a dynamic version of
+// RngBitGeneratorOp. Once the dynamism RFC is figured out, we expect to have an
+// upstream representation for this notion.
+//
+// Within this experiment, DynamicRngBitGeneratorOp is represented via the
+// `stablehlo.custom_call @stablehlo.dynamic_rng_bit_generator` custom call.
+// This custom call has the regular operand of RngBitGeneratorOp plus an
+// additional `output_shape` operand that determines the shape of the output:
+//   * [0] => initial_state
+//   * [1] => output_shape
+//
+// Semantics of DynamicRngBitGeneratorOp are inherited from semantics of
+// https://github.com/openxla/stablehlo/blob/main/docs/spec.md#rng_bit_generator
+// extended with an additional input (I3) and an additional constraint (C3):
+//
+// #### Inputs
+//
+// | Label | Name            | Type                                         |
+// |-------|-----------------|----------------------------------------------|
+// | (I1)  | `rng_algorithm` | enum of `DEFAULT`, `THREE_FRY`, and `PHILOX` |
+// | (I2)  | `initial_state` | 1-dimensional tensor of type `ui64`          |
+// | (I3)  | `output_shape`  | 1-dimensional tensor of integer type         |
+//
+// #### Outputs
+//
+// | Name           | Type                                     |
+// |----------------|------------------------------------------|
+// | `output_state` | 1-dimensional tensor of type `ui64`      |
+// | `output`       | tensor of integer or floating-point type |
+//
+// #### Constraints
+//
+// * (C1) `type(initial_state) = type(output_state)`.
+// * (C2) `size(initial_state)` is defined as:
+//   * implementation-defined if `rng_algorithm = DEFAULT`.
+//   * `2` if `rng_algorithm = THREE_FRY`.
+//   * `2` or `3` if `rng_algorithm = PHILOX`.
+// * (C3) `shape(output) = output_shape`.
+class DynamicRngBitGeneratorOpAdaptor {
+ public:
+  DynamicRngBitGeneratorOpAdaptor(CustomCallOp op);
+  LogicalResult verify();
+
+  // Same accessors as for stablehlo::RngBitGeneratorOp, extended with the
+  // additional `output_shape` operand.
+  // These accessors assume that the operation is well-formed (i.e. that it
+  // can pass verification).
+  RngAlgorithm getRngAlgorithm();
+  Value getInitialState();
+  Value getOutputShape();
+  Value getOutputState();
+  Value getOutput();
+
+ private:
+  CustomCallOp op_;
+};
+
+// Wraps a custom call in a DynamicReduceWindowAdaptor.
+// Fails if the call_target_name of the custom call doesn't match
+// "stablehlo.dynamic_rng_bit_generator".
+std::optional<DynamicRngBitGeneratorOpAdaptor> getDynamicRngBitGeneratorOp(
+    CustomCallOp op);
+
 }  // namespace stablehlo
 }  // namespace mlir
 

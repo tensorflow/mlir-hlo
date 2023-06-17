@@ -49,9 +49,11 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
         attr.getName() != "called_computations")
       return op_.emitError()
              << attr.getName() << " is not a supported attribute";
-    if (!op_.getBackendConfig().empty())
-      return op_.emitError() << "expects an empty backend_config";
   }
+  if (!op_.getBackendConfig().empty())
+    return op_.emitError() << "expects an empty backend_config";
+  if (op_.getCallTargetName() != "stablehlo.dynamic_reduce_window")
+    return op_.emitError() << "expects @stablehlo.dynamic_reduce_window";
 
   // reduce_window_c1
   // This constraint hold automatically thanks to the checks that we have
@@ -115,9 +117,9 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
   for (auto inputType : inputTypes) {
     if (!inputType.hasRank()) continue;
     if (!inputShape) inputShape = inputType.getShape();
-    if (inputType.getShape() != *inputShape)
+    if (failed(verifyCompatibleShape(inputType.getShape(), *inputShape)))
       return op_.emitError() << "expects all inputs (operands 0.." << numInputs
-                             << ") to have the same shape";
+                             << ") to have compatible shapes";
   }
 
   // reduce_window_c3
@@ -143,7 +145,7 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
       if (index < 0) index += op_->getNumOperands();
       return op_.emitError()
              << "expects " << name << " (operand #" << index << ") "
-             << "to be have shape [" << expectedShape << "]";
+             << "to have shape [" << expectedShape << "]";
     }
     return success();
   };
@@ -192,8 +194,8 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
 
     if (!resultType.hasRank()) continue;
     if (!resultShape) resultShape = resultType.getShape();
-    if (resultType.getShape() != *resultShape)
-      return op_.emitError() << "expects all results to have the same shape";
+    if (failed(verifyCompatibleShape(resultType.getShape(), *resultShape)))
+      return op_.emitError() << "expects all results to have compatible shapes";
   }
 
   // reduce_window_c15
@@ -259,6 +261,118 @@ std::optional<DynamicReduceWindowOpAdaptor> getDynamicReduceWindowOp(
 
 ValueRange DynamicReduceWindowOpAdaptor::getResults() {
   return op_.getResults();
+}
+
+DynamicRngBitGeneratorOpAdaptor::DynamicRngBitGeneratorOpAdaptor(
+    CustomCallOp op)
+    : op_(op) {}
+
+LogicalResult DynamicRngBitGeneratorOpAdaptor::verify() {
+  // Before checking the constraints inherited from RngBitGeneratorOp,
+  // make sure that the operands and the attributes of the underlying custom
+  // call make sense.
+  if (op_->getNumOperands() != 2)
+    return op_.emitError("expects size(operands) = 2");
+  if (op_->getNumResults() != 2)
+    return op_.emitError("expects size(results) = 2");
+  for (const auto& attr : op_->getAttrs()) {
+    // api_version and backend_config have default values.
+    // call_target_name should be "stablehlo.dynamic_rng_bit_generator".
+    // rng_algorithm comes from the operation.
+    if (attr.getName() != "api_version" && attr.getName() != "backend_config" &&
+        attr.getName() != "call_target_name" &&
+        attr.getName() != "rng_algorithm")
+      return op_.emitError()
+             << attr.getName() << " is not a supported attribute";
+  }
+  if (!op_.getBackendConfig().empty())
+    return op_.emitError() << "expects an empty backend_config";
+  if (op_.getCallTargetName() != "stablehlo.dynamic_rng_bit_generator")
+    return op_.emitError() << "expects @stablehlo.dynamic_rng_bit_generator";
+  if (!op_->hasAttr("rng_algorithm"))
+    return op_.emitError() << "expects an rng_algorithm";
+
+  // dynamic_rng_bit_generator_i1
+  auto rngAlgorithmAttr =
+      op_->getAttr("rng_algorithm").dyn_cast<RngAlgorithmAttr>();
+  if (!rngAlgorithmAttr)
+    return op_.emitError()
+           << "expects a #stablehlo<rng_algorithm ...> rng_algorithm";
+
+  // dynamic_rng_bit_generator_i2
+  // TODO(#643): Clarify supported types for RngBitGeneratorOp.
+  auto initialStateType = getInitialState().getType().dyn_cast<ShapedType>();
+  if (!initialStateType || !initialStateType.getElementType().isIntOrFloat())
+    return op_.emitError()
+           << "expects initial_state (operand #0) "
+           << "to be a tensor of integer or floating-point type";
+
+  // dynamic_rng_bit_generator_i3
+  auto outputShapeType = getOutputShape().getType().dyn_cast<ShapedType>();
+  if (!outputShapeType || !outputShapeType.hasRank() ||
+      outputShapeType.getRank() != 1 ||
+      !outputShapeType.getElementType().isIntOrIndex())
+    return op_.emitError()
+           << "expects output_shape (operand #1) "
+           << "to be a 1-dimensional tensor of integer or index type";
+
+  // dynamic_rng_bit_generator_o1
+  // TODO(#643): Clarify supported types for RngBitGeneratorOp.
+  auto outputStateType = getOutputState().getType().dyn_cast<ShapedType>();
+  if (!outputStateType || !outputStateType.getElementType().isIntOrFloat())
+    return op_.emitError()
+           << "expects output_state (result #0) "
+           << "to be a tensor of integer or floating-point type";
+
+  // dynamic_rng_bit_generator_o2
+  auto outputType = getOutput().getType().dyn_cast<ShapedType>();
+  if (!outputType || !outputType.getElementType().isIntOrFloat())
+    return op_.emitError()
+           << "expects output (result #1) "
+           << "to be a tensor of integer or floating-point type";
+
+  // dynamic_rng_bit_generator_c1
+  if (!hlo::isCompatibleForHloTypeInference(initialStateType, outputStateType))
+    return op_.emitError()
+           << "expects initial_state (operand #0) and output_state (result #0) "
+           << "to have compatible shapes";
+
+  // dynamic_rng_bit_generator_c2
+  // TODO(#486): Verify rng_algorithm in RngBitGeneratorOp.
+
+  // dynamic_rng_bit_generator_c3
+  if (!hlo::isCompatibleForHloTypeInference(getOutputShape(), outputType))
+    return op_.emitError() << "expects output (result #1) to have shape  "
+                           << "compatible with output_shape (operand #2)";
+
+  return success();
+}
+
+RngAlgorithm DynamicRngBitGeneratorOpAdaptor::getRngAlgorithm() {
+  return op_->getAttr("rng_algorithm").cast<RngAlgorithmAttr>().getValue();
+}
+
+Value DynamicRngBitGeneratorOpAdaptor::getInitialState() {
+  return op_.getInputs()[0];
+}
+
+Value DynamicRngBitGeneratorOpAdaptor::getOutputShape() {
+  return op_.getInputs()[1];
+}
+
+Value DynamicRngBitGeneratorOpAdaptor::getOutputState() {
+  return op_.getResults()[0];
+}
+
+Value DynamicRngBitGeneratorOpAdaptor::getOutput() {
+  return op_.getResults()[1];
+}
+
+std::optional<DynamicRngBitGeneratorOpAdaptor> getDynamicRngBitGeneratorOp(
+    CustomCallOp op) {
+  if (op.getCallTargetName() != "stablehlo.dynamic_rng_bit_generator")
+    return {};
+  return DynamicRngBitGeneratorOpAdaptor(op);
 }
 
 }  // namespace stablehlo

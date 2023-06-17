@@ -264,6 +264,27 @@ struct CanonicalizeDynamicReshapeOpPattern
   }
 };
 
+struct CanonicalizeDynamicRngBitGeneratorOpPattern
+    : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto op = getDynamicRngBitGeneratorOp(impl);
+    if (!op || failed(op->verify())) return failure();
+
+    // This pattern ignores and discards the output_shape operand. We rely on
+    // the verifier to make sure that its value is consistent with result type.
+    if (!succeeded(hlo::matchInts(op->getOutputShape())))
+      return rewriter.notifyMatchFailure(impl, "expected static output_shape");
+    if (!op->getOutput().getType().cast<ShapedType>().hasStaticShape())
+      return rewriter.notifyMatchFailure(impl, "expected static output type");
+    rewriter.replaceOpWithNewOp<RngBitGeneratorOp>(impl, impl->getResultTypes(),
+                                                   op->getRngAlgorithm(),
+                                                   op->getInitialState());
+    return success();
+  }
+};
+
 struct CanonicalizeRealDynamicSliceOpToDynamicSliceOpPattern
     : public OpRewritePattern<RealDynamicSliceOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -372,6 +393,7 @@ struct StablehloCanonicalizeDynamismPass
     patterns.add<CanonicalizeDynamicPadOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicReshapeOpPattern>(&getContext());
+    patterns.add<CanonicalizeDynamicRngBitGeneratorOpPattern>(&getContext());
     patterns.add<CanonicalizeRealDynamicSliceOpToDynamicSliceOpPattern>(
         &getContext());
     patterns.add<CanonicalizeRealDynamicSliceOpToSliceOpPattern>(&getContext());
