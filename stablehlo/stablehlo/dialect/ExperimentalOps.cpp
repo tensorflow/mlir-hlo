@@ -28,9 +28,6 @@ limitations under the License.
 namespace mlir {
 namespace stablehlo {
 
-DynamicReduceWindowOpAdaptor::DynamicReduceWindowOpAdaptor(CustomCallOp op)
-    : op_(op) {}
-
 LogicalResult DynamicReduceWindowOpAdaptor::verify() {
   // Before checking the constraints inherited from ReduceWindowOp,
   // make sure that the operands and the attributes of the underlying custom
@@ -55,14 +52,25 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
   if (op_.getCallTargetName() != "stablehlo.dynamic_reduce_window")
     return op_.emitError() << "expects @stablehlo.dynamic_reduce_window";
 
+  // Unpack operands and attributes of the underlying custom call into
+  // operation-specific inputs.
+  auto numInputs = getInputs().size();
+  auto inputs = op_.getInputs().slice(0, numInputs);
+  auto initValues = op_.getInputs().slice(numInputs, numInputs);
+  auto windowDimensions = op_.getInputs()[op_.getInputs().size() - 5];
+  auto windowStrides = op_.getInputs()[op_.getInputs().size() - 4];
+  auto baseDilations = op_.getInputs()[op_.getInputs().size() - 3];
+  auto windowDilations = op_.getInputs()[op_.getInputs().size() - 2];
+  auto padding = op_.getInputs()[op_.getInputs().size() - 1];
+  auto results = op_.getResults();
+
   // reduce_window_c1
   // This constraint hold automatically thanks to the checks that we have
   // performed above.
-  auto numInputs = getInputs().size();
 
   // reduce_window_i1
   SmallVector<ShapedType> inputTypes;
-  for (auto [index, input] : llvm::enumerate(getInputs())) {
+  for (auto [index, input] : llvm::enumerate(inputs)) {
     auto inputType = input.getType().dyn_cast<ShapedType>();
     inputTypes.push_back(inputType);
     if (!inputType)
@@ -72,7 +80,7 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
 
   // reduce_window_i2
   SmallVector<ShapedType> initValueTypes;
-  for (auto [index, initValue] : llvm::enumerate(getInitValues())) {
+  for (auto [index, initValue] : llvm::enumerate(initValues)) {
     auto initValueType = initValue.getType().dyn_cast<ShapedType>();
     initValueTypes.push_back(initValueType);
     if (!initValueType || !initValueType.hasRank() ||
@@ -96,11 +104,11 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
     }
     return success();
   };
-  if (failed(checkRank("window_dimensions", -5, getWindowDimensions(), 1)) ||
-      failed(checkRank("window_strides", -4, getWindowStrides(), 1)) ||
-      failed(checkRank("base_dilations", -3, getBaseDilations(), 1)) ||
-      failed(checkRank("window_dilations", -2, getWindowDilations(), 1)) ||
-      failed(checkRank("padding", -1, getPadding(), 2)))
+  if (failed(checkRank("window_dimensions", -5, windowDimensions, 1)) ||
+      failed(checkRank("window_strides", -4, windowStrides, 1)) ||
+      failed(checkRank("base_dilations", -3, baseDilations, 1)) ||
+      failed(checkRank("window_dilations", -2, windowDilations, 1)) ||
+      failed(checkRank("padding", -1, padding, 2)))
     return failure();
 
   // reduce_window_i7
@@ -151,15 +159,13 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
   };
   if (inputShape) {
     auto inputRank = static_cast<int64_t>(inputShape->size());
-    if (failed(checkShape("window_dimensions", -5, getWindowDimensions(),
+    if (failed(checkShape("window_dimensions", -5, windowDimensions,
                           {inputRank})) ||
-        failed(checkShape("window_strides", -4, getWindowStrides(),
-                          {inputRank})) ||
-        failed(checkShape("base_dilations", -3, getBaseDilations(),
-                          {inputRank})) ||
-        failed(checkShape("window_dilations", -2, getWindowDilations(),
-                          {inputRank})) ||
-        failed(checkShape("padding", -1, getPadding(), {inputRank, 2})))
+        failed(checkShape("window_strides", -4, windowStrides, {inputRank})) ||
+        failed(checkShape("base_dilations", -3, baseDilations, {inputRank})) ||
+        failed(
+            checkShape("window_dilations", -2, windowDilations, {inputRank})) ||
+        failed(checkShape("padding", -1, padding, {inputRank, 2})))
       return failure();
   }
 
@@ -187,7 +193,7 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
   // reduce_window_c14
   SmallVector<ShapedType> resultTypes;
   std::optional<ArrayRef<int64_t>> resultShape;
-  for (auto result : getResults()) {
+  for (auto result : results) {
     auto resultType = result.getType().dyn_cast<ShapedType>();
     resultTypes.push_back(resultType);
     if (!resultType) return op_.emitError() << "expects results to be tensors";
@@ -226,24 +232,29 @@ ValueRange DynamicReduceWindowOpAdaptor::getInitValues() {
   return op_.getInputs().slice(numInputs, numInputs);
 }
 
-Value DynamicReduceWindowOpAdaptor::getWindowDimensions() {
-  return op_.getInputs()[op_.getInputs().size() - 5];
+TypedValue<ShapedType> DynamicReduceWindowOpAdaptor::getWindowDimensions() {
+  return op_.getInputs()[op_.getInputs().size() - 5]
+      .cast<TypedValue<ShapedType>>();
 }
 
-Value DynamicReduceWindowOpAdaptor::getWindowStrides() {
-  return op_.getInputs()[op_.getInputs().size() - 4];
+TypedValue<ShapedType> DynamicReduceWindowOpAdaptor::getWindowStrides() {
+  return op_.getInputs()[op_.getInputs().size() - 4]
+      .cast<TypedValue<ShapedType>>();
 }
 
-Value DynamicReduceWindowOpAdaptor::getBaseDilations() {
-  return op_.getInputs()[op_.getInputs().size() - 3];
+TypedValue<ShapedType> DynamicReduceWindowOpAdaptor::getBaseDilations() {
+  return op_.getInputs()[op_.getInputs().size() - 3]
+      .cast<TypedValue<ShapedType>>();
 }
 
-Value DynamicReduceWindowOpAdaptor::getWindowDilations() {
-  return op_.getInputs()[op_.getInputs().size() - 2];
+TypedValue<ShapedType> DynamicReduceWindowOpAdaptor::getWindowDilations() {
+  return op_.getInputs()[op_.getInputs().size() - 2]
+      .cast<TypedValue<ShapedType>>();
 }
 
-Value DynamicReduceWindowOpAdaptor::getPadding() {
-  return op_.getInputs()[op_.getInputs().size() - 1];
+TypedValue<ShapedType> DynamicReduceWindowOpAdaptor::getPadding() {
+  return op_.getInputs()[op_.getInputs().size() - 1]
+      .cast<TypedValue<ShapedType>>();
 }
 
 Region& DynamicReduceWindowOpAdaptor::getBody() {
@@ -253,19 +264,15 @@ Region& DynamicReduceWindowOpAdaptor::getBody() {
   return bodyFunc.getBody();
 }
 
+ValueRange DynamicReduceWindowOpAdaptor::getResults() {
+  return op_.getResults();
+}
+
 std::optional<DynamicReduceWindowOpAdaptor> getDynamicReduceWindowOp(
     CustomCallOp op) {
   if (op.getCallTargetName() != "stablehlo.dynamic_reduce_window") return {};
   return DynamicReduceWindowOpAdaptor(op);
 }
-
-ValueRange DynamicReduceWindowOpAdaptor::getResults() {
-  return op_.getResults();
-}
-
-DynamicRngBitGeneratorOpAdaptor::DynamicRngBitGeneratorOpAdaptor(
-    CustomCallOp op)
-    : op_(op) {}
 
 LogicalResult DynamicRngBitGeneratorOpAdaptor::verify() {
   // Before checking the constraints inherited from RngBitGeneratorOp,
@@ -292,23 +299,29 @@ LogicalResult DynamicRngBitGeneratorOpAdaptor::verify() {
   if (!op_->hasAttr("rng_algorithm"))
     return op_.emitError() << "expects an rng_algorithm";
 
+  // Unpack operands and attributes of the underlying custom call into
+  // operation-specific inputs.
+  auto rngAlgorithmAttr = op_->getAttr("rng_algorithm");
+  auto initialState = op_.getInputs()[0];
+  auto outputShape = op_.getInputs()[1];
+  auto outputState = op_.getResults()[0];
+  auto output = op_.getResults()[1];
+
   // dynamic_rng_bit_generator_i1
-  auto rngAlgorithmAttr =
-      op_->getAttr("rng_algorithm").dyn_cast<RngAlgorithmAttr>();
-  if (!rngAlgorithmAttr)
+  if (!rngAlgorithmAttr.isa<RngAlgorithmAttr>())
     return op_.emitError()
            << "expects a #stablehlo<rng_algorithm ...> rng_algorithm";
 
   // dynamic_rng_bit_generator_i2
   // TODO(#643): Clarify supported types for RngBitGeneratorOp.
-  auto initialStateType = getInitialState().getType().dyn_cast<ShapedType>();
+  auto initialStateType = initialState.getType().dyn_cast<ShapedType>();
   if (!initialStateType || !initialStateType.getElementType().isIntOrFloat())
     return op_.emitError()
            << "expects initial_state (operand #0) "
            << "to be a tensor of integer or floating-point type";
 
   // dynamic_rng_bit_generator_i3
-  auto outputShapeType = getOutputShape().getType().dyn_cast<ShapedType>();
+  auto outputShapeType = outputShape.getType().dyn_cast<ShapedType>();
   if (!outputShapeType || !outputShapeType.hasRank() ||
       outputShapeType.getRank() != 1 ||
       !outputShapeType.getElementType().isIntOrIndex())
@@ -318,14 +331,14 @@ LogicalResult DynamicRngBitGeneratorOpAdaptor::verify() {
 
   // dynamic_rng_bit_generator_o1
   // TODO(#643): Clarify supported types for RngBitGeneratorOp.
-  auto outputStateType = getOutputState().getType().dyn_cast<ShapedType>();
+  auto outputStateType = outputState.getType().dyn_cast<ShapedType>();
   if (!outputStateType || !outputStateType.getElementType().isIntOrFloat())
     return op_.emitError()
            << "expects output_state (result #0) "
            << "to be a tensor of integer or floating-point type";
 
   // dynamic_rng_bit_generator_o2
-  auto outputType = getOutput().getType().dyn_cast<ShapedType>();
+  auto outputType = output.getType().dyn_cast<ShapedType>();
   if (!outputType || !outputType.getElementType().isIntOrFloat())
     return op_.emitError()
            << "expects output (result #1) "
@@ -341,7 +354,7 @@ LogicalResult DynamicRngBitGeneratorOpAdaptor::verify() {
   // TODO(#486): Verify rng_algorithm in RngBitGeneratorOp.
 
   // dynamic_rng_bit_generator_c3
-  if (!hlo::isCompatibleForHloTypeInference(getOutputShape(), outputType))
+  if (!hlo::isCompatibleForHloTypeInference(outputShape, outputType))
     return op_.emitError() << "expects output (result #1) to have shape  "
                            << "compatible with output_shape (operand #2)";
 
@@ -352,20 +365,20 @@ RngAlgorithm DynamicRngBitGeneratorOpAdaptor::getRngAlgorithm() {
   return op_->getAttr("rng_algorithm").cast<RngAlgorithmAttr>().getValue();
 }
 
-Value DynamicRngBitGeneratorOpAdaptor::getInitialState() {
-  return op_.getInputs()[0];
+TypedValue<ShapedType> DynamicRngBitGeneratorOpAdaptor::getInitialState() {
+  return op_.getInputs()[0].cast<TypedValue<ShapedType>>();
 }
 
-Value DynamicRngBitGeneratorOpAdaptor::getOutputShape() {
-  return op_.getInputs()[1];
+TypedValue<ShapedType> DynamicRngBitGeneratorOpAdaptor::getOutputShape() {
+  return op_.getInputs()[1].cast<TypedValue<ShapedType>>();
 }
 
-Value DynamicRngBitGeneratorOpAdaptor::getOutputState() {
-  return op_.getResults()[0];
+TypedValue<ShapedType> DynamicRngBitGeneratorOpAdaptor::getOutputState() {
+  return op_.getResults()[0].cast<TypedValue<ShapedType>>();
 }
 
-Value DynamicRngBitGeneratorOpAdaptor::getOutput() {
-  return op_.getResults()[1];
+TypedValue<ShapedType> DynamicRngBitGeneratorOpAdaptor::getOutput() {
+  return op_.getResults()[1].cast<TypedValue<ShapedType>>();
 }
 
 std::optional<DynamicRngBitGeneratorOpAdaptor> getDynamicRngBitGeneratorOp(

@@ -25,6 +25,7 @@ limitations under the License.
 // the StableHLO team at Google provides out-of-band guarantees for these
 // custom calls, with the same compatibility window as StableHLO upstream.
 
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
@@ -63,8 +64,9 @@ namespace stablehlo {
 //      to hold dynamically, and if they don't hold, the behavior is undefined.
 class DynamicReduceWindowOpAdaptor {
  public:
-  DynamicReduceWindowOpAdaptor(CustomCallOp op);
-  LogicalResult verify();
+  DynamicReduceWindowOpAdaptor(CustomCallOp op) : op_(op) {}
+  operator Operation*() { return op_; }
+  Operation* operator->() { return op_; }
 
   // Same accessors as for stablehlo::ReduceWindowOp, except that all the
   // std::optional<DenseIntElementsAttr> attributes have turned into values.
@@ -72,13 +74,17 @@ class DynamicReduceWindowOpAdaptor {
   // can pass verification).
   ValueRange getInputs();
   ValueRange getInitValues();
-  Value getWindowDimensions();
-  Value getWindowStrides();
-  Value getBaseDilations();
-  Value getWindowDilations();
-  Value getPadding();
+  TypedValue<ShapedType> getWindowDimensions();
+  TypedValue<ShapedType> getWindowStrides();
+  TypedValue<ShapedType> getBaseDilations();
+  TypedValue<ShapedType> getWindowDilations();
+  TypedValue<ShapedType> getPadding();
   Region& getBody();
   ValueRange getResults();
+
+  // Verifies the constraints documented above.
+  // Emits errors if errors are detected.
+  LogicalResult verify();
 
  private:
   CustomCallOp op_;
@@ -130,18 +136,23 @@ std::optional<DynamicReduceWindowOpAdaptor> getDynamicReduceWindowOp(
 // * (C3) `shape(output) = output_shape`.
 class DynamicRngBitGeneratorOpAdaptor {
  public:
-  DynamicRngBitGeneratorOpAdaptor(CustomCallOp op);
-  LogicalResult verify();
+  DynamicRngBitGeneratorOpAdaptor(CustomCallOp op) : op_(op) {}
+  operator Operation*() { return op_; }
+  Operation* operator->() { return op_; }
 
   // Same accessors as for stablehlo::RngBitGeneratorOp, extended with the
   // additional `output_shape` operand.
   // These accessors assume that the operation is well-formed (i.e. that it
   // can pass verification).
   RngAlgorithm getRngAlgorithm();
-  Value getInitialState();
-  Value getOutputShape();
-  Value getOutputState();
-  Value getOutput();
+  TypedValue<ShapedType> getInitialState();
+  TypedValue<ShapedType> getOutputShape();
+  TypedValue<ShapedType> getOutputState();
+  TypedValue<ShapedType> getOutput();
+
+  // Verifies the constraints documented above.
+  // Emits errors if errors are detected.
+  LogicalResult verify();
 
  private:
   CustomCallOp op_;

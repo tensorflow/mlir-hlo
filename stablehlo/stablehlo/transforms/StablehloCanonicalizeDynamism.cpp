@@ -204,30 +204,29 @@ struct CanonicalizeDynamicReduceWindowOpPattern
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(CustomCallOp impl,
                                 PatternRewriter& rewriter) const override {
-    auto op = getDynamicReduceWindowOp(impl);
-    if (!op || failed(op->verify())) return failure();
+    auto maybeOp = getDynamicReduceWindowOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicReduceWindowOpAdaptor op = *maybeOp;
 
     // ReduceWindowOp supports dynamic shapes for operands and results, so we
     // don't check for that here unlike in some other patterns in this pass.
     SmallVector<int64_t> windowDimensions, windowStrides, baseDilations,
         windowDilations, padding;
-    if (failed(hlo::matchInts(op->getWindowDimensions(), windowDimensions)))
-      return rewriter.notifyMatchFailure(impl,
+    if (failed(hlo::matchInts(op.getWindowDimensions(), windowDimensions)))
+      return rewriter.notifyMatchFailure(op,
                                          "expected static window_dimensions");
-    if (failed(hlo::matchInts(op->getWindowStrides(), windowStrides)))
-      return rewriter.notifyMatchFailure(impl,
-                                         "expected static window_strides");
-    if (failed(hlo::matchInts(op->getBaseDilations(), baseDilations)))
-      return rewriter.notifyMatchFailure(impl,
-                                         "expected static base_dilations");
-    if (failed(hlo::matchInts(op->getWindowDilations(), windowDilations)))
-      return rewriter.notifyMatchFailure(impl,
+    if (failed(hlo::matchInts(op.getWindowStrides(), windowStrides)))
+      return rewriter.notifyMatchFailure(op, "expected static window_strides");
+    if (failed(hlo::matchInts(op.getBaseDilations(), baseDilations)))
+      return rewriter.notifyMatchFailure(op, "expected static base_dilations");
+    if (failed(hlo::matchInts(op.getWindowDilations(), windowDilations)))
+      return rewriter.notifyMatchFailure(op,
                                          "expected static window_dilations");
-    if (failed(hlo::matchInts(op->getPadding(), padding)))
-      return rewriter.notifyMatchFailure(impl, "expected static padding");
+    if (failed(hlo::matchInts(op.getPadding(), padding)))
+      return rewriter.notifyMatchFailure(op, "expected static padding");
     auto newOp = rewriter.create<ReduceWindowOp>(
-        impl->getLoc(), op->getResults().getTypes(), op->getInputs(),
-        op->getInitValues(), rewriter.getI64TensorAttr(windowDimensions),
+        op->getLoc(), op->getResultTypes(), op.getInputs(), op.getInitValues(),
+        rewriter.getI64TensorAttr(windowDimensions),
         rewriter.getI64TensorAttr(windowStrides),
         rewriter.getI64TensorAttr(baseDilations),
         rewriter.getI64TensorAttr(windowDilations),
@@ -236,14 +235,14 @@ struct CanonicalizeDynamicReduceWindowOpPattern
     // Inline the called computation into newOp.
     // This is somewhat annoying because we also have to rewrite the original
     // func::ReturnOp into stablehlo::ReturnOp.
-    rewriter.cloneRegionBefore(op->getBody(), newOp.getBody(),
+    rewriter.cloneRegionBefore(op.getBody(), newOp.getBody(),
                                newOp.getBody().end());
     auto funcReturnOp =
         cast<func::ReturnOp>(newOp.getBody().front().getTerminator());
     rewriter.setInsertionPointToEnd(&newOp.getBody().front());
     rewriter.replaceOpWithNewOp<stablehlo::ReturnOp>(
         funcReturnOp, funcReturnOp.getOperands());
-    rewriter.replaceOp(impl, newOp->getResults());
+    rewriter.replaceOp(op, newOp->getResults());
     return success();
   }
 };
@@ -269,18 +268,18 @@ struct CanonicalizeDynamicRngBitGeneratorOpPattern
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(CustomCallOp impl,
                                 PatternRewriter& rewriter) const override {
-    auto op = getDynamicRngBitGeneratorOp(impl);
-    if (!op || failed(op->verify())) return failure();
+    auto maybeOp = getDynamicRngBitGeneratorOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicRngBitGeneratorOpAdaptor op = *maybeOp;
 
     // This pattern ignores and discards the output_shape operand. We rely on
     // the verifier to make sure that its value is consistent with result type.
-    if (!succeeded(hlo::matchInts(op->getOutputShape())))
-      return rewriter.notifyMatchFailure(impl, "expected static output_shape");
-    if (!op->getOutput().getType().cast<ShapedType>().hasStaticShape())
-      return rewriter.notifyMatchFailure(impl, "expected static output type");
-    rewriter.replaceOpWithNewOp<RngBitGeneratorOp>(impl, impl->getResultTypes(),
-                                                   op->getRngAlgorithm(),
-                                                   op->getInitialState());
+    if (!succeeded(hlo::matchInts(op.getOutputShape())))
+      return rewriter.notifyMatchFailure(op, "expected static output_shape");
+    if (!op.getOutput().getType().cast<ShapedType>().hasStaticShape())
+      return rewriter.notifyMatchFailure(op, "expected static output type");
+    rewriter.replaceOpWithNewOp<RngBitGeneratorOp>(
+        op, op->getResultTypes(), op.getRngAlgorithm(), op.getInitialState());
     return success();
   }
 };

@@ -850,39 +850,40 @@ struct RefineDynamicReduceWindowOpPattern
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(CustomCallOp impl,
                                 PatternRewriter& rewriter) const override {
-    auto op = getDynamicReduceWindowOp(impl);
-    if (!op || failed(op->verify())) return failure();
+    auto maybeOp = getDynamicReduceWindowOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicReduceWindowOpAdaptor op = *maybeOp;
 
     // At the moment, we only support refining return types using fully static
     // shape values which serves the current use cases well.
     // Support for partially static shape values is left for future work.
     SmallVector<int64_t> windowDimensions, windowStrides, baseDilations,
         windowDilations, padding;
-    if (failed(hlo::matchInts(op->getWindowDimensions(), windowDimensions)))
-      return rewriter.notifyMatchFailure(impl,
+    if (failed(hlo::matchInts(op.getWindowDimensions(), windowDimensions)))
+      return rewriter.notifyMatchFailure(op,
                                          "expected constant window_dimensions");
-    if (failed(hlo::matchInts(op->getWindowStrides(), windowStrides)))
-      return rewriter.notifyMatchFailure(impl,
+    if (failed(hlo::matchInts(op.getWindowStrides(), windowStrides)))
+      return rewriter.notifyMatchFailure(op,
                                          "expected constant window_strides");
-    if (failed(hlo::matchInts(op->getBaseDilations(), baseDilations)))
-      return rewriter.notifyMatchFailure(impl,
+    if (failed(hlo::matchInts(op.getBaseDilations(), baseDilations)))
+      return rewriter.notifyMatchFailure(op,
                                          "expected constant base_dilations");
-    if (failed(hlo::matchInts(op->getWindowDilations(), windowDilations)))
-      return rewriter.notifyMatchFailure(impl,
+    if (failed(hlo::matchInts(op.getWindowDilations(), windowDilations)))
+      return rewriter.notifyMatchFailure(op,
                                          "expected constant window_dilations");
-    if (failed(hlo::matchInts(op->getPadding(), padding)))
-      return rewriter.notifyMatchFailure(impl, "expected constant padding");
+    if (failed(hlo::matchInts(op.getPadding(), padding)))
+      return rewriter.notifyMatchFailure(op, "expected constant padding");
 
     SmallVector<ShapedTypeComponents> inferredReturnTypes;
     if (failed(hlo::inferReduceWindowOp(
-            /*location=*/{}, op->getInputs(), op->getInitValues(),
+            /*location=*/{}, op.getInputs(), op.getInitValues(),
             rewriter.getI64TensorAttr(windowDimensions),
             rewriter.getI64TensorAttr(windowStrides),
             rewriter.getI64TensorAttr(baseDilations),
             rewriter.getI64TensorAttr(windowDilations),
             hlo::getPaddingAttr(&rewriter, padding), inferredReturnTypes)))
-      return rewriter.notifyMatchFailure(impl, "inferReduceWindowOp failed");
-    return refineReturnTypes(rewriter, impl, inferredReturnTypes);
+      return rewriter.notifyMatchFailure(op, "inferReduceWindowOp failed");
+    return refineReturnTypes(rewriter, op, inferredReturnTypes);
   }
 };
 
@@ -900,21 +901,21 @@ struct RefineDynamicRngBitGeneratorOpPattern
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(CustomCallOp impl,
                                 PatternRewriter& rewriter) const override {
-    auto op = getDynamicRngBitGeneratorOp(impl);
-    if (!op || failed(op->verify())) return failure();
+    auto maybeOp = getDynamicRngBitGeneratorOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicRngBitGeneratorOpAdaptor op = *maybeOp;
 
     // At the moment, we only support refining return types using fully static
     // shape values which serves the current use cases well.
     // Support for partially static shape values is left for future work.
     SmallVector<int64_t> outputShape;
-    if (failed(hlo::matchInts(op->getOutputShape(), outputShape)))
-      return rewriter.notifyMatchFailure(impl,
-                                         "expected constant output_shape");
+    if (failed(hlo::matchInts(op.getOutputShape(), outputShape)))
+      return rewriter.notifyMatchFailure(op, "expected constant output_shape");
 
     // We only need to refine the shape of `output` (the second result).
     // The shape of `output_state` (the first result) is determined by the shape
     // of `initial_state`, so we ignore it and provide an empty refinement.
-    return refineReturnTypes(rewriter, impl, {{}, {outputShape}});
+    return refineReturnTypes(rewriter, op, {{}, {outputShape}});
   }
 };
 
