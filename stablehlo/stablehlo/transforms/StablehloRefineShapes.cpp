@@ -908,6 +908,7 @@ struct RefineDynamicRngBitGeneratorOpPattern
     // At the moment, we only support refining return types using fully static
     // shape values which serves the current use cases well.
     // Support for partially static shape values is left for future work.
+    auto initialStateType = op.getInitialState().getType().cast<ShapedType>();
     SmallVector<int64_t> outputShape;
     if (failed(hlo::matchInts(op.getOutputShape(), outputShape)))
       return rewriter.notifyMatchFailure(op, "expected constant output_shape");
@@ -915,7 +916,7 @@ struct RefineDynamicRngBitGeneratorOpPattern
     // We only need to refine the shape of `output` (the second result).
     // The shape of `output_state` (the first result) is determined by the shape
     // of `initial_state`, so we ignore it and provide an empty refinement.
-    return refineReturnTypes(rewriter, op, {{}, {outputShape}});
+    return refineReturnTypes(rewriter, op, {{initialStateType}, {outputShape}});
   }
 };
 
