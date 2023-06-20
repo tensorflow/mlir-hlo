@@ -1131,7 +1131,6 @@ cc_library(
         ":mlir_hlo",
         "//stablehlo:stablehlo_ops",
         "//stablehlo:stablehlo_ops_inc_gen",
-        "//third_party/absl/strings",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
