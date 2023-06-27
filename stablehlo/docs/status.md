@@ -44,7 +44,7 @@ one of the following tracking labels.
 |:-------------------------|:--------------|:-------------|:---------------|:----------------|:------------|
 | abs                      | yes           | yes          | yes            | yes             | yes         |
 | add                      | yes           | yes          | yes            | yes             | yes         |
-| after_all                | yes           | yes          | yes            | yes             | no          |
+| after_all                | yes           | yes          | yes            | yes             | yes         |
 | all_gather               | yes           | revisit      | no             | no              | no          |
 | all_reduce               | yes           | revisit      | yes            | no              | no          |
 | all_to_all               | yes           | revisit      | yes            | no              | no          |
@@ -108,7 +108,7 @@ one of the following tracking labels.
 | multiply                 | yes           | yes          | yes            | yes             | yes         |
 | negate                   | yes           | yes          | yes            | yes             | yes         |
 | not                      | yes           | yes          | yes            | yes             | yes         |
-| optimization_barrier     | yes           | yes          | yes            | yes             | no          |
+| optimization_barrier     | yes           | yes          | yes            | yes             | yes         |
 | or                       | yes           | yes          | yes            | yes             | yes         |
 | outfeed                  | yes           | yes          | yes            | no              | no          |
 | pad                      | yes           | yes          | yes            | yes             | yes         |
@@ -119,7 +119,7 @@ one of the following tracking labels.
 | real_dynamic_slice       | no            | revisit      | no             | yes             | no          |
 | recv                     | yes           | revisit      | infeasible     | no              | no          |
 | reduce                   | yes           | revisit      | yes            | revisit         | yes         |
-| reduce_precision         | yes           | yes          | yes            | yes             | no          |
+| reduce_precision         | yes           | yes          | yes            | yes             | yes         |
 | reduce_scatter           | yes           | revisit      | no             | no              | no          |
 | reduce_window            | yes           | revisit      | yes            | no              | yes         |
 | remainder                | yes           | yes          | yes            | yes             | yes         |
@@ -153,7 +153,7 @@ one of the following tracking labels.
 | triangular_solve         | yes           | revisit      | yes            | no              | revisit     |
 | tuple                    | yes           | yes          | yes            | yes             | no          |
 | unary_einsum             | no            | revisit      | no             | yes             | revisit     |
-| uniform_dequantize       | no            | yes\*        | yes\*          | yes             | no          |
-| uniform_quantize         | no            | yes\*        | infeasible     | yes             | no          |
+| uniform_dequantize       | yes           | yes          | yes            | yes             | no          |
+| uniform_quantize         | yes           | revisit      | infeasible     | yes             | no          |
 | while                    | yes           | revisit      | yes            | revisit         | yes         |
 | xor                      | yes           | yes          | yes            | yes             | yes         |

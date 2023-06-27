@@ -1797,6 +1797,14 @@ func.func @map_unranked(%arg0: tensor<*xf32>, %arg1: tensor<*xf32>) -> tensor<*x
 
 // -----
 
+// CHECK-LABEL: func @optimization_barrier
+func.func @optimization_barrier(%arg0: tensor<f32>, %arg1: tensor<f32>) -> (tensor<f32>, tensor<f32>) {
+  %0, %1 = "stablehlo.optimization_barrier"(%arg0, %arg1) : (tensor<f32>, tensor<f32>) -> (tensor<f32>, tensor<f32>)
+  func.return %0, %1 : tensor<f32>, tensor<f32>
+}
+
+// -----
+
 // CHECK-LABEL: func @outfeed
 func.func @outfeed(%arg0: tensor<3x3x3xi32>, %arg1: !stablehlo.token) -> !stablehlo.token {
   %0 = "stablehlo.outfeed"(%arg0, %arg1) {
@@ -3372,7 +3380,7 @@ func.func @reduce_precision(%arg: tensor<2x4xf32>) -> tensor<2x4xf32> {
 
 // -----
 
-func.func @reduce_precision_invalid_exponent(%arg: tensor<2x4xf32>) -> tensor<2x4xf32> {
+func.func @reduce_precision_c2(%arg: tensor<2x4xf32>) -> tensor<2x4xf32> {
   // expected-error @+1 {{exponent_bits must be at least 1.}}
   %0 = "stablehlo.reduce_precision"(%arg) {exponent_bits=0 : i32, mantissa_bits=3 : i32} : (tensor<2x4xf32>) -> tensor<2x4xf32>
   func.return %0 : tensor<2x4xf32>
@@ -3380,7 +3388,7 @@ func.func @reduce_precision_invalid_exponent(%arg: tensor<2x4xf32>) -> tensor<2x
 
 // -----
 
-func.func @reduce_precision_invalid_mantissa(%arg: tensor<2x4xf32>) -> tensor<2x4xf32> {
+func.func @reduce_precision_c3(%arg: tensor<2x4xf32>) -> tensor<2x4xf32> {
   // expected-error @+1 {{mantissa_bits must be at least 0.}}
   %0 = "stablehlo.reduce_precision"(%arg) {exponent_bits=1 : i32, mantissa_bits=-1 : i32} : (tensor<2x4xf32>) -> tensor<2x4xf32>
   func.return %0 : tensor<2x4xf32>
@@ -4512,135 +4520,6 @@ module attributes {
 
 // -----
 
-// CHECK-LABEL: func @test_alias_attribute
-// CHECK-SAME:  stablehlo.result_alias = #stablehlo.result_alias<
-// CHECK-SAME:       tuple_indices = [1, 1],
-// CHECK-SAME:       result_index = [2, 0, 1],
-// CHECK-SAME:       must_alias>
-func.func @test_alias_attribute (%arg0: tuple<i32, tuple<i32, tensor<3xf32>>> {stablehlo.result_alias = #stablehlo.result_alias<
-      tuple_indices = [1, 1],
-      result_index = [2, 0, 1],
-      must_alias>}
-    ) -> (i32, i32, tuple<tuple<i32, tensor<3xf32>>>) {
-  %0:3 = "Test.Op"() : () -> (i32, i32, tuple<tuple<i32, tensor<3xf32>>>)
-  func.return %0#0, %0#1, %0#2 : i32, i32, tuple<tuple<i32, tensor<3xf32>>>
-}
-
-// -----
-
-// CHECK-LABEL: func @test_alias_dynamic_dimension
-// CHECK-SAME:  stablehlo.result_alias = #stablehlo.result_alias<result_index = [2]>
-func.func @test_alias_dynamic_dimension (%arg0: tensor<?xf32> {stablehlo.result_alias = #stablehlo.result_alias<result_index = [2]>}
-    ) -> (i32, i32, tensor<2xf32>) {
-  %0:3 = "Test.Op"() : () -> (i32, i32, tensor<2xf32>)
-  func.return %0#0, %0#1, %0#2 : i32, i32, tensor<2xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @test_may_alias_no_tuple
-// CHECK-SAME:  stablehlo.result_alias = #stablehlo.result_alias<result_index = [2]>
-func.func @test_may_alias_no_tuple (%arg0: tensor<2xf32> {stablehlo.result_alias = #stablehlo.result_alias<result_index = [2]>}
-    ) -> (i32, i32, tensor<2xf32>) {
-  %0:3 = "Test.Op"() : () -> (i32, i32, tensor<2xf32>)
-  func.return %0#0, %0#1, %0#2 : i32, i32, tensor<2xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @test_may_alias_arg_tuple
-// CHECK-SAME:  stablehlo.result_alias = #stablehlo.result_alias<tuple_indices = [2, 0], result_index = [2]>
-func.func @test_may_alias_arg_tuple (%arg0: tuple<i32, i32, tuple<tensor<2xf32>, i32>> {stablehlo.result_alias = #stablehlo.result_alias<tuple_indices = [2, 0], result_index = [2]>}
-    ) -> (i32, i32, tensor<2xf32>) {
-  %0:3 = "Test.Op"() : () -> (i32, i32, tensor<2xf32>)
-  func.return %0#0, %0#1, %0#2 : i32, i32, tensor<2xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @test_may_alias_result_tuple
-// CHECK-SAME:  stablehlo.result_alias = #stablehlo.result_alias<result_index = [2, 1, 2]>
-func.func @test_may_alias_result_tuple (%arg0: tensor<2xf32> {stablehlo.result_alias = #stablehlo.result_alias<result_index = [2, 1, 2]>}
-    ) -> (i32, i32, tuple<i32, tuple<i32, i32, tensor<2xf32>>>, i32) {
-  %0:4 = "Test.Op"() : () -> (i32, i32, tuple<i32, tuple<i32, i32, tensor<2xf32>>>, i32)
-  func.return %0#0, %0#1, %0#2, %0#3 : i32, i32, tuple<i32, tuple<i32, i32, tensor<2xf32>>>, i32
-}
-
-// -----
-
-// expected-error@+1 {{attribute "stablehlo.result_alias" can only be used on function-like operations}}
-module attributes {stablehlo.result_alias = #stablehlo.result_alias<result_index = [2, 3]>} {}
-
-// -----
-
-// expected-error @+2 {{expected at least 1 element(s), found 0}}
-// expected-error@+1 {{failed parsing argument-result alias attribute}}
-func.func @error_empty_result_index (%arg0: tensor<2xf32> {stablehlo.result_alias = #stablehlo.result_alias<result_index = []>}
-    ) -> (tensor<2xf32>) {
-  func.return %arg0 : tensor<2xf32>
-}
-
-// -----
-
-// expected-error@+1 {{attribute "stablehlo.result_alias" expects all argument and result indices to be >= 0}}
-func.func @error_negative_arg_tuple_index (%arg0: tensor<2xf32> {stablehlo.result_alias = #stablehlo.result_alias<tuple_indices = [0, -1], result_index = [0]>}
-    ) -> (tensor<2xf32>) {
-  func.return %arg0 : tensor<2xf32>
-}
-
-// -----
-
-// expected-error@+1 {{attribute "stablehlo.result_alias" expects all argument and result indices to be >= 0}}
-func.func @error_negative_result_index (%arg0: tensor<2xf32> {stablehlo.result_alias = #stablehlo.result_alias<result_index = [-1]>}
-    ) -> (tensor<2xf32>) {
-  func.return %arg0 : tensor<2xf32>
-}
-
-// -----
-
-// expected-error@+1 {{attribute "stablehlo.result_alias" expects all argument and result indices to be >= 0}}
-func.func @error_negative_result_tuple_index (%arg0: tensor<2xf32> {stablehlo.result_alias = #stablehlo.result_alias<result_index = [0, -1]>}
-    ) -> (tensor<2xf32>) {
-  func.return %arg0 : tensor<2xf32>
-}
-
-// -----
-
-// expected-error@+1 {{attribute "stablehlo.result_alias" result index is out of range, must be <1}}
-func.func @error_result_index_out_of_range (%arg0: tensor<2xf32> {stablehlo.result_alias = #stablehlo.result_alias<result_index = [1]>}
-    ) -> (tensor<2xf32>) {
-  func.return %arg0 : tensor<2xf32>
-}
-
-// -----
-
-// expected-error@+1 {{attribute "stablehlo.result_alias" argument tuple indices are invalid}}
-func.func @error_invalid_argument_tuple_indices (%arg0: tuple<i32, tensor<2xf32>> {stablehlo.result_alias = #stablehlo.result_alias<tuple_indices = [2], result_index = [0]>}
-    ) -> (tensor<2xf32>) {
-  %0 = "Test.Op"() : () -> (tensor<2xf32>)
-  func.return %0 : tensor<2xf32>
-}
-
-// -----
-
-// expected-error@+1 {{attribute "stablehlo.result_alias" aliases do not have compatible types, 'tensor<2xf32>' vs. 'tensor<1xf32>'}}
-func.func @error_incompatible_alias_shapes (%arg0: tensor<2xf32> {stablehlo.result_alias = #stablehlo.result_alias<result_index = [0, 1]>}
-    ) -> (tuple<i32, tensor<1xf32>>) {
-  %0 = "Test.Op"() : () -> (tuple<i32, tensor<1xf32>>)
-  func.return %0 : tuple<i32, tensor<1xf32>>
-}
-
-// -----
-
-// expected-error@+1 {{attribute "stablehlo.result_alias" aliases do not have compatible types, 'tensor<2xf32>' vs. 'tensor<2xi32>'}}
-func.func @error_incompatible_alias_element_types (%arg0: tensor<2xf32> {stablehlo.result_alias = #stablehlo.result_alias<result_index = [0, 1]>}
-    ) -> (tuple<i32, tensor<2xi32>>) {
-  %0 = "Test.Op"() : () -> (tuple<i32, tensor<2xi32>>)
-  func.return %0 : tuple<i32, tensor<2xi32>>
-}
-
-// -----
-
 // CHECK-LABEL: @batch_norm_training
 func.func @batch_norm_training(%input: tensor<2x2x2x2xf64>, %scale: tensor<2xf64>, %offset: tensor<2xf64>) -> tensor<2x2x2x2xf64> {
   %0:3 = "stablehlo.batch_norm_training" (%input, %scale, %offset) {
@@ -5090,7 +4969,7 @@ func.func @quantized_dot_general(%arg0: tensor<2x16x32x!quant.uniform<i8:f32, 2.
 
 // -----
 
-// CHECK: func @uniform_quantize
+// CHECK-LABEL: func @uniform_quantize
 func.func @uniform_quantize(%arg: tensor<16x16xf32>) -> tensor<16x16x!quant.uniform<ui8:f32, 34.0:16>> {
   %0 = stablehlo.uniform_quantize %arg : (tensor<16x16xf32>) -> tensor<16x16x!quant.uniform<ui8:f32, 34.0:16>>
   func.return %0 : tensor<16x16x!quant.uniform<ui8:f32, 34.0:16>>
@@ -5106,7 +4985,7 @@ func.func @uniform_requantize(%arg: tensor<16x16x!quant.uniform<i8:f32, 5.0:20>>
 
 // -----
 
-// CHECK: func @uniform_dequantize
+// CHECK-LABEL: func @uniform_dequantize
 func.func @uniform_dequantize(%arg: tensor<16x16x!quant.uniform<i8:f32, 34.0:16>>) -> tensor<16x16xf32> {
   %0 = stablehlo.uniform_dequantize %arg : (tensor<16x16x!quant.uniform<i8:f32, 34.0:16>>) -> tensor<16x16xf32>
   func.return %0 : tensor<16x16xf32>
@@ -5114,18 +4993,9 @@ func.func @uniform_dequantize(%arg: tensor<16x16x!quant.uniform<i8:f32, 34.0:16>
 
 // -----
 
-// CHECK: func @uniform_dequantize_unranked
 func.func @uniform_dequantize_unranked(%arg: tensor<*x!quant.uniform<i8:f32, 34.0:16>>) -> tensor<*xf32> {
   %0 = stablehlo.uniform_dequantize %arg : (tensor<*x!quant.uniform<i8:f32, 34.0:16>>) -> tensor<*xf32>
   func.return %0 : tensor<*xf32>
-}
-
-// -----
-
-func.func @uniform_dequantize_not_quantize(%arg: tensor<16x16xf32>) -> tensor<16x16xf32> {
-  // expected-error@+1 {{operand #0 must be tensor of 4/8/16/32-bit uniform quantized signed integer or 4/8/16/32-bit uniform quantized unsigned integer values, but got 'tensor<16x16xf32>'}}
-  %0 = stablehlo.uniform_dequantize %arg : (tensor<16x16xf32>) -> tensor<16x16xf32>
-  func.return %0 : tensor<16x16xf32>
 }
 
 // -----

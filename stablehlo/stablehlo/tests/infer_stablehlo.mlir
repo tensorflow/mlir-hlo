@@ -234,8 +234,8 @@ func.func @clamp(%arg0: tensor<1xi32>) -> tensor<1xindex> {
 
 // -----
 
-// CHECK: func @uniform_dequantize
-func.func @uniform_dequantize(%arg: tensor<16x16x!quant.uniform<i8:f32, 34.0:16>>) -> tensor<16x16xindex> {
+// CHECK: func @uniform_dequantize_c2
+func.func @uniform_dequantize_c2(%arg: tensor<16x16x!quant.uniform<i8:f32, 34.0:16>>) -> tensor<16x16xindex> {
   %0 = stablehlo.uniform_dequantize %arg : (tensor<16x16x!quant.uniform<i8:f32, 34.0:16>>) -> tensor<16x16xf32>
   // CHECK: types0 = tensor<16x16xf32>
   %1 = "hlo_test_infer.get_return_types"(%0) : (tensor<16x16xf32>) -> tensor<16x16xindex>
@@ -496,6 +496,20 @@ func.func @sort(%input0: tensor<16x16xf32>, %input1: tensor<16x16xi32>) -> tenso
 
 // -----
 
+// CHECK-LABEL: func @optimization_barrier_c1
+// CHECK-SAME: (%[[ARG0:.*]]: tensor<f32>,
+// CHECK-SAME: %[[ARG1:.*]]: tensor<f32>)
+func.func @optimization_barrier_c1(%arg0: tensor<f32>, %arg1: tensor<f32>) -> (tensor<index>, tensor<index>) {
+  // CHECK: %[[RESULT:.*]]:2 = stablehlo.optimization_barrier %[[ARG0]], %[[ARG1]] : tensor<f32>, tensor<f32>
+  // CHECK: %[[INFER:.*]]:2 = "hlo_test_infer.get_return_types"(%[[RESULT]]#0, %[[RESULT]]#1) : (tensor<f32>, tensor<f32>) -> (tensor<index>, tensor<index>)
+  // CHECK: return %[[INFER]]#0, %[[INFER]]#1 : tensor<index>, tensor<index>
+  %0:2 = "stablehlo.optimization_barrier"(%arg0, %arg1) : (tensor<f32>, tensor<f32>) -> (tensor<f32>, tensor<f32>)
+  %1:2 = "hlo_test_infer.get_return_types"(%0#0, %0#1) : (tensor<f32>, tensor<f32>) -> (tensor<index>, tensor<index>)
+  func.return %1#0, %1#1 : tensor<index>, tensor<index>
+}
+
+// -----
+
 // CHECK-LABEL: func @outfeed
 func.func @outfeed(%arg0: tensor<3x3x3xi32>, %arg1: !stablehlo.token) -> !stablehlo.token {
   %0 = "stablehlo.outfeed"(%arg0, %arg1) {
@@ -537,9 +551,9 @@ func.func @create_token() -> !stablehlo.token {
 
 // -----
 
-// CHECK-LABEL: func @after_all_empty_arg
-func.func @after_all_empty_arg() -> !stablehlo.token {
-  %0 = "stablehlo.after_all"() : () -> !stablehlo.token
+// CHECK-LABEL: func @after_all
+func.func @after_all(%arg0: !stablehlo.token, %arg1: !stablehlo.token) -> !stablehlo.token {
+  %0 = "stablehlo.after_all"(%arg0, %arg1) : (!stablehlo.token, !stablehlo.token) -> !stablehlo.token
   // CHECK: types0 = !stablehlo.token
   %1 = "hlo_test_infer.get_return_types"(%0) : (!stablehlo.token) -> !stablehlo.token
   func.return %1 : !stablehlo.token
@@ -547,9 +561,9 @@ func.func @after_all_empty_arg() -> !stablehlo.token {
 
 // -----
 
-// CHECK-LABEL: func @after_all
-func.func @after_all(%arg0: !stablehlo.token, %arg1: !stablehlo.token) -> !stablehlo.token {
-  %0 = "stablehlo.after_all"(%arg0, %arg1) : (!stablehlo.token, !stablehlo.token) -> !stablehlo.token
+// CHECK-LABEL: func @after_all_empty_arg
+func.func @after_all_empty_arg() -> !stablehlo.token {
+  %0 = "stablehlo.after_all"() : () -> !stablehlo.token
   // CHECK: types0 = !stablehlo.token
   %1 = "hlo_test_infer.get_return_types"(%0) : (!stablehlo.token) -> !stablehlo.token
   func.return %1 : !stablehlo.token
@@ -855,6 +869,19 @@ func.func @reduce_c7(%arg0: tensor<?x?xf32>, %arg1 : tensor<f32>)
   }) {dimensions = dense<[1]> : tensor<1xi64>} : (tensor<?x?xf32>, tensor<f32>) -> tensor<?xi32>
 
   func.return %0: tensor<?xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @reduce_precision_c1
+func.func @reduce_precision_c1(%arg: tensor<2x4xf32>) -> tensor<2x4xindex> {
+  %0 = "stablehlo.reduce_precision"(%arg) {
+    exponent_bits = 2 : i32,
+    mantissa_bits = 3 : i32
+  } : (tensor<2x4xf32>) -> tensor<2x4xf32>
+  // CHECK: types0 = tensor<2x4xf32>
+  %1 = "hlo_test_infer.get_return_types"(%0) : (tensor<2x4xf32>) -> tensor<2x4xindex>
+  func.return %1: tensor<2x4xindex>
 }
 
 // -----

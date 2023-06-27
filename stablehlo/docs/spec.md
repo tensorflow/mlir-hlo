@@ -84,7 +84,7 @@ completely numeric to simplify generation of StableHLO programs.
 ```ebnf
 Type         ::= ValueType | NonValueType
 ValueType    ::= TensorType | QuantizedTensorType | TokenType | TupleType
-NonValueType ::= ElementType | QuantizedElementType | FunctionType | StringType
+NonValueType ::= TensorElementType | QuantizedTensorElementType | FunctionType | StringType
 ```
 
 **StableHLO types** are categorized into **value types** (which are also called
@@ -95,7 +95,7 @@ domain-specific nature which results in some unusual outcomes (e.g. scalar types
 are not value types).
 
 ```ebnf
-TensorType ::= 'tensor' '<' Shape ElementType '>'
+TensorType ::= 'tensor' '<' Shape TensorElementType '>'
 Shape ::= {DimensionSize 'x'}
 DimensionSize ::= digit {digit}
 ```
@@ -119,8 +119,8 @@ types, for example, to include layouts
 ([#1078](https://github.com/openxla/stablehlo/issues/1078)).
 
 ```ebnf
-QuantizedTensorType ::= 'tensor' '<' Shape QuantizedElementType '>'
-QuantizedElementType ::= '!quant.uniform' '<'
+QuantizedTensorType ::= 'tensor' '<' Shape QuantizedTensorElementType '>'
+QuantizedTensorElementType ::= '!quant.uniform' '<'
                   QuantizationStorageType
                   ['<' QuantizationStorageMin ':' QuantizationStorageMax '>']
                   ':' QuantizationExpressedType
@@ -234,7 +234,7 @@ which may allow us to remove tuple types from StableHLO
 ([#598](https://github.com/openxla/stablehlo/issues/598)).
 
 ```ebnf
-ElementType ::= BooleanType | IntegerType | FloatType | ComplexType
+TensorElementType ::= BooleanType | IntegerType | FloatType | ComplexType
 BooleanType ::= 'i1'
 IntegerType ::= SignedIntegerType | UnsignedIntegerType
 SignedIntegerType ::= 'si4' | 'si8' | 'si16' | 'si32' | 'si64'
@@ -335,11 +335,6 @@ in StableHLO programs. In the meanwhile, here is the list of these operations:
   `dynamic_gather`, `dynamic_iota`, `dynamic_pad`, `dynamic_reshape`,
   `real_dynamic_slice`, `set_dimension_size`
   ([#8](https://github.com/openxla/stablehlo/issues/8)).
-* "Quantization" category of StableHLO operations - they were bootstrapped from
-  MHLO, but we haven't specced them yet: `uniform_quantize`
-  ([#531](https://github.com/openxla/stablehlo/issues/531)) and
-  `uniform_dequantize`
-  ([#530](https://github.com/openxla/stablehlo/issues/530)).
 * Shape computations, including `arith`, `shape` and `tensor` operations
   ([#8](https://github.com/openxla/stablehlo/issues/8)).
 
@@ -666,8 +661,12 @@ it only exists to establish data dependencies from `result` to `inputs`.
 #### Examples
 
 ```mlir
+// %input0: !stablehlo.token
+// %input1: !stablehlo.token
 %result = "stablehlo.after_all"(%input0, %input1) : (!stablehlo.token, !stablehlo.token) -> !stablehlo.token
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_after_all.mlir)
 
 ### all_gather
 
@@ -1315,11 +1314,11 @@ implementation-defined as well.
   * If `num_bits(E') < num_bits(E)`:
     * `rank(result) = R + 1`.
     * `dim(result, i) = dim(operand, i)` for all `0 <= i < R`.
-    * `dim(result, R) = num_bits(E) / num_bits(E')`.
+    * `dim(result, R) * num_bits(E') = num_bits(E)`.
   * If `num_bits(E') > num_bits(E)`:
     * `rank(result) = R - 1`.
     * `dim(result, i) = dim(operand, i)` for all `0 <= i < R`.
-    * `dim(operand, R - 1) = num_bits(E') / num_bits(E)`.
+    * `dim(operand, R - 1) * num_bits(E) = num_bits(E')`.
 * (C2) If `is_complex(operand) or is_complex(result)`, then
   `is_complex(operand) and is_complex(result)`.
 
@@ -1961,7 +1960,7 @@ If `feature_group_count = 1` and `batch_group_count = 1`, then for all
 `output_spatial_index` in `index_space(dim(result, output_spatial_dimensions...))`,
 `result[result_shape(:, output_spatial_index, :)] = dot_product` where:
 
-* `padding_value = is_quantized_tensor(lhs) ? constant(zero_point(lhs), quantized_element_type(lhs)) : constant(0, element_type(lhs))`.
+* `padding_value = constant(is_quantized_tensor(lhs) ? zero_point(lhs) : 0, element_type(lhs))`.
 * `padded_lhs = pad(lhs, padding_value, lhs_padding[:, 0], lhs_padding[:, 1], lhs_base_dilations - 1)`.
 * `lhs_window_start = lhs_shape(0, output_spatial_index, 0) * lhs_window_strides`.
 * `lhs_window = slice(padded_lhs, lhs_window_start, lhs_window_start + lhs_window_dimensions, lhs_window_dilations)`.
@@ -2775,6 +2774,7 @@ indices and explains in detail which `operand` indices they correspond to.
 
 More formally, `result[result_index] = operand[operand_index]` where:
 
+<!-- markdownlint-disable line-length -->
 * `batch_dims = [d for d in axes(result) and d not in offset_dims]`.
 * `batch_index = result_index[batch_dims...]`.
 * `start_index` is defined as:
@@ -2783,16 +2783,15 @@ More formally, `result[result_index] = operand[operand_index]` where:
     `index_vector_dim` < `rank(start_indices)`.
   * `[start_indices[batch_index]]` otherwise.
 * For `d_operand` in `axes(operand)`,
-  * `full_start_index[d_operand] = start_index[d_start]` if
-    `d_operand = start_index_map[d_start]`.
+  * `full_start_index[d_operand] = clamp(start_index[d_start], 0, dim(operand, d_operand) - slice_sizes[d_operand])`
+    if `d_operand = start_index_map[d_start]`.
   * `full_start_index[d_operand] = 0` otherwise.
 * `offset_index = result_index[offset_dims...]`.
 * `full_offset_index = [oi0, ..., 0, ..., oiN]` where `oi` are individual
   elements in `offset_index`, and `0` is inserted at indices from
   `collapsed_slice_dims`.
 * `operand_index = full_start_index + full_offset_index`.
-  If `operand_index` is out of bounds for `operand`, then the behavior is
-  implementation-defined.
+<!-- markdownlint-enable line-length -->
 
 If `indices_are_sorted` is `true` then the implementation can assume that
 `start_indices` are sorted with respect to `start_index_map`, otherwise the
@@ -3562,6 +3561,8 @@ an identity, i.e. `result = operand`.
 // %result1: 1.0
 ```
 
+&nbsp;[More Examples](../stablehlo/tests/interpret_optimization_barrier.mlir)
+
 ### or
 
 #### Semantics
@@ -3664,13 +3665,13 @@ More formally, `result[result_index]` is defined as:
 
 #### Inputs
 
-| Label | Name                | Type                                                | Constraints |
-|-------|---------------------|-----------------------------------------------------|-------------|
-| (I1)  | `operand`           | tensor or per-tensor quantized tensor               | (C1), (C3)  |
-| (I2)  | `padding_value`     | 0-dimensional tensor or per-tensor quantized tensor | (C4-C6)     |
-| (I3)  | `edge_padding_low`  | 1-dimensional tensor constant of type `si64`        | (C1), (C3)  |
-| (I4)  | `edge_padding_high` | 1-dimensional tensor constant of type `si64`        | (C1), (C3)  |
-| (I5)  | `interior_padding`  | 1-dimensional tensor constant of type `si64`        | (C1-C3)     |
+| Label | Name                | Type                                                | Constraints      |
+|-------|---------------------|-----------------------------------------------------|------------------|
+| (I1)  | `operand`           | tensor or per-tensor quantized tensor               | (C1), (C2), (C4) |
+| (I2)  | `padding_value`     | 0-dimensional tensor or per-tensor quantized tensor | (C1)             |
+| (I3)  | `edge_padding_low`  | 1-dimensional tensor constant of type `si64`        | (C1), (C4)       |
+| (I4)  | `edge_padding_high` | 1-dimensional tensor constant of type `si64`        | (C1), (C4)       |
+| (I5)  | `interior_padding`  | 1-dimensional tensor constant of type `si64`        | (C2-C4)          |
 
 #### Outputs
 
@@ -3680,19 +3681,13 @@ More formally, `result[result_index]` is defined as:
 
 #### Constraints
 
-* (C1) `size(edge_padding_low) = size(edge_padding_high) =
-  size(interior_padding) = rank(operand)`.
-* (C2) `0 <= interior_padding`.
-* (C3) `shape(result) = shape(operand) + edge_padding_low +
-  max(shape(operand) - 1, 0) * interior_padding + edge_padding_high`.
-* (C4) If the operation uses non-quantized tensors:
-  * `element_type(operand) = element_type(padding_value) =
+* (C1) `element_type(operand) = element_type(padding_value) =
   element_type(result)`.
-* If the operation uses quantized tensors:
-  * (C5) `is_quantized_tensor(operand) and is_quantized_tensor(padding_value)
-    and is_quantized_tensor(result)`.
-  * (C6) `quantized_element_type(operand) =
-    quantized_element_type(padding_value) = quantized_element_type(result)`.
+* (C2) `size(edge_padding_low) = size(edge_padding_high) =
+  size(interior_padding) = rank(operand)`.
+* (C3) `0 <= interior_padding`.
+* (C4) `shape(result) = shape(operand) + edge_padding_low +
+  max(shape(operand) - 1, 0) * interior_padding + edge_padding_high`.
 
 #### Examples
 
@@ -4015,15 +4010,17 @@ More formally:
 #### Examples
 
 ```mlir
-// Logical values: -Inf, +Inf, NaN, ...
-// %operand: [0xFF800000, 0x7F800000, 0x7FFFFFFF, 0.0, 1000.0, 1000000.0]
+// Logical values: +Inf, NaN, +Denormal, 0.0, 65519.0, 65520.0
+// %operand: [0x7FF0000000000000, 0x7FFFFFFFFFFFFFFF, 0x0000000000000001, 0.0, 65519.0, 65520.0]
 %output = "stablehlo.reduce_precision"(%operand) {
   exponent_bits = 5 : i32,
-  mantissa_bits = 2 : i32
-} : (tensor<6xf32>) -> tensor<6xf32>
-// Logical values: -Inf, +Inf, NaN, NaN, 0.0, 1024.0, +Inf
-// %output: [0xFF800000, 0x7F800000, 0x7FFFFFFF, 0.0, 1024.0, 0x7F800000]
+  mantissa_bits = 10 : i32
+} : (tensor<6xf64>) -> tensor<6xf64>
+// Logical values: +Inf, NaN, 0.0, 0.0, 65504.0, +Inf
+// %output: [0x7FF0000000000000, 0x7FFFFFFFFFFFFFFF, 0.0, 0.0, 65504.0, 0x7FF0000000000000]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_reduce_precision.mlir)
 
 ### reduce_scatter
 
@@ -5535,6 +5532,87 @@ Produces a `result` tuple from values `val`.
 // %result: ([1.0, 2.0], (3))
 ```
 
+### uniform_dequantize
+
+#### Semantics
+
+Performs element-wise conversion of quantized tensor `operand` to a
+floating-point tensor `result` according to the quantization parameters defined
+by the `operand` type.
+
+More formally, `result = dequantize(operand)`.
+
+#### Inputs
+
+| Label | Name      | Type             | Constraints |
+|-------|-----------|------------------|-------------|
+| (I1)  | `operand` | quantized tensor | (C1), (C2)  |
+
+#### Outputs
+
+| Name     | Type                          | Constraints |
+|----------|-------------------------------|-------------|
+| `result` | tensor of floating-point type | (C1), (C2)  |
+
+#### Constraints
+
+* (C1) `shape(operand) = shape(result)`.
+* (C2) `element_type(result) = expressed_type(operand)`.
+
+#### Examples
+
+```mlir
+// %operand: [10, 10]
+%result = "stablehlo.uniform_dequantize"(%operand) : (tensor<2x!quant.uniform<i8:f32:0, {0.1:-30,0.5:-20}>>) -> tensor<2xf32>
+// %result: [4.0, 15.0]
+```
+
+### uniform_quantize
+
+#### Semantics
+
+Performs element-wise conversion of floating-point tensor or quantized tensor
+`operand` to a quantized tensor `result` according to the quantization
+parameters defined by the `result` type.
+
+More formally,
+
+* If `is_float(operand)`:
+  * `result = quantize(operand, type(result))`.
+* If `is_quantized(operand)`:
+  * `float_result = dequantize(operand)`.
+  * `result = quantize(float_result, type(result))`.
+
+#### Inputs
+
+| Label | Name      | Type                                       | Constraints |
+|-------|-----------|--------------------------------------------|-------------|
+| (I1)  | `operand` | tensor of floating-point or quantized type | (C1), (C2)  |
+
+#### Outputs
+
+| Name     | Type             | Constraints |
+|----------|------------------|-------------|
+| `result` | quantized tensor | (C1), (C2)  |
+
+#### Constraints
+
+* (C1) `shape(operand) = shape(result)`.
+* (C2) `expressed_type(result) = is_float(operand) ? element_type(operand) :
+  expressed_type(operand)`.
+
+#### Examples
+
+```mlir
+// %operand: [4.0, 15.0]
+%result = "stablehlo.uniform_quantize"(%operand) : (tensor<2xf32>) -> tensor<2x!quant.uniform<i8:f32:0, {0.1:-30,0.5:-20}>>
+// %result: [10, 10]
+
+// %operand: [10, 10]
+%result = "stablehlo.uniform_quantize"(%operand) : (tensor<2x!quant.uniform<i8:f32:0, {0.1:-30,0.5:-20}>>) -> tensor<2x!quant.uniform<i8:f32:0, {0.1:-20,0.2:-30}>>
+// %result: [20, 45]
+```
+
 ### while
 
 #### Semantics
@@ -6012,6 +6090,20 @@ use type syntax because it's typically more concise. E.g.
 
 #### Functions on types
 
+* `element_type` is defined on tensor types and quantized tensor types and
+returns, respectively, the `TensorElementType` or `QuantizedTensorElementType`
+part of the corresponding `TensorType` or `QuantizedTensorType`.
+
+```python
+def element_type(x: Value | Placeholder | Type):
+ if type(x) == TensorType:
+    return tensor_element_type(x)
+  if type(x) == QuantizedTensorType:
+    return quantized_element_type(x)
+  if type(x) is not Type:
+    return element_type(type(x))
+```
+
 * `is_per_axis_quantized(x: Value | Placeholder | Type) -> Value` is a shortcut
 for `is_quantized(x) and quantized_dimension(x) is not None`.
 
@@ -6019,25 +6111,25 @@ for `is_quantized(x) and quantized_dimension(x) is not None`.
 shortcut for `is_quantized(x) and quantized_dimension(x) is None`.
 
 * `is_quantized(x: Value | Placeholder | Type) -> Value` is a shortcut for
-`is_quantized_element_type(x)`.
+`is_quantized_tensor_element_type(x)`.
 
 * `is_type_name(x: Value | Placeholder | Type) -> Value`. Available for all
 types. For example, `is_float(x)` returns `true` if `x` is a `FloatType`.
 If `x` is a value or placeholder, this function is a shortcut for
 `is_type_name(type(x))`.
 
-* `max_value(x: Type) -> Value` returns the maximum value of an `ElementType`.
-If `x` is not an `ElementType`, returns `None`.
+* `max_value(x: Type) -> Value` returns the maximum value of an
+`TensorElementType`.  If `x` is not an `TensorElementType`, returns `None`.
 
 * `min_value(x: Type) -> Value` returns the minimum possible value of an
-`ElementType`. If `x` is not an `ElementType`, returns `None`.
+`TensorElementType`. If `x` is not an `TensorElementType`, returns `None`.
 
 * `member_name(x: Value | Placeholder | Type) -> Any`. Available for all member
-definitions `member_name` of all types. For example, `element_type(x)` returns
-the `ElementType` part of a corresponding `TensorType`. If `x` is a value or
-placeholder, this function is a shortcut for `member_name(type(x))`.
-If `x` is not a type that has an appropriate member, or a value or
-a placeholder of such a type, returns `None`.
+definitions `member_name` of all types. For example, `tensor_element_type(x)`
+returns the `TensorElementType` part of a corresponding `TensorType`.
+If `x` is a value or placeholder, this function is a shortcut for
+`member_name(type(x))`.  If `x` is not a type that has an appropriate member, or
+a value or a placeholder of such a type, returns `None`.
 
 #### Construction of values
 
@@ -6122,8 +6214,8 @@ def baseline_type(x: Value | Placeholder | Type) -> Type:
   if type(x) == TensorType:
     return x
   if type(x) == QuantizedTensorType:
-    element_type = quantized_element_type(x)
-    baseline_element_type = QuantizedElementType(
+    element_type = quantized_tensor_element_type(x)
+    baseline_element_type = QuantizedTensorElementType(
       storage_type = storage_type(element_type),
       storage_min = storage_min(element_type),
       storage_max = storage_max(element_type),
@@ -6134,6 +6226,41 @@ def baseline_type(x: Value | Placeholder | Type) -> Type:
     return QuantizedTensorType(shape(x), baseline_element_type)
   if type(x) is not Type:
     return baseline_element_type(type(x))
+```
+
+* `dequantize` is defined on quantized tensor types and turns them into
+floating-point tensor types. This happens via converting quantized elements
+which represent integer values of the storage type into corresponding
+floating-point values of the expressed type using the zero point and scale
+associated with the quantized element type. At the moment, this function only
+works for per-tensor quantization. Per-axis quantization is work in progress
+([#1574](https://github.com/openxla/stablehlo/issues/1574)).
+
+```python
+def dequantize(x: Value) -> Value:
+  assert is_quantized(x)
+  x_storage = bitcast_convert(x, storage_type(x))
+  x_storage_sub = x_storage - zero_point(x_storage)
+  x_expressed_sub = convert(x_storage_sub, expressed_type(x))
+  return x_expressed_sub * scale(x)
+```
+
+* `quantize` is defined on floating-point tensor types and turns them into
+quantized tensor types. This happens via converting floating-point values
+of the expressed type into corresponding integer values of the storage type
+using the zero point and scale associated with the quantized element type.
+At the moment, this function only works for per-tensor quantization. Per-axis
+quantization is work in progress
+([#1574](https://github.com/openxla/stablehlo/issues/1574)).
+
+```python
+def quantize(x: Value, type: Type) -> Value:
+  assert is_float(x) and is_quantized(type)
+  x_expressed_rounded = round_nearest_even(x / scale(type))
+  x_storage_rounded = convert(x_expressed_rounded, storage_type(type))
+  x_storage_add = x_storage_rounded + zero_point(type)
+  x_storage = clamp(storage_min(type), x_storage_add, storage_max(type))
+  return bitcast_convert(x_storage, type)
 ```
 
 * `dequantize_op_quantize` is used to specify element-wise computations on
@@ -6147,10 +6274,10 @@ works for per-tensor quantization. Per-axis quantization is work in progress
 def dequantize_op_quantize(op, *inputs_and_output_type):
   inputs = inputs_and_output_type[:-1]
   output_type = inputs_and_output_type[-1]
-  float_inputs = [(x - zero_point(x)) * scale(x) for x in inputs]
+
+  float_inputs = map(dequantize, inputs)
   float_result = op(*float_inputs)
-  rounded_result = round_nearest_even(float_result / scale(output_type))
-  return clamp(storage_min(output_type), rounded_result, storage_max(output_type))
+  return quantize(float_result, output_type)
 ```
 
 #### Grid computations

@@ -1163,7 +1163,7 @@ def StableHLO_AfterAllOp : StableHLO_Op<"after_all", [Pure,
     ```
   }];
 
-  let arguments = (ins Variadic<HLO_Token>:$inputs);
+  let arguments = (ins Variadic<HLO_Token>:$inputs /*after_all_i1*/);
   let results = (outs HLO_Token:$result);
 
   let assemblyFormat = [{
@@ -2950,7 +2950,7 @@ def StableHLO_TorchIndexSelectOp : StableHLO_Op<"torch_index_select", [Pure]> {
 
 def StableHLO_OptimizationBarrierOp : StableHLO_Op<"optimization_barrier",
       [Pure, HLO_PairwiseSameOperandAndResultType,
-      DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+      DeclareOpInterfaceMethods<InferTypeOpInterface> /*optimization_barrier_c1*/]> {
   let summary = "OptimizationBarrier operation";
   let description = [{
     Ensures that the operations that produce the `operand` are executed before any
@@ -2958,7 +2958,7 @@ def StableHLO_OptimizationBarrierOp : StableHLO_Op<"optimization_barrier",
     from moving operations across the barrier. Other than that, the operation is
     an identity, i.e. `result` = `operand`.
 
-    See
+    See:
     https://github.com/openxla/stablehlo/blob/main/docs/spec.md#optimization_barrier
 
     Example:
@@ -3055,44 +3055,46 @@ def StableHLO_RngBitGeneratorOp : StableHLO_Op<"rng_bit_generator", [Pure]> {
 
 // TODO(b/230662142): Implement unknown scales/zero_point cases.
 def StableHLO_UniformQuantizeOp : StableHLO_UnaryElementwiseOp<"uniform_quantize",
-      [Pure], TensorOf<[F32, BF16, HLO_QuantizedInt]>,
-      HLO_QuantizedIntTensor> {
+      [Pure], TensorOf<[HLO_Float, HLO_QuantizedInt]> /*uniform_quantize_i1*/,
+      HLO_QuantizedIntTensor> { /*uniform_quantize_c1*/
   let summary = "UniformQuantize operation";
   let description = [{
-    This operation is a work in progress, so it is not yet included in
-    the StableHLO specification: https://github.com/openxla/stablehlo/issues/588.
+    Performs element-wise conversion of floating-point tensor or quantized
+    tensor `operand` to a quantized tensor `result` according to the
+    quantization parameters defined by the `result` type.
 
-    Informally, this operation converts floating point tensors or uniform
-    quantized tensors to uniform quantized tensors according to the quantization
-    parameters defined by the result type.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#uniform_quantize
 
     Example:
     ```mlir
-    %result = stablehlo.uniform_quantize %operand : (tensor<16x16xf32>) -> tensor<16x16x!quant.uniform<ui8:f32, 34.0:16>>
+    %result = stablehlo.uniform_quantize %operand : (tensor<2xf32>) -> tensor<2x!quant.uniform<i8:f32:0, {0.1:-30,0.5:-20}>>
     ```
   }];
 }
 
 def StableHLO_UniformDequantizeOp : StableHLO_UnaryElementwiseOp<"uniform_dequantize",
-      [InferTensorType, Pure], HLO_QuantizedIntTensor, TensorOf<[F32, BF16]>> {
+      [InferTensorType, Pure], HLO_QuantizedIntTensor /*uniform_dequantize_i1*/,
+      HLO_FpTensor> { /*uniform_dequantize_c1, uniform_dequantize_c2*/
   let summary = "UniformDequantize operation";
   let description = [{
-    This operation is a work in progress, so it is not yet included in
-    the StableHLO specification: https://github.com/openxla/stablehlo/issues/588.
+    Performs element-wise conversion of quantized tensor `operand` to a
+    floating-point tensor `result` according to the quantization parameters
+    defined by the `operand` type.
 
-    Informally, this operation converts uniform quantized tensors to floating
-    point tensors according to the quantization parameters defined by the
-    operand type.
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#uniform_dequantize
 
     Example:
     ```mlir
-    %result = stablehlo.uniform_dequantize %operand : (tensor<16x16x!quant.uniform<i8:f32, 34.0:16>>) -> tensor<16x16xf32>
+    %result = stablehlo.uniform_dequantize %operand : (tensor<2x!quant.uniform<i8:f32:0, {0.1:-30,0.5:-20}>>) -> tensor<2xf32>
     ```
   }];
 }
 
 def StableHLO_ReducePrecisionOp :
-    StableHLO_Op<"reduce_precision", [HLO_CompatibleOperandsAndResultType, Pure]> {
+    StableHLO_Op<"reduce_precision", [Pure,
+    HLO_CompatibleOperandsAndResultType /*reduce_precision_c1*/]> {
   let summary = "ReducePrecision operation";
   let description = [{
     Performs element-wise conversion of `operand` to another floating-point type
@@ -3104,13 +3106,13 @@ def StableHLO_ReducePrecisionOp :
 
     Example:
     ```mlir
-    %output = stablehlo.reduce_precision %operand, format = e5m2 : tensor<6xf32>
+    %output = stablehlo.reduce_precision %operand, format = e5m10 : tensor<6xf64>
     ```
   }];
   let arguments = (ins
-    HLO_FpTensor:$operand,
-    I32Attr:$exponent_bits,
-    I32Attr:$mantissa_bits
+    HLO_FpTensor:$operand, /*reduce_precision_i1*/
+    I32Attr:$exponent_bits, /*reduce_precision_i2*/
+    I32Attr:$mantissa_bits /*reduce_precision_i3*/
   );
   let hasVerifier = 1;
   let results = (outs HLO_FpTensor:$output);
