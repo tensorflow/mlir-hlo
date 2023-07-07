@@ -176,7 +176,7 @@ FailureOr<SmallVector<bool>> convertWindowReversalAttribute(
 // window with values 1, x, 2, x, 3, where x indicates holes left by the
 // dilation. So DilatedBound(3, 2) == 5.
 int64_t dilatedBound(int64_t bound, int64_t dilation) {
-  assert(bound >= 0 && "The dimension to dialate must be >= 0");
+  assert(bound >= 0 && "The dimension to dilate must be >= 0");
   if (bound == 0) return 0;
 
   // Suppose the array has three entries 123 and the dilation factor is 4. Then
@@ -405,7 +405,7 @@ SmallVector<int64_t> inferWindowOutputShape(ArrayRef<int64_t> baseShape,
   return outputDimensions;
 }
 
-unsigned potentiallyComplexBitwidth(Type type) {
+unsigned potentiallyComplexBitWidth(Type type) {
   auto complexTy = type.dyn_cast<ComplexType>();
   return complexTy ? 2 * complexTy.getElementType().getIntOrFloatBitWidth()
                    : type.getIntOrFloatBitWidth();
@@ -745,7 +745,7 @@ LogicalResult verifyRegionNotEmpty(std::optional<Location> location,
 
 // Checks:
 //  P1. Same sizes for input, kernel and output spatialDims.
-//  P2. Spatial and non-spatial dimentions (for input,kernel, &output) should
+//  P2. Spatial and non-spatial dimensions (for input,kernel, &output) should
 //      be unique and in range [0, num_dims), where num_dims = rank of input
 //      (lhs/rhs) tensors.
 //
@@ -832,7 +832,7 @@ LogicalResult verifyPrecisionConfig(std::optional<Location> loc,
 }
 
 // Verifies the following properties:
-//  P1. The input, kernel, and output spatial-dimentions are valid.
+//  P1. The input, kernel, and output spatial-dimensions are valid.
 //  P2. Given,
 //          input-dimensions: b * input-spatial-dims * f
 //          kernel-dimensions: kernel-spatial-dims * i * o
@@ -2648,8 +2648,8 @@ LogicalResult inferRngOp(
   Type elementType = getElementTypeOrSelf(b);
 
   // Operand `shape` (1D by ODS) may be a constant or not, if `shape` is:
-  // 1, not constant and have dynimic dim (tensor<?x>): infer tensor<*x>.
-  // 2. not constant nor dynimic (e.g. tensor<3xi64>): infer tensor<?x?x?x>.
+  // 1, not constant and have dynamic dim (tensor<?x>): infer tensor<*x>.
+  // 2. not constant nor dynamic (e.g. tensor<3xi64>): infer tensor<?x?x?x>.
   // 3. constant (e.g. dense<[2, 3, 5]>): infer tensor<2x3x5x>.
 
   // Match to check whether the `shape` operand is a constant.
@@ -3114,21 +3114,12 @@ LogicalResult verifyAllReduceOp(std::optional<Location> location, Value operand,
   return success();
 }
 
-/*
- * We intend to verify the following properties
- * P1. We cannot convert between complex and real types (cf xla)
- * P3. The dimensions of the operand and the target
- * shape must match, except that the shape with the smaller element bitwidth has
- * an appropriately-sized additional innermost dimension, e.g.
- * ... x f32 => [bitcast_convert] => ... x 4 x i8
- * ... x 4 x i8 => [bitcast_convert] => ... x f32
- */
 LogicalResult verifyBitcastConvertOp(std::optional<Location> location,
                                      Value operand, Value result) {
   auto operandShapedType = operand.getType().cast<ShapedType>();
   auto targetShapedType = result.getType().cast<ShapedType>();
 
-  // P1.
+  // bitcast_convert_c2
   auto targetElt = targetShapedType.getElementType();
   auto operandElt = operandShapedType.getElementType();
   if (targetElt.isa<ComplexType>() != operandElt.isa<ComplexType>())
@@ -3136,10 +3127,9 @@ LogicalResult verifyBitcastConvertOp(std::optional<Location> location,
         location, "cannot convert between real and complex types, but got: ",
         operandShapedType, " and ", targetShapedType);
 
-  auto targetEltBitwidth = potentiallyComplexBitwidth(targetElt);
-  auto operandEltBitwidth = potentiallyComplexBitwidth(operandElt);
+  auto targetEltBitWidth = potentiallyComplexBitWidth(targetElt);
+  auto operandEltBitWidth = potentiallyComplexBitWidth(operandElt);
 
-  // P2.
   auto operandType = operandShapedType.dyn_cast<RankedTensorType>();
   auto targetType = targetShapedType.dyn_cast<RankedTensorType>();
   if (!operandType || !targetType) return success();
@@ -3147,36 +3137,33 @@ LogicalResult verifyBitcastConvertOp(std::optional<Location> location,
   auto targetShape = targetType.getShape();
   auto operandShape = operandType.getShape();
   ArrayRef<int64_t> smallerEltShape, biggerEltShape;
-  Type smallerElt, biggerElt;
-  if (operandEltBitwidth < targetEltBitwidth) {
+  if (operandEltBitWidth < targetEltBitWidth) {
     smallerEltShape = operandShape;
-    smallerElt = operandElt;
     biggerEltShape = targetShape;
-    biggerElt = targetElt;
   } else {
     smallerEltShape = targetShape;
-    smallerElt = targetElt;
     biggerEltShape = operandShape;
-    biggerElt = operandElt;
   }
 
   ArrayRef<int64_t> smallerEltPrefix;
-  auto smallerEltBitwidth = std::min(targetEltBitwidth, operandEltBitwidth);
-  auto biggerEltBitwidth = std::max(targetEltBitwidth, operandEltBitwidth);
-  if (operandEltBitwidth != targetEltBitwidth) {
-    if (smallerEltShape.empty()) {
-      return emitOptionalError(location,
-                               "does not allow the smaller element type to be "
-                               "part of a 0d tensor, but got: ",
-                               operandType, " and ", targetType, ".");
+  auto smallerEltBitWidth = std::min(targetEltBitWidth, operandEltBitWidth);
+  auto biggerEltBitWidth = std::max(targetEltBitWidth, operandEltBitWidth);
+  // bitcast_convert_c1
+  if (operandEltBitWidth != targetEltBitWidth) {
+    if (smallerEltShape.size() != biggerEltShape.size() + 1) {
+      return emitOptionalError(
+          location, "rank of smaller element type (", smallerEltShape.size(),
+          ") should be 1 more than rank of larger element type (",
+          biggerEltShape.size(), "), but ", smallerEltShape.size(),
+          " != ", biggerEltShape.size(), " + 1.");
     }
     smallerEltPrefix = smallerEltShape.drop_back();
     if (!isDynamicDimSize(smallerEltShape.back()) &&
-        smallerEltShape.back() * smallerEltBitwidth != biggerEltBitwidth) {
+        smallerEltShape.back() * smallerEltBitWidth != biggerEltBitWidth) {
       return emitOptionalError(
-          location, "requires compatible bitwidths. ", "Got: ", operandType,
-          " and ", targetType, ", but ", smallerEltBitwidth, " * ",
-          smallerEltShape.back(), " != ", biggerEltBitwidth, ".");
+          location, "requires compatible bit widths. ", "Got: ", operandType,
+          " and ", targetType, ", but ", smallerEltBitWidth, " * ",
+          smallerEltShape.back(), " != ", biggerEltBitWidth, ".");
     }
   } else {
     smallerEltPrefix = smallerEltShape;
@@ -3185,6 +3172,7 @@ LogicalResult verifyBitcastConvertOp(std::optional<Location> location,
   for (auto it : llvm::zip(smallerEltPrefix, biggerEltShape)) {
     auto targetDim = std::get<0>(it);
     auto operandDim = std::get<1>(it);
+    // bitcast_convert_c1
     if (!verifyCompatibleDims(targetDim, operandDim))
       return emitOptionalError(location,
                                "operand and result shapes must match except "

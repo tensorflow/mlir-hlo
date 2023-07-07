@@ -1284,12 +1284,12 @@ type of the `result` tensor.
 More formally, given `E = element_type(operand)`, `E' = element_type(result)`,
 and `R = rank(operand)`:
 
-* If `num_bits(E') = num_bits(E)`,
-  `bits(result[i0, ..., iR-1]) = bits(operand[i0, ..., iR-1])`.
 * If `num_bits(E') < num_bits(E)`,
   `bits(result[i0, ..., iR-1, :]) = bits(operand[i0, ..., iR-1])`.
 * If `num_bits(E') > num_bits(E)`,
   `bits(result[i0, ..., iR-2]) = bits(operand[i0, ..., iR-2, :])`.
+* If `num_bits(E') = num_bits(E)`,
+  `bits(result[i0, ..., iR-1]) = bits(operand[i0, ..., iR-1])`.
 
 `bits` returns in-memory representation of a given value, and its behavior
 is implementation-defined because the exact representation of tensors is
@@ -1298,14 +1298,14 @@ implementation-defined as well.
 
 #### Inputs
 
-| Label | Name      | Type                        | Constraints |
-|-------|-----------|-----------------------------|-------------|
+| Label | Name      | Type                       | Constraints |
+|-------|-----------|----------------------------|-------------|
 | (I1)  | `operand` | tensor or quantized tensor | (C1-C2)     |
 
 #### Outputs
 
-| Name     | Type                        | Constraints |
-|----------|-----------------------------|-------------|
+| Name     | Type                       | Constraints |
+|----------|----------------------------|-------------|
 | `result` | tensor or quantized tensor | (C1-C2)     |
 
 #### Constraints
@@ -1328,13 +1328,12 @@ implementation-defined as well.
 #### Examples
 
 ```mlir
-// %operand: [0.0, 1.0]
-%result = "stablehlo.bitcast_convert"(%operand) : (tensor<2xf32>) -> tensor<2x4xi8>
-// %result: [
-//           [0, 0, 0, 0],
-//           [0, 0, -128, 63] // little-endian representation of 1.0
-//          ]
+// %operand: 0x0123456789ABCDEF
+%result = "stablehlo.bitcast_convert"(%operand) : (tensor<f64>) -> tensor<4xf16>
+// %result: [0xCDEF, 0x89AB, 0x4567, 0x0123] // little-endian representation
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_bitcast_convert.mlir)
 
 ### broadcast_in_dim
 
@@ -2130,7 +2129,7 @@ If `batch_group_count > 1`:
   window_reversal = dense<false> : tensor<2xi1>,
   // In the StableHLO dialect, dimension numbers are encoded via:
   // `[<input dimensions>]x[<kernel dimensions>]->[output dimensions]`.
-  // "b" is batch dimenion, "f" is feature dimension,
+  // "b" is batch dimension, "f" is feature dimension,
   // "i" is input feature dimension, "o" is output feature dimension,
   // "0/1/etc" are spatial dimensions.
   dimension_numbers = #stablehlo.conv<[b, 0, 1, f]x[0, 1, i, o]->[b, 0, 1, f]>,
@@ -3067,10 +3066,9 @@ Reads data from the infeed and produces `results`.
 Semantics of `infeed_config` is implementation-defined.
 
 `results` consist of payload values which come first and a token which comes
-last. The operation produces a token to reify the side effect of this operation
-as a value that other operations can take a data dependency on. In the future,
-we are planning to split the payload and the token into two separate outputs
-to improve clarity ([#670](https://github.com/openxla/stablehlo/issues/670)).
+last. In the future, we are planning to split the payload and the token into two
+separate outputs to improve clarity
+([#670](https://github.com/openxla/stablehlo/issues/670)).
 
 #### Inputs
 
@@ -3654,9 +3652,6 @@ Writes `inputs` to the outfeed and produces a `result` token.
 
 Semantics of `outfeed_config` is implementation-defined.
 
-The operation takes a token and produces a token to reify its side effects
-as a value that other operations can take a data dependency on.
-
 #### Inputs
 
 | Label | Name             | Type                       |
@@ -3894,9 +3889,8 @@ implementation-defined. This flag duplicates the information provided in
 ([#666](https://github.com/openxla/stablehlo/issues/666)).
 
 `results` consist of payload values which come first and a token which comes
-last. The operation produces a token to reify its side effects as a value that
-other operations can take a data dependency on. In the future, we are planning
-to split the payload and the token into two separate outputs to improve clarity
+last. In the future, we are planning to split the payload and the token into two
+separate outputs to improve clarity
 ([#670](https://github.com/openxla/stablehlo/issues/670)).
 
 #### Inputs
@@ -4184,7 +4178,7 @@ where:
 * `padded_inputs = pad(inputs..., init_values..., padding[:, 0], padding[:, 1],
   base_dilations - 1)`.
 * `window_start = result_index * window_strides`.
-* `window_end = window_start + window_dimensions + window_dilations - 1`.
+* `window_end = window_start + (window_dimensions - 1) * window_dilations + 1`.
 * `windows = slice(padded_inputs..., window_start, window_end,
   window_dilations)`.
 
@@ -4228,7 +4222,7 @@ where:
 * (C15) `shape(results[0]) = num_windows` where:
   * `dilated_input_shape = shape(inputs[0]) = 0 ? 0 : (shape(inputs[0]) - 1) * base_dilations + 1`.
   * `padded_input_shape = padding[:, 0] + dilated_input_shape + padding[:, 1]`.
-  * `dilated_window_shape = window_dimensions = 0 ? 0 : (window_dimensions - 1) * window_dilations + 1`.
+  * `dilated_window_shape = (window_dimensions - 1) * window_dilations + 1`.
   * `is_empty_window = padded_input_shape = 0 || dilated_window_shape > padded_input_shape`.
   * `num_windows = is_empty_window ? 0 : floor((padded_input_shape - dilated_window_shape) / window_strides) + 1`.
 * (C16) `element_type(results...) = element_type(init_values...)`.
@@ -4671,12 +4665,13 @@ Given that, `results = exec(schedule, inputs)`, where:
 * `schedule` is an implementation-defined permutation of
   `index_space(updates[0])`.
 * `exec([update_index, ...], results) = exec([...], updated_results)` where:
-  * `updated_values =
-    update_computation(results...[result_index], updates...[update_index])`.
-  * `updated_results` is a copy of `results` with `results...[result_index]`
-    set to `updated_values...`.
-  * If `result_index` is out of bounds for `shape(results[0])`, the behavior
-    is implementation-defined.
+  * If `result_index` is in bounds for `shape(results...)`
+    * `updated_values =
+      update_computation(results...[result_index], updates...[update_index])`.
+    * `updated_results` is a copy of `results` with `results...[result_index]`
+      set to `updated_values...`.
+  * Otherwise
+    * `updated_results = results`.
 * `exec([], results) = results`.
 
 If `indices_are_sorted` is `true` then the implementation can assume that
@@ -4752,7 +4747,7 @@ undefined.
 //          [[9, 10], [11, 12], [13, 14], [15, 16]],
 //          [[17, 18], [19, 20], [21, 22], [23, 24]]
 //         ]
-// %scatter_indices: [[[0, 2], [1, 0], [2, 1]], [[0, 1], [1, 0], [2, 0]]]
+// %scatter_indices: [[[0, 2], [1, 0], [2, 1]], [[0, 1], [1, 0], [0, 9]]]
 // %update: [
 //           [[[1, 1], [1, 1]], [[1, 1], [1, 1]], [[1, 1], [1, 1]]],
 //           [[[1, 1], [1, 1]], [[1, 1], [1, 1]], [[1, 1], [1, 1]]]
@@ -4771,7 +4766,7 @@ undefined.
   unique_indices = false
 } : (tensor<3x4x2xi64>, tensor<2x3x2xi64>, tensor<2x3x2x2xi64>) -> tensor<3x4x2xi64>
 // %result: [
-//           [[1, 2], [5, 6], [8, 9], [8, 9]],
+//           [[1, 2], [5, 6], [7, 8], [7, 8]],
 //           [[10, 11], [12, 13], [14, 15], [16, 17]],
 //           [[18, 19], [20, 21], [21, 22], [23, 24]]
 //          ]
@@ -4933,9 +4928,6 @@ More formally:
 #### Semantics
 
 Sends `inputs` to a channel `channel_id` and produces a `result` token.
-
-The operation takes a token and produces a token to reify its side effects
-as a value that other operations can take a data dependency on.
 
 If `is_host_transfer` is `true`, then the operation transfers data to the
 host. Otherwise, it transfers data to another device. What this means is
@@ -5789,10 +5781,13 @@ A StableHLO program is executed by providing input values to the `main` function
 and computing output values. Output values of a function are computed by
 executing the graph of ops rooted in the corresponding `return` op.
 
-The execution order is implementation-defined, as long as ops are executed
-before their uses. Possible execution orders of the example program above are
-`%0` → `%1` → `%2` → `%3` → `%4` → `return` or `%3` → `%0` → `%1` → `%2` → `%4`
-→ `return`.
+The execution order is implementation-defined as long as it is aligned with
+dataflow, i.e. if ops are executed before their uses. In StableHLO, all
+side-effecting ops consume one token and produce one token (multiple tokens can
+be multiplexed into one token via `after_all`), so the execution order of side
+effects is also aligned with dataflow. Possible execution orders of the example
+program above are `%0` → `%1` → `%2` → `%3` → `%4` → `return` or `%3` → `%0` →
+`%1` → `%2` → `%4` → `return`.
 
 More formally, a **StableHLO process** is a combination of:
 1\) a StableHLO program, 2) operation statuses (not executed yet,

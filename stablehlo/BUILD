@@ -734,6 +734,7 @@ gentbl_cc_library(
 cc_library(
     name = "stablehlo_passes",
     srcs = [
+        "stablehlo/transforms/PassPipelines.cpp",
         "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
         "stablehlo/transforms/StablehloLegalizeToVhlo.cpp",
         "stablehlo/transforms/StablehloRefineShapes.cpp",
