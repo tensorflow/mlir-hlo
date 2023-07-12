@@ -1210,7 +1210,7 @@ struct StablehloRefineShapesPass
     // function. This is sufficient because we only support one function per
     // program at the moment.
     // TODO(#1048): Find out why .maxIterations = 1 no longer works.
-    // There have been recent refactors in applyPatternsAndFoldGreedily
+    // There have been recent refactors to applyPatternsAndFoldGreedily
     // upstream, and that might be the reason.
     GreedyRewriteConfig config;
     config.useTopDownTraversal = true;
