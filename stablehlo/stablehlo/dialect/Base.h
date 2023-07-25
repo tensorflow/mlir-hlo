@@ -255,6 +255,10 @@ class BroadcastingElementwise
     : public mlir::OpTrait::TraitBase<ConcreteType, BroadcastingElementwise> {};
 
 template <typename ConcreteType>
+class IsCommutative
+    : public mlir::OpTrait::TraitBase<ConcreteType, IsCommutative> {};
+
+template <typename ConcreteType>
 class PairwiseSameOperandAndResultType
     : public mlir::OpTrait::TraitBase<ConcreteType,
                                       PairwiseSameOperandAndResultType> {
