@@ -10,7 +10,7 @@ module @jit_testcase {
     %4 = stablehlo.constant dense<2.000000e+00> : tensor<20x20xf32>
     %5 = stablehlo.constant dense<3.200000e+01> : tensor<20x20xf32>
     %6 = stablehlo.constant dense<8.000000e+00> : tensor<20x20xf32>
-    %7 = stablehlo.multiply %3, %2 : tensor<20x20xf32>
+    %7 = stablehlo.multiply %2, %3 : tensor<20x20xf32>
     %8 = stablehlo.subtract %7, %4 : tensor<20x20xf32>
     %9 = stablehlo.constant dense<0.000000e+00> : tensor<20x20xf32>
     %10 = stablehlo.constant dense<0.000000e+00> : tensor<20x20xf32>

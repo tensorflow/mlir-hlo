@@ -19,7 +19,7 @@ module @jit_testcase {
     %13 = stablehlo.add %10, %11 : tensor<20x20xf32>
     %14 = stablehlo.divide %10, %13 : tensor<20x20xf32>
     %15 = stablehlo.add %10, %14 : tensor<20x20xf32>
-    %16 = stablehlo.multiply %12, %15 : tensor<20x20xf32>
+    %16 = stablehlo.multiply %15, %12 : tensor<20x20xf32>
     %17 = stablehlo.abs %2 : tensor<20x20xf32>
     %18 = stablehlo.compare  LT, %17, %11 : (tensor<20x20xf32>, tensor<20x20xf32>) -> tensor<20x20xi1>
     %19 = stablehlo.select %18, %16, %9 : tensor<20x20xi1>, tensor<20x20xf32>

@@ -72,12 +72,12 @@ module @jit_fun_flat_jax {
     %24 = stablehlo.subtract %14, %23 : tensor<f64>
     %25 = stablehlo.minimum %18, %24 : tensor<f64>
     %26 = stablehlo.constant dense<0.000000e+00> : tensor<f64>
-    %27 = stablehlo.maximum %26, %25 : tensor<f64>
+    %27 = stablehlo.maximum %25, %26 : tensor<f64>
     %28 = stablehlo.constant dense<1.000000e+00> : tensor<f64>
     %29 = stablehlo.subtract %14, %28 : tensor<f64>
     %30 = stablehlo.minimum %19, %29 : tensor<f64>
     %31 = stablehlo.constant dense<0.000000e+00> : tensor<f64>
-    %32 = stablehlo.maximum %31, %30 : tensor<f64>
+    %32 = stablehlo.maximum %30, %31 : tensor<f64>
     %33 = stablehlo.convert %27 : (tensor<f64>) -> tensor<i64>
     %34 = stablehlo.convert %32 : (tensor<f64>) -> tensor<i64>
     %35 = stablehlo.constant dense<5> : tensor<i64>

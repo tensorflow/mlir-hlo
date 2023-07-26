@@ -20,7 +20,7 @@ module @jit_testcase {
     %14 = stablehlo.divide %10, %13 : tensor<20x20xf32>
     %15 = stablehlo.subtract %8, %14 : tensor<20x20xf32>
     %16 = stablehlo.divide %10, %12 : tensor<20x20xf32>
-    %17 = stablehlo.add %9, %16 : tensor<20x20xf32>
+    %17 = stablehlo.add %16, %9 : tensor<20x20xf32>
     %18 = stablehlo.constant dense<-1259.13916> : tensor<20x20xf32>
     %19 = stablehlo.constant dense<2.000000e+00> : tensor<20x20xf32>
     %20 = stablehlo.add %7, %19 : tensor<20x20xf32>
@@ -78,11 +78,11 @@ module @jit_testcase {
     %72 = stablehlo.divide %66, %68 : tensor<20x20xf32>
     %73 = stablehlo.add %65, %72 : tensor<20x20xf32>
     %74 = stablehlo.constant dense<7.500000e+00> : tensor<20x20xf32>
-    %75 = stablehlo.add %74, %7 : tensor<20x20xf32>
+    %75 = stablehlo.add %7, %74 : tensor<20x20xf32>
     %76 = stablehlo.constant dense<2.01490307> : tensor<20x20xf32>
     %77 = stablehlo.divide %7, %74 : tensor<20x20xf32>
     %78 = stablehlo.log_plus_one %77 : tensor<20x20xf32>
-    %79 = stablehlo.add %76, %78 : tensor<20x20xf32>
+    %79 = stablehlo.add %78, %76 : tensor<20x20xf32>
     %80 = stablehlo.divide %71, %73 : tensor<20x20xf32>
     %81 = stablehlo.constant dense<7.000000e+00> : tensor<20x20xf32>
     %82 = stablehlo.divide %81, %75 : tensor<20x20xf32>
@@ -94,10 +94,10 @@ module @jit_testcase {
     %88 = stablehlo.abs %87 : tensor<20x20xf32>
     %89 = stablehlo.add %0, %88 : tensor<20x20xf32>
     %90 = stablehlo.constant dense<3.14159274> : tensor<20x20xf32>
-    %91 = stablehlo.multiply %90, %89 : tensor<20x20xf32>
+    %91 = stablehlo.multiply %89, %90 : tensor<20x20xf32>
     %92 = stablehlo.cosine %91 : tensor<20x20xf32>
     %93 = stablehlo.sine %91 : tensor<20x20xf32>
-    %94 = stablehlo.multiply %90, %92 : tensor<20x20xf32>
+    %94 = stablehlo.multiply %92, %90 : tensor<20x20xf32>
     %95 = stablehlo.divide %94, %93 : tensor<20x20xf32>
     %96 = stablehlo.subtract %84, %95 : tensor<20x20xf32>
     %97 = stablehlo.select %3, %96, %84 : tensor<20x20xi1>, tensor<20x20xf32>

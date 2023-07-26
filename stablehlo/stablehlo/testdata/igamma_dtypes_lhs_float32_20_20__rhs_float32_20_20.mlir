@@ -202,7 +202,7 @@ module @jit_testcase {
     %21 = stablehlo.multiply %19, %20 : tensor<20x20xf32>
     %22 = stablehlo.constant dense<-1.000000e+00> : tensor<f32>
     %23 = stablehlo.constant dense<-1.000000e+00> : tensor<20x20xf32>
-    %24 = stablehlo.multiply %23, %1 : tensor<20x20xf32>
+    %24 = stablehlo.multiply %1, %23 : tensor<20x20xf32>
     %25 = stablehlo.multiply %24, %2 : tensor<20x20xf32>
     %26 = stablehlo.multiply %6, %6 : tensor<20x20xf32>
     %27 = stablehlo.divide %25, %26 : tensor<20x20xf32>
@@ -270,7 +270,7 @@ module @jit_testcase {
     %32 = stablehlo.constant dense<1.000000e+00> : tensor<20x20xf32>
     %33 = stablehlo.subtract %32, %27 : tensor<20x20xf32>
     %34 = stablehlo.select %30, %33, %27 : tensor<20x20xi1>, tensor<20x20xf32>
-    %35 = stablehlo.multiply %24, %34 : tensor<20x20xf32>
+    %35 = stablehlo.multiply %34, %24 : tensor<20x20xf32>
     %36 = stablehlo.sine %35 : tensor<20x20xf32>
     %37 = stablehlo.log %36 : tensor<20x20xf32>
     %38 = stablehlo.is_finite %37 : (tensor<20x20xf32>) -> tensor<20x20xi1>
@@ -288,17 +288,17 @@ module @jit_testcase {
     %50 = stablehlo.add %48, %49 : tensor<20x20xf32>
     %51 = stablehlo.constant dense<7.500000e+00> : tensor<f32>
     %52 = stablehlo.constant dense<7.500000e+00> : tensor<20x20xf32>
-    %53 = stablehlo.add %52, %48 : tensor<20x20xf32>
+    %53 = stablehlo.add %48, %52 : tensor<20x20xf32>
     %54 = stablehlo.constant dense<2.01490307> : tensor<f32>
     %55 = stablehlo.constant dense<2.01490307> : tensor<20x20xf32>
     %56 = stablehlo.constant dense<7.500000e+00> : tensor<20x20xf32>
     %57 = stablehlo.divide %48, %56 : tensor<20x20xf32>
     %58 = stablehlo.log_plus_one %57 : tensor<20x20xf32>
-    %59 = stablehlo.add %55, %58 : tensor<20x20xf32>
+    %59 = stablehlo.add %58, %55 : tensor<20x20xf32>
     %60 = stablehlo.divide %53, %59 : tensor<20x20xf32>
     %61 = stablehlo.subtract %50, %60 : tensor<20x20xf32>
     %62 = stablehlo.multiply %61, %59 : tensor<20x20xf32>
-    %63 = stablehlo.add %43, %62 : tensor<20x20xf32>
+    %63 = stablehlo.add %62, %43 : tensor<20x20xf32>
     %64 = stablehlo.constant dense<1.000000e+00> : tensor<f32>
     %65 = stablehlo.constant dense<1.000000e+00> : tensor<20x20xf32>
     %66 = stablehlo.constant dense<676.520386> : tensor<f32>
@@ -309,7 +309,7 @@ module @jit_testcase {
     %71 = stablehlo.constant dense<1.000000e+00> : tensor<20x20xf32>
     %72 = stablehlo.add %70, %71 : tensor<20x20xf32>
     %73 = stablehlo.divide %67, %72 : tensor<20x20xf32>
-    %74 = stablehlo.add %65, %73 : tensor<20x20xf32>
+    %74 = stablehlo.add %73, %65 : tensor<20x20xf32>
     %75 = stablehlo.constant dense<-1259.13916> : tensor<f32>
     %76 = stablehlo.constant dense<-1259.13916> : tensor<20x20xf32>
     %77 = stablehlo.constant dense<1.000000e+00> : tensor<f32>
@@ -583,7 +583,7 @@ module @jit_testcase {
       %238 = stablehlo.multiply %iterArg_4, %237 : tensor<20x20xf32>
       %239 = stablehlo.constant dense<-1.000000e+00> : tensor<f32>
       %240 = stablehlo.constant dense<-1.000000e+00> : tensor<20x20xf32>
-      %241 = stablehlo.multiply %240, %iterArg_1 : tensor<20x20xf32>
+      %241 = stablehlo.multiply %iterArg_1, %240 : tensor<20x20xf32>
       %242 = stablehlo.multiply %241, %iterArg_3 : tensor<20x20xf32>
       %243 = stablehlo.multiply %225, %225 : tensor<20x20xf32>
       %244 = stablehlo.divide %242, %243 : tensor<20x20xf32>

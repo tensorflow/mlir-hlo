@@ -3,7 +3,7 @@
 module @jit_fun_flat_jax {
   func.func public @main(%arg0: tensor<i64>, %arg1: tensor<?x4xf32> {mhlo.sharding = ""}) -> tensor<1x4xf32> {
     %0 = stablehlo.constant dense<-1> : tensor<i64>
-    %1 = stablehlo.add %0, %arg0 : tensor<i64>
+    %1 = stablehlo.add %arg0, %0 : tensor<i64>
     %2 = stablehlo.convert %1 : (tensor<i64>) -> tensor<i32>
     %3 = stablehlo.reshape %2 : (tensor<i32>) -> tensor<1xi32>
     %4 = stablehlo.constant dense<0> : tensor<1xi32>

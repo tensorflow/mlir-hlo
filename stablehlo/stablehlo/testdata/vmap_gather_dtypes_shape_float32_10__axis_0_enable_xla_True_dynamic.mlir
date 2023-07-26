@@ -41,7 +41,7 @@ module @jit_fun_flat_jax {
     %32 = stablehlo.compare  LT, %22, %31,  SIGNED : (tensor<2xi64>, tensor<2xi64>) -> tensor<2xi1>
     %33 = stablehlo.constant dense<2> : tensor<i64>
     %34 = stablehlo.broadcast_in_dim %33, dims = [] : (tensor<i64>) -> tensor<2xi64>
-    %35 = stablehlo.add %22, %34 : tensor<2xi64>
+    %35 = stablehlo.add %34, %22 : tensor<2xi64>
     %36 = stablehlo.select %32, %35, %22 : tensor<2xi1>, tensor<2xi64>
     %37 = stablehlo.convert %36 : (tensor<2xi64>) -> tensor<2xi32>
     %38 = stablehlo.broadcast_in_dim %37, dims = [0] : (tensor<2xi32>) -> tensor<2x1xi32>
@@ -56,7 +56,7 @@ module @jit_fun_flat_jax {
     %47 = stablehlo.compare  LT, %23, %46,  SIGNED : (tensor<2xi64>, tensor<2xi64>) -> tensor<2xi1>
     %48 = stablehlo.constant dense<2> : tensor<i64>
     %49 = stablehlo.broadcast_in_dim %48, dims = [] : (tensor<i64>) -> tensor<2xi64>
-    %50 = stablehlo.add %23, %49 : tensor<2xi64>
+    %50 = stablehlo.add %49, %23 : tensor<2xi64>
     %51 = stablehlo.select %47, %50, %23 : tensor<2xi1>, tensor<2xi64>
     %52 = stablehlo.convert %51 : (tensor<2xi64>) -> tensor<2xi32>
     %53 = stablehlo.broadcast_in_dim %52, dims = [0] : (tensor<2xi32>) -> tensor<2x1xi32>

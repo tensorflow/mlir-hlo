@@ -16,9 +16,9 @@ module @jit_testcase {
     %10 = stablehlo.constant dense<6.914060e-01> : tensor<20x20xbf16>
     %11 = stablehlo.add %8, %10 : tensor<20x20xbf16>
     %12 = stablehlo.constant dense<1.000000e+00> : tensor<20x20xbf16>
-    %13 = stablehlo.add %12, %0 : tensor<20x20xbf16>
+    %13 = stablehlo.add %0, %12 : tensor<20x20xbf16>
     %14 = stablehlo.constant dense<-1.000000e+00> : tensor<20x20xbf16>
-    %15 = stablehlo.add %14, %0 : tensor<20x20xbf16>
+    %15 = stablehlo.add %0, %14 : tensor<20x20xbf16>
     %16 = stablehlo.multiply %13, %15 : tensor<20x20xbf16>
     %17 = stablehlo.sqrt %16 : tensor<20x20xbf16>
     %18 = stablehlo.add %0, %17 : tensor<20x20xbf16>

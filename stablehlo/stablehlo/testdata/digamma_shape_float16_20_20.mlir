@@ -21,7 +21,7 @@ module @jit_testcase {
     %15 = stablehlo.divide %11, %14 : tensor<20x20xf32>
     %16 = stablehlo.subtract %9, %15 : tensor<20x20xf32>
     %17 = stablehlo.divide %11, %13 : tensor<20x20xf32>
-    %18 = stablehlo.add %10, %17 : tensor<20x20xf32>
+    %18 = stablehlo.add %17, %10 : tensor<20x20xf32>
     %19 = stablehlo.constant dense<-1259.13916> : tensor<20x20xf32>
     %20 = stablehlo.constant dense<2.000000e+00> : tensor<20x20xf32>
     %21 = stablehlo.add %8, %20 : tensor<20x20xf32>
@@ -79,11 +79,11 @@ module @jit_testcase {
     %73 = stablehlo.divide %67, %69 : tensor<20x20xf32>
     %74 = stablehlo.add %66, %73 : tensor<20x20xf32>
     %75 = stablehlo.constant dense<7.500000e+00> : tensor<20x20xf32>
-    %76 = stablehlo.add %75, %8 : tensor<20x20xf32>
+    %76 = stablehlo.add %8, %75 : tensor<20x20xf32>
     %77 = stablehlo.constant dense<2.01490307> : tensor<20x20xf32>
     %78 = stablehlo.divide %8, %75 : tensor<20x20xf32>
     %79 = stablehlo.log_plus_one %78 : tensor<20x20xf32>
-    %80 = stablehlo.add %77, %79 : tensor<20x20xf32>
+    %80 = stablehlo.add %79, %77 : tensor<20x20xf32>
     %81 = stablehlo.divide %72, %74 : tensor<20x20xf32>
     %82 = stablehlo.constant dense<7.000000e+00> : tensor<20x20xf32>
     %83 = stablehlo.divide %82, %76 : tensor<20x20xf32>
@@ -95,10 +95,10 @@ module @jit_testcase {
     %89 = stablehlo.abs %88 : tensor<20x20xf32>
     %90 = stablehlo.add %2, %89 : tensor<20x20xf32>
     %91 = stablehlo.constant dense<3.14159274> : tensor<20x20xf32>
-    %92 = stablehlo.multiply %91, %90 : tensor<20x20xf32>
+    %92 = stablehlo.multiply %90, %91 : tensor<20x20xf32>
     %93 = stablehlo.cosine %92 : tensor<20x20xf32>
     %94 = stablehlo.sine %92 : tensor<20x20xf32>
-    %95 = stablehlo.multiply %91, %93 : tensor<20x20xf32>
+    %95 = stablehlo.multiply %93, %91 : tensor<20x20xf32>
     %96 = stablehlo.divide %95, %94 : tensor<20x20xf32>
     %97 = stablehlo.subtract %85, %96 : tensor<20x20xf32>
     %98 = stablehlo.select %4, %97, %85 : tensor<20x20xi1>, tensor<20x20xf32>

@@ -16,7 +16,7 @@ module @jit_fun_flat_jax {
     %11 = stablehlo.constant dense<1> : tensor<i64>
     %12 = stablehlo.subtract %3, %11 : tensor<i64>
     %13 = stablehlo.select %10, %12, %3 : tensor<i1>, tensor<i64>
-    %14 = stablehlo.multiply %2, %13 : tensor<i64>
+    %14 = stablehlo.multiply %13, %2 : tensor<i64>
     %15 = stablehlo.subtract %1, %14 : tensor<i64>
     %16 = stablehlo.constant dense<2> : tensor<i64>
     %17 = stablehlo.add %15, %16 : tensor<i64>
@@ -32,7 +32,7 @@ module @jit_fun_flat_jax {
     %27 = stablehlo.constant dense<1> : tensor<i64>
     %28 = stablehlo.subtract %19, %27 : tensor<i64>
     %29 = stablehlo.select %26, %28, %19 : tensor<i1>, tensor<i64>
-    %30 = stablehlo.multiply %18, %29 : tensor<i64>
+    %30 = stablehlo.multiply %29, %18 : tensor<i64>
     %31 = stablehlo.subtract %17, %30 : tensor<i64>
     %32 = stablehlo.constant dense<-1> : tensor<i64>
     %33 = stablehlo.multiply %arg0, %32 : tensor<i64>
@@ -48,7 +48,7 @@ module @jit_fun_flat_jax {
     %43 = stablehlo.constant dense<1> : tensor<i64>
     %44 = stablehlo.subtract %35, %43 : tensor<i64>
     %45 = stablehlo.select %42, %44, %35 : tensor<i1>, tensor<i64>
-    %46 = stablehlo.multiply %34, %45 : tensor<i64>
+    %46 = stablehlo.multiply %45, %34 : tensor<i64>
     %47 = stablehlo.subtract %33, %46 : tensor<i64>
     %48 = stablehlo.constant dense<-1> : tensor<i64>
     %49 = stablehlo.multiply %arg0, %48 : tensor<i64>
@@ -64,7 +64,7 @@ module @jit_fun_flat_jax {
     %59 = stablehlo.constant dense<1> : tensor<i64>
     %60 = stablehlo.subtract %51, %59 : tensor<i64>
     %61 = stablehlo.select %58, %60, %51 : tensor<i1>, tensor<i64>
-    %62 = stablehlo.multiply %50, %61 : tensor<i64>
+    %62 = stablehlo.multiply %61, %50 : tensor<i64>
     %63 = stablehlo.subtract %49, %62 : tensor<i64>
     %64 = stablehlo.constant dense<2> : tensor<i64>
     %65 = stablehlo.add %63, %64 : tensor<i64>
@@ -80,7 +80,7 @@ module @jit_fun_flat_jax {
     %75 = stablehlo.constant dense<1> : tensor<i64>
     %76 = stablehlo.subtract %67, %75 : tensor<i64>
     %77 = stablehlo.select %74, %76, %67 : tensor<i1>, tensor<i64>
-    %78 = stablehlo.multiply %66, %77 : tensor<i64>
+    %78 = stablehlo.multiply %77, %66 : tensor<i64>
     %79 = stablehlo.subtract %65, %78 : tensor<i64>
     %80 = stablehlo.constant dense<-1> : tensor<i64>
     %81 = stablehlo.multiply %77, %80 : tensor<i64>

@@ -341,7 +341,7 @@ module @jit_testcase {
       %122 = stablehlo.add %120, %121 : tensor<f32>
       %123 = stablehlo.reshape %122 : (tensor<f32>) -> tensor<f32>
       %124 = stablehlo.constant dense<0.000000e+00> : tensor<f32>
-      %125 = stablehlo.maximum %124, %123 : tensor<f32>
+      %125 = stablehlo.maximum %123, %124 : tensor<f32>
       %126 = stablehlo.constant dense<0.000000e+00> : tensor<f32>
       %127 = stablehlo.constant dense<1.000000e+00> : tensor<f32>
       %128 = stablehlo.constant dense<2.000000e+00> : tensor<f32>
@@ -349,7 +349,7 @@ module @jit_testcase {
        cond {
         %151 = stablehlo.multiply %iterArg_6, %iterArg_6 : tensor<f32>
         %152 = stablehlo.constant dense<3.310000e-02> : tensor<f32>
-        %153 = stablehlo.multiply %152, %151 : tensor<f32>
+        %153 = stablehlo.multiply %151, %152 : tensor<f32>
         %154 = stablehlo.constant dense<1.000000e+00> : tensor<f32>
         %155 = stablehlo.subtract %154, %153 : tensor<f32>
         %156 = stablehlo.compare  GE, %iterArg_8, %155,  FLOAT : (tensor<f32>, tensor<f32>) -> tensor<i1>
@@ -659,13 +659,13 @@ module @jit_testcase {
           %289 = stablehlo.add %287, %288 : tensor<f32>
           %290 = stablehlo.reshape %289 : (tensor<f32>) -> tensor<f32>
           %291 = stablehlo.constant dense<-0.99999994> : tensor<f32>
-          %292 = stablehlo.maximum %291, %290 : tensor<f32>
+          %292 = stablehlo.maximum %290, %291 : tensor<f32>
           %293 = func.call @erf_inv(%292) : (tensor<f32>) -> tensor<f32>
           %294 = stablehlo.constant dense<1.41421354> : tensor<f32>
-          %295 = stablehlo.multiply %294, %293 : tensor<f32>
+          %295 = stablehlo.multiply %293, %294 : tensor<f32>
           %296 = stablehlo.multiply %295, %iterArg_9 : tensor<f32>
           %297 = stablehlo.constant dense<1.000000e+00> : tensor<f32>
-          %298 = stablehlo.add %297, %296 : tensor<f32>
+          %298 = stablehlo.add %296, %297 : tensor<f32>
           stablehlo.return %iterArg_9, %248, %295, %298 : tensor<f32>, tensor<2xui32>, tensor<f32>, tensor<f32>
         }
         %181 = stablehlo.multiply %180#2, %180#2 : tensor<f32>
@@ -776,7 +776,7 @@ module @jit_testcase {
         %222 = stablehlo.add %220, %221 : tensor<f32>
         %223 = stablehlo.reshape %222 : (tensor<f32>) -> tensor<f32>
         %224 = stablehlo.constant dense<0.000000e+00> : tensor<f32>
-        %225 = stablehlo.maximum %224, %223 : tensor<f32>
+        %225 = stablehlo.maximum %223, %224 : tensor<f32>
         stablehlo.return %iterArg_3, %iterArg_4, %173, %181, %183, %225 : tensor<f32>, tensor<f32>, tensor<2xui32>, tensor<f32>, tensor<f32>, tensor<f32>
       }
       %130 = stablehlo.constant dense<1.000000e+00> : tensor<f32>
