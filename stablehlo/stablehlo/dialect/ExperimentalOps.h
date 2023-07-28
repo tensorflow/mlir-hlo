@@ -90,7 +90,7 @@ class DynamicReduceWindowOpAdaptor {
   CustomCallOp op_;
 };
 
-// Wraps a custom call in a DynamicReduceWindowAdaptor.
+// Wraps a custom call in a DynamicReduceWindowOpAdaptor.
 // Fails if the call_target_name of the custom call doesn't match
 // "stablehlo.dynamic_reduce_window".
 std::optional<DynamicReduceWindowOpAdaptor> getDynamicReduceWindowOp(
@@ -158,11 +158,68 @@ class DynamicRngBitGeneratorOpAdaptor {
   CustomCallOp op_;
 };
 
-// Wraps a custom call in a DynamicReduceWindowAdaptor.
+// Wraps a custom call in a DynamicRngBitGeneratorOpAdaptor.
 // Fails if the call_target_name of the custom call doesn't match
 // "stablehlo.dynamic_rng_bit_generator".
 std::optional<DynamicRngBitGeneratorOpAdaptor> getDynamicRngBitGeneratorOp(
     CustomCallOp op);
+
+// The DynamicTopKOp experiment provides a dynamic version of
+// TopKOp. Once the dynamism RFC is figured out, we expect to have an
+// upstream representation for this notion.
+//
+// Within this experiment, DynamicTopKOp is represented via the
+// `stablehlo.custom_call @stablehlo.dynamic_top_k` custom call.
+// This custom call has the regular operand of TopKOp plus an
+// additional `k` operand that determines the shape of the output.
+//
+// Semantics of DynamicTopKOp are inherited from semantics of Chlo.TopKOp.
+//
+// #### Inputs
+//
+// | Label | Name            | Type                                         |
+// |-------|-----------------|----------------------------------------------|
+// | (I1)  | `operand`       | tensor of integer or floating-point type     |
+// | (I2)  | `k`             | 0-dimensional tensor of integer or index type|
+//
+// #### Outputs
+//
+// | Name           | Type                                     |
+// |----------------|------------------------------------------|
+// | `values`       | tensor of integer or floating-point type |
+// | `indices`      | tensor of si32 type                      |
+//
+// #### Constraints
+//
+// * (C1) `shape(values)[:-1] = shape(operand)[:-1]`
+// * (C2) `element_type(values) = element_type(operand)`
+// * (C3) `shape(values)[-1] <= shape(operand)[-1]`
+// * (C4) `shape(indices) = shape(values)`
+class DynamicTopKOpAdaptor {
+ public:
+  DynamicTopKOpAdaptor(CustomCallOp op) : op_(op) {}
+  operator Operation*() { return op_; }
+  Operation* operator->() { return op_; }
+
+  // These accessors assume that the operation is well-formed (i.e. that it
+  // can pass verification).
+  TypedValue<ShapedType> getOperand();
+  TypedValue<ShapedType> getK();
+  TypedValue<ShapedType> getValues();
+  TypedValue<ShapedType> getIndices();
+
+  // Verifies the constraints documented above.
+  // Emits errors if errors are detected.
+  LogicalResult verify();
+
+ private:
+  CustomCallOp op_;
+};
+
+// Wraps a custom call in a DynamicTopKOpAdaptor.
+// Fails if the call_target_name of the custom call doesn't match
+// "stablehlo.dynamic_top_k".
+std::optional<DynamicTopKOpAdaptor> getDynamicTopKOp(CustomCallOp op);
 
 }  // namespace stablehlo
 }  // namespace mlir

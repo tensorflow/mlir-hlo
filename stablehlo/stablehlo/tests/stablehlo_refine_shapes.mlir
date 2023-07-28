@@ -650,6 +650,16 @@ func.func @refine_dynamic_rng_bit_generator(%arg0: tensor<2xui64>) -> (tensor<?x
 
 // -----
 
+// CHECK-LABEL: func @refine_dynamic_top_k
+func.func @refine_dynamic_top_k(%arg0: tensor<16xf32>) -> (tensor<?xf32>, tensor<?xi32>) {
+  // CHECK: stablehlo.dynamic_top_k{{.*}} -> (tensor<4xf32>, tensor<4xi32>)
+  %k = stablehlo.constant dense<4> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<?xf32>, tensor<?xi32>)
+  return %1#0, %1#1 : tensor<?xf32>, tensor<?xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @refine_infer_type_op_interface_supported_dialect_chlo
 func.func @refine_infer_type_op_interface_supported_dialect_chlo(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>) -> tensor<*xf32> {
   // CHECK: chlo.broadcast_add{{.*}} -> tensor<4xf32>

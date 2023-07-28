@@ -660,6 +660,147 @@ func.func @dynamic_rng_bit_generator_inapplicable_dynamic_output_type(%arg0: ten
 
 // -----
 
+// CHECK-LABEL: func @dynamic_top_k_success
+func.func @dynamic_top_k_success(%arg0: tensor<16xf32>) -> (tensor<3xf32>, tensor<3xi32>) {
+  // CHECK: chlo.top_k
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<3xf32>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3xf32>, tensor<3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @dynamic_top_k_failure_k_mismatch
+func.func @dynamic_top_k_failure_k_mismatch(%arg0: tensor<16xf32>) -> (tensor<3xf32>, tensor<3xi32>) {
+  // CHECK: @stablehlo.dynamic_top_k
+  %k = stablehlo.constant dense<4> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<3xf32>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3xf32>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k I1
+// CHECK-LABEL: func @dynamic_top_k_error_operand_not_float
+func.func @dynamic_top_k_error_operand_not_float(%arg0: tensor<16xcomplex<f64>>) -> (tensor<3xcomplex<f64>>, tensor<3xi32>) {
+  // expected-error@+2{{expects operand #0 to be a tensor of integer or floating-point type}}
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xcomplex<f64>>, tensor<ui64>) -> (tensor<3xcomplex<f64>>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3xcomplex<f64>>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k I1
+// CHECK-LABEL: func @dynamic_top_k_error_operand_unranked
+func.func @dynamic_top_k_error_operand_unranked(%arg0: tensor<*xf32>) -> (tensor<3xf32>, tensor<3xi32>) {
+  // expected-error@+2{{expects operand #0 to be a tensor of integer or floating-point type of rank at least 1}}
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<*xf32>, tensor<ui64>) -> (tensor<3xf32>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3xf32>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k I1
+// CHECK-LABEL: func @dynamic_top_k_error_scalar_operand
+func.func @dynamic_top_k_error_scalar_operand(%arg0: tensor<f32>) -> (tensor<3xf32>, tensor<3xi32>) {
+  // expected-error@+2{{expects operand #0 to be a tensor of integer or floating-point type of rank at least 1}}
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<f32>, tensor<ui64>) -> (tensor<3xf32>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3xf32>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k I2
+// CHECK-LABEL: func @dynamic_top_k_error_k_not_integer
+func.func @dynamic_top_k_error_k_not_integer(%arg0: tensor<16xf32>) -> (tensor<3xf32>, tensor<3xi32>) {
+  // expected-error@+2{{expects k (operand #1) to be a 0-dimensional tensor of integer or index type}}
+  %k = stablehlo.constant dense<3.> : tensor<f32>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<f32>) -> (tensor<3xf32>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3xf32>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k I2
+// CHECK-LABEL: func @dynamic_top_k_error_k_not_scalar
+func.func @dynamic_top_k_error_k_not_scalar(%arg0: tensor<16xf32>) -> (tensor<3xf32>, tensor<3xi32>) {
+  // expected-error@+2{{expects k (operand #1) to be a 0-dimensional tensor of integer or index type}}
+  %k = stablehlo.constant dense<3> : tensor<1xui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<1xui64>) -> (tensor<3xf32>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3xf32>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k O1
+// CHECK-LABEL: func @dynamic_top_k_error_values_not_float
+func.func @dynamic_top_k_error_values_not_float(%arg0: tensor<16xf32>) -> (tensor<3xcomplex<f64>>, tensor<3xi32>) {
+  // expected-error@+2{{expects values (result #0) to be a tensor of integer or floating-point type}}
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<3xcomplex<f64>>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3xcomplex<f64>>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k O2
+// CHECK-LABEL: func @dynamic_top_k_error_indices_not_i32
+func.func @dynamic_top_k_error_indices_not_i32(%arg0: tensor<16xf32>) -> (tensor<3xf32>, tensor<3xi64>) {
+  // expected-error@+2{{expects indices (result #1) to be a tensor of si32}}
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<3xf32>, tensor<3xi64>)
+  return %1#0, %1#1 : tensor<3xf32>, tensor<3xi64>
+}
+
+// -----
+
+// dynamic_top_k C1
+// CHECK-LABEL: func @dynamic_top_k_error_values_bad_rank
+func.func @dynamic_top_k_error_values_bad_rank(%arg0: tensor<16xf32>) -> (tensor<3x4xf32>, tensor<3xi32>) {
+  // expected-error@+2{{expects the values shape to match the operand shape in all but the last dimension}}
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<3x4xf32>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3x4xf32>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k C2
+// CHECK-LABEL: func @dynamic_top_k_error_values_bad_element_type
+func.func @dynamic_top_k_error_values_bad_element_type(%arg0: tensor<16xf32>) -> (tensor<3xf64>, tensor<3xi32>) {
+  // expected-error@+2{{expects the values element type to be the same as the operand element type}}
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<3xf64>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<3xf64>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k C3
+// CHECK-LABEL: func @dynamic_top_k_error_values_last_dim_too_large
+func.func @dynamic_top_k_error_values_last_dim_too_large(%arg0: tensor<16xf32>) -> (tensor<17xf32>, tensor<3xi32>) {
+  // expected-error@+2{{expects the values last dimension to have size at least as large as operand last dimension}}
+  %k = stablehlo.constant dense<17> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<17xf32>, tensor<3xi32>)
+  return %1#0, %1#1 : tensor<17xf32>, tensor<3xi32>
+}
+
+// -----
+
+// dynamic_top_k C4
+// CHECK-LABEL: func @dynamic_top_k_error_indices_shape_mismatch
+func.func @dynamic_top_k_error_indices_shape_mismatch(%arg0: tensor<16xf32>) -> (tensor<3xf32>, tensor<4xi32>) {
+  // expected-error@+2{{expects the indices shape to match the values shape}}
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<3xf32>, tensor<4xi32>)
+  return %1#0, %1#1 : tensor<3xf32>, tensor<4xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @real_dynamic_slice_to_dynamic_slice_success_static_result_type
 func.func @real_dynamic_slice_to_dynamic_slice_success_static_result_type(%arg0: tensor<4xf32>, %arg1: tensor<1xi64>) -> tensor<1xf32> {
   //  CHECK-NOT: stablehlo.real_dynamic_slice

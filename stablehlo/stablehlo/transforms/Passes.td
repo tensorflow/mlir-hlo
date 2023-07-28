@@ -25,6 +25,7 @@ def StablehloCanonicalizeDynamismPass : Pass<"stablehlo-canonicalize-dynamism", 
     For example, if the output_shape operand of DynamicReshapeOp is a constant
     value, then the operation can be transformed to ReshapeOp.
   }];
+  let dependentDialects = ["mlir::chlo::ChloDialect"];
 }
 
 def StablehloLegalizeToVhloPass : Pass<"stablehlo-legalize-to-vhlo", "ModuleOp"> {

@@ -920,6 +920,25 @@ struct RefineDynamicRngBitGeneratorOpPattern
   }
 };
 
+struct RefineDynamicTopKOpPattern : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto maybeOp = getDynamicTopKOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicTopKOpAdaptor op = *maybeOp;
+
+    auto operandType = op.getOperand().getType().cast<ShapedType>();
+    SmallVector<int64_t> outputShape(operandType.getShape());
+    SmallVector<int64_t> k;
+    if (failed(hlo::matchInts(op.getK(), k)))
+      return rewriter.notifyMatchFailure(op, "expected constant k");
+
+    outputShape[operandType.getRank() - 1] = k[0];
+    return refineReturnTypes(rewriter, op, {{outputShape}, {outputShape}});
+  }
+};
+
 struct RefineInferTypeOpInterfacePattern
     : public OpInterfaceRewritePattern<InferTypeOpInterface> {
   explicit RefineInferTypeOpInterfacePattern(MLIRContext* context)
@@ -1251,6 +1270,7 @@ struct StablehloRefineShapesPass
     patterns.add<RefineDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<RefineDynamicReshapeOpPattern>(&getContext());
     patterns.add<RefineDynamicRngBitGeneratorOpPattern>(&getContext());
+    patterns.add<RefineDynamicTopKOpPattern>(&getContext());
     patterns.add<RefineInferTypeOpInterfacePattern>(&getContext());
     patterns.add<RefineRealDynamicSliceOpPattern>(&getContext());
     patterns.add<RefineReduceScatterOpPattern>(&getContext());

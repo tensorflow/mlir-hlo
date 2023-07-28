@@ -24,6 +24,7 @@ limitations under the License.
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "stablehlo/dialect/ChloOps.h"
 #include "stablehlo/dialect/ExperimentalOps.h"
 #include "stablehlo/dialect/StablehloOps.h"
 #include "stablehlo/transforms/Passes.h"
@@ -284,6 +285,35 @@ struct CanonicalizeDynamicRngBitGeneratorOpPattern
   }
 };
 
+struct CanonicalizeDynamicTopKOpPattern
+    : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto maybeOp = getDynamicTopKOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicTopKOpAdaptor op = *maybeOp;
+
+    SmallVector<int64_t> k;
+    if (failed(hlo::matchInts(op.getK(), k)))
+      return rewriter.notifyMatchFailure(impl, "expected constant k");
+
+    // We rely on many of the properties checked by verification.
+    auto valuesType = op.getValues().getType().cast<ShapedType>();
+    auto valuesLastDimSize = valuesType.getShape()[valuesType.getRank() - 1];
+    if (hlo::isDynamicDimSize(valuesLastDimSize) ||
+        valuesLastDimSize != k[0])
+      return rewriter.notifyMatchFailure(
+          op,
+          "expected value of k to match the values last dimension size of "
+          "static values type (result #0)");
+
+    rewriter.replaceOpWithNewOp<chlo::TopKOp>(
+        op, op->getResultTypes(), op.getOperand(), k[0]);
+    return success();
+  }
+};
+
 struct CanonicalizeRealDynamicSliceOpToDynamicSliceOpPattern
     : public OpRewritePattern<RealDynamicSliceOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -393,6 +423,7 @@ struct StablehloCanonicalizeDynamismPass
     patterns.add<CanonicalizeDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicReshapeOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicRngBitGeneratorOpPattern>(&getContext());
+    patterns.add<CanonicalizeDynamicTopKOpPattern>(&getContext());
     patterns.add<CanonicalizeRealDynamicSliceOpToDynamicSliceOpPattern>(
         &getContext());
     patterns.add<CanonicalizeRealDynamicSliceOpToSliceOpPattern>(&getContext());

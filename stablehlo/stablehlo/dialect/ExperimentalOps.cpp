@@ -388,5 +388,117 @@ std::optional<DynamicRngBitGeneratorOpAdaptor> getDynamicRngBitGeneratorOp(
   return DynamicRngBitGeneratorOpAdaptor(op);
 }
 
+LogicalResult DynamicTopKOpAdaptor::verify() {
+  if (op_->getNumOperands() != 2)
+    return op_.emitError("expects size(operands) = 2");
+  if (op_->getNumResults() != 2)
+    return op_.emitError("expects size(results) = 2");
+  for (const auto& attr : op_->getAttrs()) {
+    // api_version and backend_config have default values.
+    // call_target_name should be "stablehlo.dynamic_top_k".
+    if (attr.getName() != "api_version" && attr.getName() != "backend_config" &&
+        attr.getName() != "call_target_name")
+      return op_.emitError()
+             << attr.getName() << " is not a supported attribute";
+  }
+  if (!op_.getBackendConfig().empty())
+    return op_.emitError() << "expects an empty backend_config";
+  if (op_.getCallTargetName() != "stablehlo.dynamic_top_k")
+    return op_.emitError() << "expects @stablehlo.dynamic_top_k";
+
+  auto operand = op_.getInputs()[0];
+  auto k = op_.getInputs()[1];
+  auto values = op_.getResults()[0];
+  auto indices = op_.getResults()[1];
+
+  // dynamic_top_k_i1
+  auto operandType = operand.getType().dyn_cast<ShapedType>();
+  if (!operandType || !operandType.hasRank() || operandType.getRank() < 1 ||
+      !operandType.getElementType().isIntOrFloat())
+    return op_.emitError()
+           << "expects operand #0 "
+           << "to be a tensor of integer or floating-point type "
+           << "of rank at least 1";
+
+  // dynamic_top_k_i2
+  auto kType = k.getType().dyn_cast<ShapedType>();
+  if (!kType || !kType.hasRank() ||
+      kType.getRank() != 0 || !kType.getElementType().isIntOrIndex())
+    return op_.emitError()
+           << "expects k (operand #1) "
+           << "to be a 0-dimensional tensor of integer or index type";
+
+  // dynamic_top_k_o1
+  auto valuesType = values.getType().dyn_cast<ShapedType>();
+  if (!valuesType || !valuesType.hasRank() || valuesType.getRank() < 1 ||
+      !valuesType.getElementType().isIntOrFloat())
+    return op_.emitError()
+           << "expects values (result #0) "
+           << "to be a tensor of integer or floating-point type "
+           << "of rank at least 1";
+
+  // dynamic_top_k_o2
+  auto indicesType = indices.getType().dyn_cast<ShapedType>();
+  if (!indicesType || !indicesType.hasRank() || indicesType.getRank() < 1 ||
+      !indicesType.getElementType().isSignlessInteger(32))
+    return op_.emitError() << "expects indices (result #1) "
+                           << "to be a tensor of si32 of rank at least 1";
+
+  // dynamic_top_k_c1
+  auto operandLastDim = operandType.getRank() - 1;
+  SmallVector<int64_t> expectedValuesShape(operandType.getShape());
+  expectedValuesShape[operandLastDim] =
+      valuesType.getDimSize(valuesType.getRank() - 1);
+  if (failed(verifyCompatibleShape(expectedValuesShape, valuesType.getShape())))
+    return op_.emitError() << "expects the values shape to match the operand "
+                              "shape in all but the last dimension";
+
+  // dynamic_top_k_c2
+  if (valuesType.getElementType() != operandType.getElementType())
+    return op_.emitError()
+           << "expects the values element type to be the same as the operand "
+           << "element type";
+
+  // dynamic_top_k_c3
+  if (!operandType.isDynamicDim(operandLastDim) &&
+      !valuesType.isDynamicDim(operandLastDim) &&
+      operandType.getDimSize(operandLastDim) <
+          valuesType.getDimSize(operandLastDim))
+    return op_.emitError() << "expects the values last dimension to have size "
+                              "at least as large "
+                           << "as operand last dimension";
+
+  // dynamic_top_k_c4
+  if (failed(
+          verifyCompatibleShape(indicesType.getShape(), valuesType.getShape())))
+    return op_.emitError()
+           << "expects the indices shape to match the values shape";
+
+  return success();
+}
+
+TypedValue<ShapedType> DynamicTopKOpAdaptor::getOperand() {
+  return op_.getInputs()[0].cast<TypedValue<ShapedType>>();
+}
+
+TypedValue<ShapedType> DynamicTopKOpAdaptor::getK() {
+  return op_.getInputs()[1].cast<TypedValue<ShapedType>>();
+}
+
+
+TypedValue<ShapedType> DynamicTopKOpAdaptor::getValues() {
+  return op_.getResults()[0].cast<TypedValue<ShapedType>>();
+}
+
+TypedValue<ShapedType> DynamicTopKOpAdaptor::getIndices() {
+  return op_.getResults()[1].cast<TypedValue<ShapedType>>();
+}
+
+std::optional<DynamicTopKOpAdaptor> getDynamicTopKOp(
+    CustomCallOp op) {
+  if (op.getCallTargetName() != "stablehlo.dynamic_top_k") return {};
+  return DynamicTopKOpAdaptor(op);
+}
+
 }  // namespace stablehlo
 }  // namespace mlir
