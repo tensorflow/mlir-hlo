@@ -110,7 +110,7 @@ module @jit_testcase {
     %40 = stablehlo.add %38, %39 : tensor<f32>
     %41 = stablehlo.reshape %40 : (tensor<f32>) -> tensor<f32>
     %42 = stablehlo.constant dense<0.000000e+00> : tensor<f32>
-    %43 = stablehlo.maximum %41, %42 : tensor<f32>
+    %43 = stablehlo.maximum %42, %41 : tensor<f32>
     %44 = stablehlo.custom_call @check.eq(%43, %1) : (tensor<f32>, tensor<f32>) -> tensor<i1>
     return %44 : tensor<i1>
   }

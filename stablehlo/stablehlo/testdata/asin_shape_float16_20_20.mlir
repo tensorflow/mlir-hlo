@@ -11,9 +11,9 @@ module @jit_testcase {
     %5 = stablehlo.multiply %0, %0 : tensor<20x20xf16>
     %6 = stablehlo.subtract %4, %5 : tensor<20x20xf16>
     %7 = stablehlo.sqrt %6 : tensor<20x20xf16>
-    %8 = stablehlo.add %7, %3 : tensor<20x20xf16>
+    %8 = stablehlo.add %3, %7 : tensor<20x20xf16>
     %9 = stablehlo.atan2 %0, %8 : tensor<20x20xf16>
-    %10 = stablehlo.multiply %9, %2 : tensor<20x20xf16>
+    %10 = stablehlo.multiply %2, %9 : tensor<20x20xf16>
     %11 = stablehlo.custom_call @check.eq(%10, %1) : (tensor<20x20xf16>, tensor<20x20xf16>) -> tensor<i1>
     return %11 : tensor<i1>
   }

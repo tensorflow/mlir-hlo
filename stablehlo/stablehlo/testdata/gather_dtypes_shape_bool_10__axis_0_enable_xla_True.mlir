@@ -34,7 +34,7 @@ module @jit_testcase {
     %12 = stablehlo.compare  LT, %6, %11,  SIGNED : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
     %13 = stablehlo.constant dense<1> : tensor<i32>
     %14 = stablehlo.broadcast_in_dim %13, dims = [] : (tensor<i32>) -> tensor<1xi32>
-    %15 = stablehlo.add %14, %6 : tensor<1xi32>
+    %15 = stablehlo.add %6, %14 : tensor<1xi32>
     %16 = stablehlo.select %12, %15, %6 : tensor<1xi1>, tensor<1xi32>
     %17 = stablehlo.broadcast_in_dim %16, dims = [0] : (tensor<1xi32>) -> tensor<1x1xi32>
     %18 = "stablehlo.gather"(%9, %17) {dimension_numbers = #stablehlo.gather<collapsed_slice_dims = [0], start_index_map = [0], index_vector_dim = 1>, slice_sizes = dense<1> : tensor<1xi64>} : (tensor<1xi32>, tensor<1x1xi32>) -> tensor<1xi32>
@@ -45,7 +45,7 @@ module @jit_testcase {
     %23 = stablehlo.compare  LT, %7, %22,  SIGNED : (tensor<1xi32>, tensor<1xi32>) -> tensor<1xi1>
     %24 = stablehlo.constant dense<1> : tensor<i32>
     %25 = stablehlo.broadcast_in_dim %24, dims = [] : (tensor<i32>) -> tensor<1xi32>
-    %26 = stablehlo.add %25, %7 : tensor<1xi32>
+    %26 = stablehlo.add %7, %25 : tensor<1xi32>
     %27 = stablehlo.select %23, %26, %7 : tensor<1xi1>, tensor<1xi32>
     %28 = stablehlo.broadcast_in_dim %27, dims = [0] : (tensor<1xi32>) -> tensor<1x1xi32>
     %29 = "stablehlo.gather"(%20, %28) {dimension_numbers = #stablehlo.gather<collapsed_slice_dims = [0], start_index_map = [0], index_vector_dim = 1>, slice_sizes = dense<1> : tensor<1xi64>} : (tensor<1xi32>, tensor<1x1xi32>) -> tensor<1xi32>
