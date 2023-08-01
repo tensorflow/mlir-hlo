@@ -337,6 +337,53 @@ cc_library(
 )
 
 cc_library(
+    name = "interpreter_ops",
+    srcs = [
+        "stablehlo/reference/InterpreterOps.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/InterpreterOps.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":interpreter_ops_inc_gen",
+        ":reference_interpretervalue",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "interpreter_ops_inc_gen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "stablehlo/reference/InterpreterOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "stablehlo/reference/InterpreterOps.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "stablehlo/reference/InterpreterOps.td",
+    deps = [
+        ":interpreter_ops_td_files",
+    ],
+)
+
+td_library(
+    name = "interpreter_ops_td_files",
+    srcs = [
+        "stablehlo/reference/InterpreterOps.td",
+    ],
+    includes = ["."],
+    deps = [
+        ":base_td_files",
+    ],
+)
+
+cc_library(
     name = "reference_axes",
     srcs = [
         "stablehlo/reference/Axes.cpp",
@@ -855,6 +902,7 @@ cc_binary(
     ],
     deps = [
         ":check_ops",
+        ":interpreter_ops",
         ":reference_errors",
         ":reference_ops",
         ":reference_scope",
