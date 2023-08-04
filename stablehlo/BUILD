@@ -348,6 +348,10 @@ cc_library(
     deps = [
         ":interpreter_ops_inc_gen",
         ":reference_interpretervalue",
+        ":reference_ops",
+        ":reference_process",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
     ],
@@ -477,6 +481,7 @@ cc_library(
         ":reference_errors",
         ":reference_index",
         ":reference_interpretervalue",
+        ":reference_process",
         ":reference_scope",
         ":reference_tensor",
         ":reference_token",
@@ -488,6 +493,14 @@ cc_library(
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
     ],
+)
+
+cc_library(
+    name = "reference_process",
+    hdrs = [
+        "stablehlo/reference/Process.h",
+    ],
+    includes = ["."],
 )
 
 cc_library(
@@ -539,6 +552,7 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":reference_errors",
         ":stablehlo_ops",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
@@ -569,6 +583,7 @@ cc_library(
     ],
     deps = [
         ":chlo_ops",
+        ":interpreter_ops",
         ":stablehlo_ops",
         ":vhlo_ops",
         "@llvm-project//mlir:IR",
@@ -904,6 +919,7 @@ cc_binary(
         ":check_ops",
         ":interpreter_ops",
         ":reference_errors",
+        ":reference_interpretervalue",
         ":reference_ops",
         ":reference_scope",
         ":reference_tensor",
@@ -912,6 +928,7 @@ cc_binary(
         ":stablehlo_serialization",
         ":test_utils",
         ":vhlo_ops",
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:AllPassesAndDialects",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
@@ -928,6 +945,7 @@ cc_binary(
         "stablehlo/tools/StablehloOptMain.cpp",
     ],
     deps = [
+        ":interpreter_ops",
         ":register",
         ":stablehlo_passes",
         ":test_utils",
