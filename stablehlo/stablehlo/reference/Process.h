@@ -18,16 +18,52 @@ limitations under the License.
 
 #include <cstdint>
 
+#include "stablehlo/reference/ProcessGrid.h"
+#include "stablehlo/reference/Tensor.h"
+
 namespace mlir {
 namespace stablehlo {
 
-struct ProcessId {
-  uint32_t replicaId;
-  uint32_t partitionId;
-};
+/// StableHLO process.
+class Process {
+ public:
+  /// \name Constructors
+  /// @{
+  Process(ProcessId id, ProcessGrid *grid);
+  /// @}
 
-struct Process {
-  ProcessId processId;
+  /// See `ProcessGrid::crossPartition`.
+  ProcessGroups crossPartition(
+      SmallVector<SmallVector<uint32_t>> partitionGroups);
+
+  /// See `ProcessGrid::crossReplica`.
+  ProcessGroups crossReplica(SmallVector<SmallVector<uint32_t>> replicaGroups);
+
+  /// See `ProcessGrid::crossReplicaAndPartition`.
+  ProcessGroups crossReplicaAndPartition(
+      SmallVector<SmallVector<uint32_t>> replicaGroups);
+
+  /// See `ProcessGrid::flattenedIds`.
+  ProcessGroups flattenedIds(
+      SmallVector<SmallVector<uint32_t>> flattenedIdGroups);
+
+  /// Getter for the underlying StableHLO `process_id`.
+  ProcessId getId();
+
+  /// See `ProcessGrid::outfeed`.
+  void outfeed(ArrayRef<Tensor> inputs);
+
+  /// See `ProcessGrid::rendezvous`.
+  RendezvousResult rendezvous(ProcessGroup processGroup, int64_t channelId,
+                              const Tensor &operand);
+
+ private:
+  /// StableHLO `process_id`.
+  ProcessId id_;
+
+  /// See ProcessGrid. The pointer is used to gain access to allow
+  /// synchronization among participating processes.
+  ProcessGrid *grid_;
 };
 
 }  // namespace stablehlo

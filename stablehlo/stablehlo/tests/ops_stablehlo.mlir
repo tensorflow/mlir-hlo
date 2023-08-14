@@ -40,19 +40,47 @@ func.func @invalid_reduce_scatter(%data: tensor<4x16xf32>) -> tensor<4x5xf32> {
 
 // -----
 
-func.func @main(%arg0: tensor<10xf32>) -> tensor<10xf32> {
-  %0 = "stablehlo.all_reduce"(%arg0) ({
-  // Perform max reduction inside the region
-  ^bb0(%lhs: tensor<f32>, %rhs: tensor<f32>):
-    %max = stablehlo.maximum %lhs, %rhs : tensor<f32>
+// TODO(#498): AllReduceOp replica groups does not need to be rank 2.
+func.func @all_reduce(%operand: tensor<10xf32>) -> tensor<10xf32> {
+  // expected-error@+1 {{replica groups should be a rank 2 tensor}}
+  %0 = "stablehlo.all_reduce"(%operand) ({
+  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
+    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
     "stablehlo.return"(%max) : (tensor<f32>) -> ()
   })
   {
-    replica_groups = dense<[[0, 2, 4, 6], [1, 3, 5, 7]]> : tensor<2x4xi64>,
-    channel_handle = #stablehlo.channel_handle<
-      handle = 5,
-      type = 2
-    >,
+    replica_groups = dense<0> : tensor<1xi64>
+  } : (tensor<10xf32>) -> tensor<10xf32>
+  func.return %0 : tensor<10xf32>
+}
+
+
+// -----
+
+func.func @all_reduce_c1(%operand: tensor<10xf32>) -> tensor<10xf32> {
+  // expected-error@+1 {{replica id #1 seen more than once}}
+  %0 = "stablehlo.all_reduce"(%operand) ({
+  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
+    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
+    "stablehlo.return"(%max) : (tensor<f32>) -> ()
+  })
+  {
+    replica_groups = dense<[[0, 1, 1, 3]]> : tensor<1x4xi64>
+  } : (tensor<10xf32>) -> tensor<10xf32>
+  func.return %0 : tensor<10xf32>
+}
+
+// -----
+
+func.func @all_reduce_c3(%operand: tensor<10xf32>) -> tensor<10xf32> {
+  //  expected-error@+1 {{replica groups cannot be empty}}
+  %0 = "stablehlo.all_reduce"(%operand) ({
+  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
+    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
+    "stablehlo.return"(%max) : (tensor<f32>) -> ()
+  })
+  {
+    replica_groups = dense<0> : tensor<0x2xi64>,
     use_global_device_ids
   } : (tensor<10xf32>) -> tensor<10xf32>
   func.return %0 : tensor<10xf32>
@@ -60,7 +88,39 @@ func.func @main(%arg0: tensor<10xf32>) -> tensor<10xf32> {
 
 // -----
 
-func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32> {
+func.func @all_reduce_c3(%operand: tensor<10xf32>) -> tensor<10xf32> {
+  //  expected-error@+1 {{replica id #2 not seen in replica groups}}
+  %0 = "stablehlo.all_reduce"(%operand) ({
+  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
+    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
+    "stablehlo.return"(%max) : (tensor<f32>) -> ()
+  })
+  {
+    replica_groups = dense<[[0, 1, 3]]> : tensor<1x3xi64>
+  } : (tensor<10xf32>) -> tensor<10xf32>
+  func.return %0 : tensor<10xf32>
+}
+
+// -----
+
+func.func @all_reduce_c4(%operand: tensor<10xf32>) -> tensor<10xf32> {
+  //  expected-error@+1 {{channel_id must be positive when useGlobalDeviceIds is set but got: -1}}
+  %0 = "stablehlo.all_reduce"(%operand) ({
+  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
+    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
+    "stablehlo.return"(%max) : (tensor<f32>) -> ()
+  })
+  {
+    replica_groups = dense<[[0, 2, 4, 6], [1, 3, 5, 7]]> : tensor<2x4xi64>,
+    channel_handle = #stablehlo.channel_handle<handle = -1, type = 0>,
+    use_global_device_ids
+  } : (tensor<10xf32>) -> tensor<10xf32>
+  func.return %0 : tensor<10xf32>
+}
+
+// -----
+
+func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{Reduction-region must take 2 parameters, but takes 3 parameter(s)}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<f32>):
@@ -75,7 +135,7 @@ func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32
 
 // -----
 
-func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32> {
+func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{The reduction-region expected to return some value(s)}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
@@ -90,7 +150,7 @@ func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32
 
 // -----
 
-func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32> {
+func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{Reduction-region here must produce 1 tensors, but produces 2 instead}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
@@ -105,7 +165,7 @@ func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32
 
 // -----
 
-func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32> {
+func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{Reduction-region here must produce tensor-typed result(s), but produces 'tuple<tensor<f32>, tensor<f32>>' instead}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
@@ -121,7 +181,7 @@ func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32
 
 // -----
 
-func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32> {
+func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{The type of reduction-region's parameter at index 1 is different than the corresponding result type: 'tensor<i32>' vs 'tensor<f32>'}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<f32>, %arg1: tensor<i32>):
@@ -136,7 +196,7 @@ func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32
 
 // -----
 
-func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32> {
+func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{The type of reduction-region's parameter at index 0 is different than the corresponding result type: 'tensor<f32>' vs 'tensor<i32>'}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
@@ -152,7 +212,7 @@ func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32
 
 // -----
 
-func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32> {
+func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{The type of reduction-region's result type at index 0 differs from the op's corresponding init-value type: 'tensor<i32>' vs 'tensor<f32>'}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
@@ -167,7 +227,7 @@ func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32
 
 // -----
 
-func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32> {
+func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
   // expected-error@+1 {{The type of reduction-region's result type at index 0 differs from the op's corresponding init-value type: 'tensor<4xf32>' vs 'tensor<f32>'}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>):
@@ -176,97 +236,6 @@ func.func @all_reduce_invalid_reducer(%operand: tensor<10xf32>) -> tensor<10xf32
   })
   {
     replica_groups = dense<[[0, 2, 4, 6], [1, 3, 5, 7]]> : tensor<2x4xi64>
-  } : (tensor<10xf32>) -> tensor<10xf32>
-  func.return %0 : tensor<10xf32>
-}
-
-// -----
-
-func.func @all_reduce_invalid_return_type(%operand: tensor<10xf32>) -> tensor<10x4xf32> {
-  // expected-error@+1 {{requires compatible types for all operands and results}}
-  %0 = "stablehlo.all_reduce"(%operand) ({
-  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
-    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
-    "stablehlo.return"(%max) : (tensor<f32>) -> ()
-  })
-  {
-    replica_groups = dense<[[0, 2, 4, 6], [1, 3, 5, 7]]> : tensor<2x4xi64>
-  } : (tensor<10xf32>) -> tensor<10x4xf32>
-  func.return %0 : tensor<10x4xf32>
-}
-
-// -----
-
-func.func @all_reduce_invalid_return_type(%operand: tensor<10xf32>) -> tensor<10xi32> {
-  // expected-error@+1 {{requires compatible types for all operands and results}}
-  %0 = "stablehlo.all_reduce"(%operand) ({
-  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
-    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
-    "stablehlo.return"(%max) : (tensor<f32>) -> ()
-  })
-  {
-    replica_groups = dense<[[0, 2, 4, 6], [1, 3, 5, 7]]> : tensor<2x4xi64>
-  } : (tensor<10xf32>) -> tensor<10xi32>
-  func.return %0 : tensor<10xi32>
-}
-
-// -----
-
-func.func @all_reduce_invalid_replica_group(%operand: tensor<10xf32>) -> tensor<10xf32> {
-  // expected-error@+1 {{replica groups should be a rank 2 tensor}}
-  %0 = "stablehlo.all_reduce"(%operand) ({
-  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
-    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
-    "stablehlo.return"(%max) : (tensor<f32>) -> ()
-  })
-  {
-    replica_groups = dense<0> : tensor<1xi64>
-  } : (tensor<10xf32>) -> tensor<10xf32>
-  func.return %0 : tensor<10xf32>
-}
-
-// -----
-
-func.func @all_reduce_invalid_replica_group(%operand: tensor<10xf32>) -> tensor<10xf32> {
-  // expected-error@+1 {{replica id #1 seen more than once}}
-  %0 = "stablehlo.all_reduce"(%operand) ({
-  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
-    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
-    "stablehlo.return"(%max) : (tensor<f32>) -> ()
-  })
-  {
-    replica_groups = dense<[[0, 1, 1, 3]]> : tensor<1x4xi64>
-  } : (tensor<10xf32>) -> tensor<10xf32>
-  func.return %0 : tensor<10xf32>
-}
-
-// -----
-
-func.func @all_reduce_invalid_replica_group(%operand: tensor<10xf32>) -> tensor<10xf32> {
-  //  expected-error@+1 {{replica id #2 not seen in replica groups}}
-  %0 = "stablehlo.all_reduce"(%operand) ({
-  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
-    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
-    "stablehlo.return"(%max) : (tensor<f32>) -> ()
-  })
-  {
-    replica_groups = dense<[[0, 1, 3]]> : tensor<1x3xi64>
-  } : (tensor<10xf32>) -> tensor<10xf32>
-  func.return %0 : tensor<10xf32>
-}
-
-// -----
-
-func.func @all_reduce_invalid_replica_group(%operand: tensor<10xf32>) -> tensor<10xf32> {
-  //  expected-error@+1 {{replica groups cannot be empty}}
-  %0 = "stablehlo.all_reduce"(%operand) ({
-  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
-    %max = stablehlo.maximum %arg0, %arg1 : tensor<f32>
-    "stablehlo.return"(%max) : (tensor<f32>) -> ()
-  })
-  {
-    replica_groups = dense<0> : tensor<0x2xi64>,
-    use_global_device_ids
   } : (tensor<10xf32>) -> tensor<10xf32>
   func.return %0 : tensor<10xf32>
 }
@@ -1259,7 +1228,18 @@ func.func @collective_permute(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
 
 // -----
 
-func.func @collective_permute_invalid_sources(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
+func.func @collective_permute_c1(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
+  // expected-error@+1 {{expect source_target_pairs attribute of shape (N, 2), but got (2, 3)}}
+  %0 = "stablehlo.collective_permute"(%arg0) {
+    source_target_pairs = dense<[[0, 1, 2], [3, 4, 5]]> : tensor<2x3xi64>
+  } : (tensor<128x32xf32>) -> tensor<128x32xf32>
+  func.return %0 : tensor<128x32xf32>
+}
+
+
+// -----
+
+func.func @collective_permute_c2(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
   // expected-error@+1 {{duplicate sources not allowed}}
   %0 = "stablehlo.collective_permute"(%arg0) {
     source_target_pairs = dense<[[0, 1], [0, 2], [2, 3]]> : tensor<3x2xi64>
@@ -1269,7 +1249,7 @@ func.func @collective_permute_invalid_sources(%arg0: tensor<128x32xf32>) -> tens
 
 // -----
 
-func.func @collective_permute_invalid_destinations(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
+func.func @collective_permute_c3(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
   // expected-error@+1 {{duplicate targets not allowed}}
   %0 = "stablehlo.collective_permute"(%arg0) {
     source_target_pairs = dense<[[0, 1], [1, 2], [2, 1]]> : tensor<3x2xi64>
@@ -1279,30 +1259,20 @@ func.func @collective_permute_invalid_destinations(%arg0: tensor<128x32xf32>) ->
 
 // -----
 
-func.func @collective_permute_invalid_source_target_pairs(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
-  // expected-error@+1 {{expect source_target_pairs attribute to be of rank 2, but got rank 1}}
-  %0 = "stablehlo.collective_permute"(%arg0) {
-    source_target_pairs = dense<[0, 1]> : tensor<2xi64>
-  } : (tensor<128x32xf32>) -> tensor<128x32xf32>
-  func.return %0 : tensor<128x32xf32>
-}
-
-// -----
-
-func.func @collective_permute_invalid_source_target_pairs(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
-  // expected-error@+1 {{expect source_target_pairs attribute of shape (N, 2), but got (2, 3)}}
-  %0 = "stablehlo.collective_permute"(%arg0) {
-    source_target_pairs = dense<[[0, 1, 2], [3, 4, 5]]> : tensor<2x3xi64>
-  } : (tensor<128x32xf32>) -> tensor<128x32xf32>
-  func.return %0 : tensor<128x32xf32>
-}
-
-// -----
-
-func.func @collective_permute_invalid_source_target_pairs(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
+func.func @collective_permute_c4(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
   // expected-error@+1 {{replica ids in source_target_pairs must be >= 0}}
   %0 = "stablehlo.collective_permute"(%arg0) {
     source_target_pairs = dense<[[0, 1], [-1, 0]]> : tensor<2x2xi64>
+  } : (tensor<128x32xf32>) -> tensor<128x32xf32>
+  func.return %0 : tensor<128x32xf32>
+}
+
+// -----
+
+func.func @collective_permute_i2(%arg0: tensor<128x32xf32>) -> tensor<128x32xf32> {
+  // expected-error@+1 {{expect source_target_pairs attribute to be of rank 2, but got rank 1}}
+  %0 = "stablehlo.collective_permute"(%arg0) {
+    source_target_pairs = dense<[0, 1]> : tensor<2xi64>
   } : (tensor<128x32xf32>) -> tensor<128x32xf32>
   func.return %0 : tensor<128x32xf32>
 }
@@ -1817,16 +1787,6 @@ func.func @map_unranked(%arg0: tensor<*xf32>, %arg1: tensor<*xf32>) -> tensor<*x
 func.func @optimization_barrier(%arg0: tensor<f32>, %arg1: tensor<f32>) -> (tensor<f32>, tensor<f32>) {
   %0, %1 = "stablehlo.optimization_barrier"(%arg0, %arg1) : (tensor<f32>, tensor<f32>) -> (tensor<f32>, tensor<f32>)
   func.return %0, %1 : tensor<f32>, tensor<f32>
-}
-
-// -----
-
-// CHECK-LABEL: func @outfeed
-func.func @outfeed(%arg0: tensor<3x3x3xi32>, %arg1: !stablehlo.token) -> !stablehlo.token {
-  %0 = "stablehlo.outfeed"(%arg0, %arg1) {
-    outfeed_config = ""
-  } : (tensor<3x3x3xi32>, !stablehlo.token) -> !stablehlo.token
-  func.return %0 : !stablehlo.token
 }
 
 // -----

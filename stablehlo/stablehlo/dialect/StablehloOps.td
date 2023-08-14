@@ -1028,16 +1028,15 @@ def StableHLO_OutfeedOp : StableHLO_Op<"outfeed",
 
     Example:
     ```mlir
-    %result = "stablehlo.outfeed"(%input0, %token) {
-      outfeed_config = ""
-    } : (tensor<3x3x3xi32>, !stablehlo.token) -> !stablehlo.token
+    %result = "stablehlo.outfeed"(%inputs0, %token) :
+        (tensor<2x2x2xi64>, !stablehlo.token) -> !stablehlo.token
     ```
   }];
 
   let arguments = (ins
-    Variadic<HLO_Tensor>:$inputs,
-    HLO_Token:$token,
-    DefaultValuedStrAttr<StrAttr, "">:$outfeed_config
+    Variadic<HLO_Tensor>:$inputs, /*outfeed_i1*/
+    HLO_Token:$token, /*outfeed_i2*/
+    DefaultValuedStrAttr<StrAttr, "">:$outfeed_config /*outfeed_i3*/
   );
   let results = (outs HLO_Token);
 }
@@ -1332,7 +1331,7 @@ def StableHLO_AllGatherOp : StableHLO_Op<"all_gather", [SameOperandsAndResultEle
 }
 
 def StableHLO_AllReduceOp : StableHLO_Op<"all_reduce",
-    [HLO_CompatibleOperandsAndResultType]> {
+    [HLO_CompatibleOperandsAndResultType /*all_reduce_c6*/]> {
   let summary = "AllReduce operation";
   let description = [{
     Within each process group in the process grid, applies a reduction function
@@ -1345,25 +1344,24 @@ def StableHLO_AllReduceOp : StableHLO_Op<"all_reduce",
     Example:
     ```mlir
     %result = "stablehlo.all_reduce"(%operand) ({
-      ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
-        %0 = stablehlo.add %arg1, %arg2 : tensor<f32>
-        stablehlo.return %0 : tensor<f32>
+      ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>):
+        %0 = stablehlo.add %arg1, %arg2 : tensor<i64>
+        stablehlo.return %0 : tensor<i64>
     }) {
       replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
-      // channel_id = 0
       channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
       // use_global_device_ids = false
-    } : (tensor<4xf32>) -> tensor<4xf32>
+    } : (tensor<4xi64>) -> tensor<4xi64>
     ```
   }];
 
   let arguments = (ins
-    HLO_Tensor:$operand,
-    I64ElementsAttr:$replica_groups,
-    OptionalAttr<StableHLO_ChannelHandle>:$channel_handle,
-    UnitAttr:$use_global_device_ids
+    HLO_Tensor:$operand, /*all_reduce_i1*/
+    I64ElementsAttr:$replica_groups, /*all_reduce_i2*/
+    OptionalAttr<StableHLO_ChannelHandle>:$channel_handle, /*all_reduce_i3*/
+    UnitAttr:$use_global_device_ids /*all_reduce_i4*/
   );
-  let regions = (region SizedRegion<1>:$computation);
+  let regions = (region SizedRegion<1>:$computation /*all_reduce_i5*/);
   let results = (outs HLO_Tensor);
   let hasVerifier = 1;
 }
@@ -2029,7 +2027,7 @@ def StableHLO_ConcatenateOp : StableHLO_ShapedInterfaceOp<"concatenate",
 }
 
 def StableHLO_CollectivePermuteOp: StableHLO_Op<"collective_permute",
-    [HLO_CompatibleOperandsAndResultType]> {
+    [HLO_CompatibleOperandsAndResultType /*collective_permute_c5*/]> {
   let summary = "CollectivePermute operation";
   let description = [{
     Within each process group in the process grid, sends the value of the
@@ -2042,17 +2040,16 @@ def StableHLO_CollectivePermuteOp: StableHLO_Op<"collective_permute",
     Example:
     ```mlir
     %result = "stablehlo.collective_permute"(%operand) {
-      source_target_pairs = dense<[[0, 1]]> : tensor<1x2xi64>,
-      // channel_id = 0
+      source_target_pairs = dense<[[0, 1], [1, 2]]> : tensor<2x2xi64>,
       channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
-    } : (tensor<2x2xf32>) -> tensor<2x2xf32>
+    } : (tensor<2x2xi64>) -> tensor<2x2xi64>
     ```
   }];
 
   let arguments = (ins
-    HLO_Tensor:$operand,
-    I64ElementsAttr:$source_target_pairs,
-    OptionalAttr<StableHLO_ChannelHandle>:$channel_handle
+    HLO_Tensor:$operand, /*collective_permute_i1*/
+    I64ElementsAttr:$source_target_pairs, /*collective_permute_i2*/
+    OptionalAttr<StableHLO_ChannelHandle>:$channel_handle /*collective_permute_i3*/
   );
   let results = (outs HLO_Tensor);
   let hasVerifier = 1;

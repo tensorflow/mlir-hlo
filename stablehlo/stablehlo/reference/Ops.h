@@ -1,4 +1,4 @@
-/* Copyright 2022 The StableHLO Authors.
+/* Copyright 2023 The StableHLO Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ limitations under the License.
 #include "stablehlo/reference/Axes.h"
 #include "stablehlo/reference/InterpreterValue.h"
 #include "stablehlo/reference/Process.h"
+#include "stablehlo/reference/ProcessGrid.h"
 #include "stablehlo/reference/Scope.h"
 #include "stablehlo/reference/Tensor.h"
 #include "stablehlo/reference/Token.h"
@@ -32,6 +33,11 @@ namespace stablehlo {
 Tensor evalAbsOp(const Tensor &operand, ShapedType resultType);
 Tensor evalAddOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Token evalAfterAllOp(ArrayRef<Token> inputs, MLIRContext *context);
+Tensor evalAllReduceOp(const Tensor &operand,
+                       SmallVector<SmallVector<uint32_t>> replicaGroups,
+                       int64_t channelId, bool useGlobalDeviceIds,
+                       Region &computation, Process *process, Scope &scope,
+                       ShapedType resultType);
 Tensor evalAndOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalAtan2Op(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalBitcastConvertOp(const Tensor &operand, ShapedType resultType);
@@ -46,6 +52,9 @@ Tensor evalCeilOp(const Tensor &operand, ShapedType resultType);
 Tensor evalClampOp(const Tensor &min, const Tensor &operand, const Tensor &max,
                    ShapedType resultType);
 Tensor evalClzOp(const Tensor &operand, ShapedType resultType);
+Tensor evalCollectivePermuteOp(
+    const Tensor &operand, SmallVector<SmallVector<uint32_t>> sourceTargetPairs,
+    ChannelId channelId, Process *process);
 Tensor evalCompareOp(const Tensor &lhs, const Tensor &rhs,
                      ComparisonDirection comparisonDirection,
                      ShapedType resultType);
@@ -99,6 +108,7 @@ Tensor evalNotOp(const Tensor &operand, ShapedType resultType);
 SmallVector<InterpreterValue> evalOptimizationBarrierOp(
     ArrayRef<InterpreterValue> operand);
 Tensor evalOrOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
+Token evalOutfeedOp(ArrayRef<Tensor> inputs, Token token, Process *process);
 Tensor evalPadOp(const Tensor &operand, const Tensor &paddingValue,
                  const Sizes &edgePaddingLow, const Sizes &interiorPadding,
                  ShapedType resultType);

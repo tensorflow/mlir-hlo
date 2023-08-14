@@ -46,7 +46,7 @@ one of the following tracking labels.
 | add                      | yes           | yes          | yes            | yes             | yes         |
 | after_all                | yes           | yes          | yes            | yes             | yes         |
 | all_gather               | yes           | revisit      | no             | no              | no          |
-| all_reduce               | yes           | revisit      | yes            | no              | no          |
+| all_reduce               | yes           | revisit      | yes            | no              | yes         |
 | all_to_all               | yes           | revisit      | yes            | no              | no          |
 | and                      | yes           | yes          | yes            | yes             | yes         |
 | atan2                    | yes           | yes          | yes            | yes             | yes         |
@@ -61,7 +61,7 @@ one of the following tracking labels.
 | ceil                     | yes           | yes          | yes            | yes             | yes         |
 | cholesky                 | yes           | yes          | yes            | yes             | revisit     |
 | clamp                    | yes           | revisit      | yes            | yes             | yes         |
-| collective_permute       | yes           | revisit      | yes            | no              | no          |
+| collective_permute       | yes           | revisit      | yes            | no              | yes         |
 | compare                  | yes           | yes          | yes            | yes             | yes         |
 | complex                  | yes           | yes          | yes            | yes             | yes         |
 | compute_reshape_shape    | no            | revisit      | no             | yes             | no          |
@@ -110,7 +110,7 @@ one of the following tracking labels.
 | not                      | yes           | yes          | yes            | yes             | yes         |
 | optimization_barrier     | yes           | yes          | yes            | yes             | yes         |
 | or                       | yes           | yes          | yes            | yes             | yes         |
-| outfeed                  | yes           | yes          | yes            | no              | no          |
+| outfeed                  | yes           | yes          | yes            | no              | yes         |
 | pad                      | yes           | yes          | yes            | yes             | yes         |
 | partition_id             | yes           | yes          | yes            | yes             | yes         |
 | popcnt                   | yes           | yes          | yes            | yes             | yes         |
