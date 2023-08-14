@@ -35,17 +35,17 @@ namespace stablehlo {
 
 // Populates StableHLO ops to VHLO ops rewriting patterns.
 void populateStablehloToVhloPatterns(RewritePatternSet *patterns,
-                                     TypeConverter *converter,
+                                     const TypeConverter *converter,
                                      MLIRContext *context);
 
 // Populates VHLO ops to StableHLO ops rewriting patterns.
 void populateVhloToStablehloPatterns(RewritePatternSet *patterns,
-                                     TypeConverter *converter,
+                                     const TypeConverter *converter,
                                      MLIRContext *context);
 
 // Populates VHLO downgrade rewriting patterns.
 void populateVhloToVersionPatterns(RewritePatternSet *patterns,
-                                   TypeConverter *converter,
+                                   const TypeConverter *converter,
                                    MLIRContext *contexts);
 
 //// Pass pipelines ////

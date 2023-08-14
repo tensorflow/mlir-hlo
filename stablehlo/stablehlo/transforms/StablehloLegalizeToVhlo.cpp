@@ -86,7 +86,7 @@ class StablehloToVhloTypeConverter : public vhlo::VhloTypeConverter {
   return vhlo::Name##Version##Attr::get(attr.getContext(), vhloValue.value())
 
 Attribute convertGeneric(Attribute stablehloAttr,
-                         TypeConverter* typeConverter) {
+                         const TypeConverter* typeConverter) {
   // Handle StableHLO attributes.
   // The logic that handles attributes from other dialects (e.g. builtin
   // attributes) lives below.
@@ -824,7 +824,7 @@ class StablehloToVhloOpConverter : public OpConversionPattern<StablehloOpTy> {
 
 template <typename... StablehloOpTypes>
 void populateStablehloToVhloPatterns(RewritePatternSet* patterns,
-                                     TypeConverter* converter,
+                                     const TypeConverter* converter,
                                      MLIRContext* context) {
   patterns->add<StablehloToVhloOpConverter<StablehloOpTypes>...>(*converter,
                                                                  context);
@@ -856,7 +856,7 @@ struct StablehloLegalizeToVhloPass
 };
 
 void populateStablehloToVhloPatterns(RewritePatternSet* patterns,
-                                     TypeConverter* converter,
+                                     const TypeConverter* converter,
                                      MLIRContext* context) {
   populateStablehloToVhloPatterns<
 #define GET_OP_LIST

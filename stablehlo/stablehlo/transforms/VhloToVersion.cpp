@@ -285,7 +285,7 @@ struct VersionConversionPattern : OpConversionPattern<SourceOp> {
 
 namespace stablehlo {
 void populateVhloToVersionPatterns(RewritePatternSet* patterns,
-                                   TypeConverter* converter,
+                                   const TypeConverter* converter,
                                    MLIRContext* context) {
   // Currently empty because we're starting from a clean slate in v0.9.0 and
   // changes so far are additive.

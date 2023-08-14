@@ -280,9 +280,9 @@ Attribute encodePrecisionConfig(Attribute hloAttrs) {
 //    %0 = mhlo.add %arg0, %arg1 : tensor<f32>
 //    mhlo.return %0 : tensor<f32>
 //  }
-FailureOr<func::FuncOp> rewriteMhloRegionAsFunc(
-    Operation* op, ConversionPatternRewriter& rewriter,
-    TypeConverter* typeConverter) {
+FailureOr<func::FuncOp>
+rewriteMhloRegionAsFunc(Operation *op, ConversionPatternRewriter &rewriter,
+                        const TypeConverter *typeConverter) {
   auto& region = op->getRegion(0);
   if (!region.hasOneBlock()) return failure();
 
@@ -330,8 +330,8 @@ FailureOr<func::FuncOp> rewriteMhloRegionAsFunc(
 //    mhlo.attributes = {precision_config = ["PACKED_NIBBLE"]}}
 template <typename HloOpTy>
 LogicalResult rewriteMhloOpAsCustomCall(HloOpTy hloOp,
-                                        ConversionPatternRewriter& rewriter,
-                                        TypeConverter* typeConverter,
+                                        ConversionPatternRewriter &rewriter,
+                                        const TypeConverter *typeConverter,
                                         ValueRange stablehloOperands) {
   if (hloOp->getNumRegions() > 1) {
     // Extensibility protocol for regions is only supported for single-region

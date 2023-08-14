@@ -170,9 +170,9 @@ Attribute decodePrecisionConfig(Attribute stablehloAttr) {
 //    %2 = stablehlo.add %arg2, %arg3 : tensor<f32>
 //    stablehlo.return %2 : tensor<f32>
 //  }) {...} : (tensor<8xf32>, tensor<f32>) -> (tensor<8xf32>, tensor<f32>)
-LogicalResult convertFuncToStablehloRegion(Operation* op, func::FuncOp funcOp,
-                                           ConversionPatternRewriter& rewriter,
-                                           TypeConverter* typeConverter) {
+LogicalResult convertFuncToStablehloRegion(Operation *op, func::FuncOp funcOp,
+                                           ConversionPatternRewriter &rewriter,
+                                           const TypeConverter *typeConverter) {
   auto& region = op->getRegion(0);
   rewriter.inlineRegionBefore(funcOp.getBody(), region, region.end());
   if (failed(rewriter.convertRegionTypes(&region, *typeConverter,
@@ -198,9 +198,9 @@ LogicalResult convertFuncToStablehloRegion(Operation* op, func::FuncOp funcOp,
 //   %0 = "mhlo.dot"(%arg0, %arg1) {
 //     precision_config = [#mhlo<precision PACKED_NIBBLE>] } ...
 LogicalResult rewriteCustomCallAsMhloOp(stablehlo::CustomCallOp stablehloOp,
-                                        ConversionPatternRewriter& rewriter,
-                                        TypeConverter* typeConverter,
-                                        SmallVector<Type>& hloTypes,
+                                        ConversionPatternRewriter &rewriter,
+                                        const TypeConverter *typeConverter,
+                                        SmallVector<Type> &hloTypes,
                                         ValueRange hloOperands) {
   // Only call_target_name, backend_config, called_computations, mhlo.version,
   // and mhlo.attributes are compatible with the extensibility protocol.

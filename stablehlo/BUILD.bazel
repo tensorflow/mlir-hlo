@@ -344,7 +344,7 @@ td_library(
     ],
     includes = ["."],
     deps = [
-        "//:base_td_files",
+        ":base_td_files",
     ],
 )
 
