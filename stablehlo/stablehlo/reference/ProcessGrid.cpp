@@ -88,7 +88,7 @@ ProcessGrid::ProcessGrid(uint32_t numReplicas, uint32_t numPartitions)
 ProcessGroups ProcessGrid::crossPartition(
     SmallVector<SmallVector<uint32_t>> partitionGroups) {
   ProcessGroups processGroups;
-  for (auto partitionGroup : partitionGroups) {
+  for (const auto &partitionGroup : partitionGroups) {
     for (uint32_t replicaId = 0; replicaId < numReplicas_; ++replicaId) {
       ProcessGroup processGroup;
       for (uint32_t partitionId : partitionGroup)
@@ -102,7 +102,7 @@ ProcessGroups ProcessGrid::crossPartition(
 ProcessGroups ProcessGrid::crossReplica(
     SmallVector<SmallVector<uint32_t>> replicaGroups) {
   ProcessGroups processGroups;
-  for (auto replicaGroup : replicaGroups) {
+  for (const auto &replicaGroup : replicaGroups) {
     for (uint32_t partitionId = 0; partitionId < numPartitions_;
          ++partitionId) {
       ProcessGroup processGroup;
@@ -117,7 +117,7 @@ ProcessGroups ProcessGrid::crossReplica(
 ProcessGroups ProcessGrid::crossReplicaAndPartition(
     SmallVector<SmallVector<uint32_t>> replicaGroups) {
   ProcessGroups processGroups;
-  for (auto replicaGroup : replicaGroups) {
+  for (const auto &replicaGroup : replicaGroups) {
     ProcessGroup processGroup;
     for (uint32_t partitionId = 0; partitionId < numPartitions_; ++partitionId)
       for (uint32_t replicaId : replicaGroup)
@@ -130,7 +130,7 @@ ProcessGroups ProcessGrid::crossReplicaAndPartition(
 ProcessGroups ProcessGrid::flattenedIds(
     SmallVector<SmallVector<uint32_t>> flattenedIdGroups) {
   ProcessGroups processGroups;
-  for (auto flattenedIdGroup : flattenedIdGroups) {
+  for (const auto &flattenedIdGroup : flattenedIdGroups) {
     ProcessGroup processGroup;
     for (auto flattenedId : flattenedIdGroup) {
       uint32_t replicaId = flattenedId / numPartitions_;
@@ -140,6 +140,13 @@ ProcessGroups ProcessGrid::flattenedIds(
     processGroups.push_back(processGroup);
   }
   return processGroups;
+}
+
+std::mutex &ProcessGrid::getRendezvousLock(ProcessGroup processGroup,
+                                           ChannelId channelId) {
+  std::lock_guard<std::mutex> lock(rendezvousLock_);
+  std::pair<ProcessGroup, ChannelId> channelKey(processGroup, channelId);
+  return channelLocks_[channelKey];
 }
 
 void ProcessGrid::outfeed(ArrayRef<Tensor> inputs) {
@@ -152,13 +159,16 @@ RendezvousResult ProcessGrid::rendezvous(ProcessGroup processGroup,
                                          const Tensor &operand) {
   std::pair<ProcessGroup, ChannelId> channelKey(processGroup, channelId);
   {
-    std::lock_guard<std::mutex> lock(channelLocks_[channelKey]);
+    std::lock_guard<std::mutex> lock(
+        getRendezvousLock(processGroup, channelId));
     if (channels_[channelKey].size() == processGroup.size())
       channels_[channelKey].clear();
+
     channels_[channelKey].insert(processId, operand);
   }
   {
-    std::unique_lock<std::mutex> lock(channelLocks_[channelKey]);
+    std::unique_lock<std::mutex> lock(
+        getRendezvousLock(processGroup, channelId));
     if (channels_[channelKey].size() == processGroup.size())
       channelConditions_[channelKey].notify_all();
 
@@ -167,9 +177,9 @@ RendezvousResult ProcessGrid::rendezvous(ProcessGroup processGroup,
               return channels_[channelKey].size() == processGroup.size();
             }))
       llvm::report_fatal_error("rendezvous timed out");
-  }
 
-  return channels_[channelKey];
+    return channels_[channelKey];
+  }
 }
 
 }  // namespace stablehlo
