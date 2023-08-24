@@ -45,9 +45,9 @@ one of the following tracking labels.
 | abs                      | yes           | yes          | yes            | yes             | yes         |
 | add                      | yes           | yes          | yes            | yes             | yes         |
 | after_all                | yes           | yes          | yes            | yes             | yes         |
-| all_gather               | yes           | revisit      | no             | no              | no          |
+| all_gather               | yes           | revisit      | no             | no              | yes         |
 | all_reduce               | yes           | revisit      | yes            | no              | yes         |
-| all_to_all               | yes           | revisit      | yes            | no              | no          |
+| all_to_all               | yes           | revisit      | yes            | no              | yes         |
 | and                      | yes           | yes          | yes            | yes             | yes         |
 | atan2                    | yes           | yes          | yes            | yes             | yes         |
 | batch_norm_grad          | yes           | revisit      | yes            | no              | revisit     |
@@ -120,7 +120,7 @@ one of the following tracking labels.
 | recv                     | yes           | revisit      | infeasible     | no              | no          |
 | reduce                   | yes           | revisit      | yes            | revisit         | yes         |
 | reduce_precision         | yes           | yes          | yes            | yes             | yes         |
-| reduce_scatter           | yes           | revisit      | no             | no              | no          |
+| reduce_scatter           | yes           | revisit      | no             | no              | yes         |
 | reduce_window            | yes           | revisit      | yes            | no              | yes         |
 | remainder                | yes           | yes          | yes            | yes             | yes         |
 | replica_id               | yes           | yes          | yes            | yes             | yes         |

@@ -138,9 +138,13 @@ void CollectivePermuteOp::build(OpBuilder& odsBuilder, OperationState& odsState,
 //===----------------------------------------------------------------------===//
 
 LogicalResult ReduceScatterOp::verify() {
+  int64_t channelId = 0;
+  if (auto channelHandleAttr = getChannelHandleAttr())
+    channelId = channelHandleAttr.getHandle();
+
   return hlo::verifyReduceScatterOp(
       getLoc(), getOperand(), getScatterDimension(), getReplicaGroups(),
-      getUseGlobalDeviceIds(), getComputation(), getResult());
+      channelId, getUseGlobalDeviceIds(), getComputation(), getResult());
 }
 
 //===----------------------------------------------------------------------===//
@@ -877,9 +881,13 @@ void AllToAllOp::build(OpBuilder& odsBuilder, OperationState& odsState,
 //===----------------------------------------------------------------------===//
 
 LogicalResult AllGatherOp::verify() {
+  int64_t channelId = 0;
+  if (auto channelHandleAttr = getChannelHandleAttr())
+    channelId = channelHandleAttr.getHandle();
+
   return hlo::verifyAllGatherOp(getLoc(), getOperand(), getAllGatherDim(),
-                                getReplicaGroups(), getUseGlobalDeviceIds(),
-                                getResult());
+                                getReplicaGroups(), channelId,
+                                getUseGlobalDeviceIds(), getResult());
 }
 
 //===----------------------------------------------------------------------===//

@@ -742,18 +742,20 @@ Afterwards, within each `process_group`:
 ```mlir
 // num_replicas: 2
 // num_partitions: 1
-// %operand@(0, 0): [[1.0, 2.0], [3.0, 4.0]]
-// %operand@(1, 0): [[5.0, 6.0], [7.0, 8.0]]
+// %operand@(0, 0): [[1, 2], [3, 4]]
+// %operand@(1, 0): [[5, 6], [7, 8]]
 %result = "stablehlo.all_gather"(%operand) {
   all_gather_dim = 1 : i64,
   replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>,
   // channel_id = 0
   channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
   // use_global_device_ids = false
-} : (tensor<2x2xf32>) -> tensor<2x4xf32>
-// %result@(0, 0): [[1.0, 2.0, 5.0, 6.0], [3.0, 4.0, 7.0, 8.0]]
-// %result@(1, 0): [[1.0, 2.0, 5.0, 6.0], [3.0, 4.0, 7.0, 8.0]]
+} : (tensor<2x2xi64>) -> tensor<2x4xi64>
+// %result@(0, 0): [[1, 2, 5, 6], [3, 4, 7, 8]]
+// %result@(1, 0): [[1, 2, 5, 6], [3, 4, 7, 8]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_all_gather.mlir)
 
 ### all_reduce
 
@@ -860,20 +862,20 @@ Afterwards, within each `process_group`:
 
 #### Inputs
 
-| Label | Name               | Type                                         | Constraints      |
-|-------|--------------------|----------------------------------------------|------------------|
-| (I1)  | `operand`          | tensor or per-tensor quantized tensor        | (C1)             |
-| (I2)  | `split_dimension`  | constant of type `si64`                      | (C1), (C2), (C8) |
-| (I3)  | `concat_dimension` | constant of type `si64`                      | (C3), (C8)       |
-| (I4)  | `split_count`      | constant of type `si64`                      | (C2), (C4), (C8) |
-| (I5)  | `replica_groups`   | 2-dimensional tensor constant of type `si64` | (C7)             |
-| (I6)  | `channel_id`       | constant of type `si64`                      |                  |
+| Label | Name               | Type                                         | Constraints            |
+|-------|--------------------|----------------------------------------------|------------------------|
+| (I1)  | `operand`          | tensor or per-tensor quantized tensor        | (C1-C3), (C9)          |
+| (I2)  | `split_dimension`  | constant of type `si64`                      | (C1), (C2), (C9)       |
+| (I3)  | `concat_dimension` | constant of type `si64`                      | (C3), (C9)             |
+| (I4)  | `split_count`      | constant of type `si64`                      | (C2), (C4), (C8), (C9) |
+| (I5)  | `replica_groups`   | 2-dimensional tensor constant of type `si64` | (C5-C8)                |
+| (I6)  | `channel_id`       | constant of type `si64`                      |                        |
 
 #### Outputs
 
 | Name     | Type                                  | Constraints |
 |----------|---------------------------------------|-------------|
-| `result` | tensor or per-tensor quantized tensor | (C8)        |
+| `result` | tensor or per-tensor quantized tensor | (C9)        |
 
 #### Constraints
 
@@ -886,7 +888,8 @@ Afterwards, within each `process_group`:
   * `num_replicas` if `cross_replica` is used.
   * `num_partitions` if `cross_partition` is used.
 * (C7) `0 <= replica_groups < size(replica_groups)`.
-* (C8) `type(result) = type(operand)` except:
+* (C8) `dim(replica_groups, 1) = split_count`.
+* (C9) `type(result) = type(operand)` except:
   * `dim(result, split_dimension) =
     dim(operand, split_dimension) / split_count`.
   * `dim(result, concat_dimension) =
@@ -897,33 +900,27 @@ Afterwards, within each `process_group`:
 ```mlir
 // num_replicas: 2
 // num_partitions: 1
-// %operand@(0, 0): [
-//                   [1.0, 2.0, 3.0, 4.0],
-//                   [5.0, 6.0, 7.0, 8.0]
-//                  ]
-// %operand@(1, 0): [
-//                   [9.0, 10.0, 11.0, 12.0],
-//                   [13.0, 14.0, 15.0, 16.0]
-//                  ]
+// %operand@(0, 0): [[1, 2, 3, 4],
+//                   [5, 6, 7, 8]]
+// %operand@(1, 0): [[9, 10, 11, 12],
+//                   [13, 14, 15, 16]]
 %result = "stablehlo.all_to_all"(%operand) {
   split_dimension = 1 : i64,
   concat_dimension = 0 : i64,
   split_count = 2 : i64,
   replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
-} : (tensor<2x4xf32>) -> tensor<4x2xf32>
-// %result@(0, 0): [
-//                  [1.0, 2.0],
-//                  [5.0, 6.0],
-//                  [9.0, 10.0],
-//                  [13.0, 14.0]
-//                 ]
-// %result@(1, 0): [
-//                  [3.0, 4.0],
-//                  [7.0, 8.0],
-//                  [11.0, 12.0],
-//                  [15.0, 16.0]
-//                 ]
+} : (tensor<2x4xi64>) -> tensor<4x2xi64>
+// %result@(0, 0): [[1, 2],
+//                  [5, 6],
+//                  [9, 10],
+//                  [13, 14]]
+// %result@(1, 0): [[3, 4],
+//                  [7, 8],
+//                  [11, 12],
+//                  [15, 16]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_all_to_all.mlir)
 
 ### and
 
@@ -4122,7 +4119,7 @@ Afterwards, within each `process_group`:
 * `reduced_value = all_reduce(operand, replica_groups, channel_id,
   use_global_device_ids, computation)`.
 * `parts@sender = split(reduced_value@sender, dim(process_groups, 1),
-  split_dimension)`.
+  scatter_dimension)`.
 * `result@receiver = parts@sender[receiver_index]` for all `sender` in
   `process_group`, where `receiver_index = process_group.index(receiver)`.
 
@@ -4165,35 +4162,27 @@ Afterwards, within each `process_group`:
 ```mlir
 // num_replicas: 2
 // num_partitions: 1
-// %operand@(0, 0): [
-//                   [1.0, 2.0, 3.0, 4.0],
-//                   [5.0, 6.0, 7.0, 8.0]
-//                  ]
-// %operand@(1, 0): [
-//                   [9.0, 10.0, 11.0, 12.0],
-//                   [13.0, 14.0, 15.0, 16.0]
-//                  ]
+// %operand@(0, 0): [[1, 2, 3, 4],
+//                   [5, 6, 7, 8]]
+// %operand@(1, 0): [[9, 10, 11, 12],
+//                   [13, 14, 15, 16]]
 %result = "stablehlo.reduce_scatter"(%operand) ({
-  ^bb0(%arg0: tensor<f32>, %arg1: tensor<f32>):
-  %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<f32>, tensor<f32>) -> tensor<f32>
-  "stablehlo.return"(%0) : (tensor<f32>) -> ()
+  ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>):
+  %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<i64>, tensor<i64>) -> tensor<i64>
+  "stablehlo.return"(%0) : (tensor<i64>) -> ()
 }) {
   scatter_dimension = 1 : i64,
   replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>,
-  // channel_id = 0
   channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
-  // use_global_device_ids = false
-} : (tensor<2x4xf32>) -> tensor<2x2xf32>
+} : (tensor<2x4xi64>) -> tensor<2x2xi64>
 //
-// %result@(0, 0): [
-//                  [10.0, 12.0],
-//                  [18.0, 20.0]
-//                 ]
-// %result@(1, 0): [
-//                  [14.0, 16.0],
-//                  [22.0, 24.0]
-//                 ]
+// %result@(0, 0): [[10, 12],
+//                  [18, 20]]
+// %result@(1, 0): [[14, 16],
+//                  [22, 24]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret_reduce_scatter.mlir)
 
 ### reduce_window
 
@@ -6329,33 +6318,47 @@ def baseline_type(x: Value | Placeholder | Type) -> Type:
 floating-point tensor types. This happens via converting quantized elements
 which represent integer values of the storage type into corresponding
 floating-point values of the expressed type using the zero point and scale
-associated with the quantized element type. At the moment, this function only
-works for per-tensor quantization. Per-axis quantization is work in progress
-([#1574](https://github.com/openxla/stablehlo/issues/1574)).
+associated with the quantized element type.
 
 ```python
+def compute_zero_points(quantized_type, result_type):
+  if is_per_tensor_quantized(quantized_type):
+    return broadcast_in_dim(constant(zero_point(quantized_type), storage_type(quantized_type)), [], result_type)
+  if is_per_axis_quantized(quantized_type):
+    for i in index_space(result_type):
+      d = quantized_dimension(quantized_type)
+      zero_points[i] = zero_points(quantized_type)[i[d]]
+    return zero_points
+
+def compute_scales(quantized_type, result_type):
+  if is_per_tensor_quantized(quantized_type):
+    return broadcast_in_dim(constant(scale(quantized_type), expressed_type(quantized_type)), [],
+            type(result_type))
+  if is_per_axis_quantized(quantized_type):
+    for i in index_space(result_type):
+      d = quantized_dimension(quantized_type)
+      scales[i] = scales(quantized_type)[i[d]]
+    return scales
+
 def dequantize(x: Value) -> Value:
   assert is_quantized(x)
   x_storage = bitcast_convert(x, storage_type(x))
-  x_storage_sub = x_storage - zero_point(x_storage)
+  x_storage_sub = x_storage - compute_zero_points(type(x), type(x_storage))
   x_expressed_sub = convert(x_storage_sub, expressed_type(x))
-  return x_expressed_sub * scale(x)
+  return x_expressed_sub * compute_scales(type(x), type(x_expressed_sub))
 ```
 
 * `quantize` is defined on floating-point tensor types and turns them into
 quantized tensor types. This happens via converting floating-point values
 of the expressed type into corresponding integer values of the storage type
 using the zero point and scale associated with the quantized element type.
-At the moment, this function only works for per-tensor quantization. Per-axis
-quantization is work in progress
-([#1574](https://github.com/openxla/stablehlo/issues/1574)).
 
 ```python
 def quantize(x: Value, type: Type) -> Value:
   assert is_float(x) and is_quantized(type)
-  x_expressed_rounded = round_nearest_even(x / scale(type))
+  x_expressed_rounded = round_nearest_even(x / compute_scales(type, type(x)))
   x_storage_rounded = convert(x_expressed_rounded, storage_type(type))
-  x_storage_add = x_storage_rounded + zero_point(type)
+  x_storage_add = x_storage_rounded + compute_zero_points(type, type(x_storage_rounded))
   x_storage = clamp(storage_min(type), x_storage_add, storage_max(type))
   return bitcast_convert(x_storage, type)
 ```

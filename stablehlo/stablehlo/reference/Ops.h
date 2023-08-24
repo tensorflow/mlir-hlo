@@ -33,11 +33,20 @@ namespace stablehlo {
 Tensor evalAbsOp(const Tensor &operand, ShapedType resultType);
 Tensor evalAddOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Token evalAfterAllOp(ArrayRef<Token> inputs, MLIRContext *context);
+Tensor evalAllGatherOp(const Tensor &operand, int64_t allGatherDim,
+                       SmallVector<SmallVector<uint32_t>> replicaGroups,
+                       ChannelId channelId, bool useGlobalDeviceIds,
+                       Process *process, ShapedType resultType);
 Tensor evalAllReduceOp(const Tensor &operand,
                        SmallVector<SmallVector<uint32_t>> replicaGroups,
                        ChannelId channelId, bool useGlobalDeviceIds,
                        Region &computation, Process *process, Scope &scope,
                        ShapedType resultType);
+Tensor evalAllToAllOp(const Tensor &operand, Axis splitDimension,
+                      Axis concatDimension, int64_t splitCount,
+                      SmallVector<SmallVector<uint32_t>> replicaGroups,
+                      ChannelId channelId, Process *process,
+                      ShapedType resultType);
 Tensor evalAndOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalAtan2Op(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalBitcastConvertOp(const Tensor &operand, ShapedType resultType);
@@ -123,6 +132,11 @@ SmallVector<Tensor> evalReduceOp(ArrayRef<Tensor> inputs,
                                  ArrayRef<ShapedType> resultTypes);
 Tensor evalReducePrecisionOp(const Tensor &operand, int32_t exponentBits,
                              int32_t mantissaBits, ShapedType resultType);
+Tensor evalReduceScatterOp(const Tensor &operand, int64_t scatterDimension,
+                           SmallVector<SmallVector<uint32_t>> replicaGroups,
+                           ChannelId channelId, bool useGlobalDeviceIds,
+                           Region &region, Process *process, Scope &scope,
+                           ShapedType returnType);
 SmallVector<Tensor> evalReduceWindowOp(
     ArrayRef<Tensor> inputs, ArrayRef<Tensor> initValues,
     const Sizes &windowDimensions, const Sizes &windowStrides,

@@ -417,7 +417,7 @@ LogicalResult verifyReplicaGroups(std::optional<Location> location,
                                   bool useGlobalDeviceIds,
                                   std::optional<size_t> expectedGroupSize) {
   auto replicaGroupType = replicaGroups.getType().cast<RankedTensorType>();
-
+  // all_gather_i3, all_to_all_i5
   if (replicaGroupType.getRank() != 2)
     return emitOptionalError(location,
                              "replica groups should be a rank 2 tensor");
@@ -435,23 +435,25 @@ LogicalResult verifyReplicaGroups(std::optional<Location> location,
   for (int64_t replicaId : replicaIds) {
     // Replica groups are stored in a 2D tensor. If the op supports non-uniform
     // groups, null replica IDs are stored as -1.
+    // all_gather_c4
     if (replicaId == -1) {
       if (!allGroupsMustHaveSameSize) continue;
       return emitOptionalError(location, "Invalid replica id -1");
     }
 
-    // all_reduce_c1
+    // all_gather_c2, all_reduce_c1, all_to_all_c5
     if (!replicaIdsSeen.insert(replicaId).second)
       return emitOptionalError(location, "replica id #", replicaId,
                                " seen more than once");
   }
 
-  // all_reduce_c3
+  // all_gather_c4, all_reduce_c3, all_to_all_c7
   for (size_t id = 0; id < replicaIdsSeen.size(); id++)
     if (!replicaIdsSeen.contains(id))
       return emitOptionalError(location, "replica id #", id,
                                " not seen in replica groups");
 
+  // all_to_all_c8
   if (allGroupsMustHaveSameSize && expectedGroupSize &&
       (replicaIds.size() / replicaGroupType.getShape()[0] !=
        *expectedGroupSize))
@@ -534,21 +536,21 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
                                  ArrayRef<int64_t> allowedDimensions) {
   int64_t numInputs = inputTypes.size();
 
-  // all_reduce_c6, reduce_c6, reduce_window_c13, scatter_c15,
-  // select_and_scatter_c10
+  // all_reduce_c6, reduce_c6, reduce_scatter_c7, reduce_window_c13,
+  // scatter_c15, select_and_scatter_c10
   if (static_cast<int64_t>(block.getArguments().size()) != numInputs * 2)
     return emitOptionalError(loc, "Reduction-region must take ", numInputs * 2,
                              " parameters, but takes ",
                              block.getArguments().size(), " parameter(s)");
 
-  // all_reduce_c6, reduce_c6, reduce_window_c13, scatter_c15,
-  // select_and_scatter_c10
+  // all_reduce_c6, reduce_c6, reduce_scatter_c7, reduce_window_c13,
+  // scatter_c15, select_and_scatter_c10
   if (block.getTerminator()->getOperands().empty())
     return emitOptionalError(
         loc, "The reduction-region expected to return some value(s)");
 
-  // all_reduce_c6, reduce_c6, reduce_window_c13, scatter_c15,
-  // select_and_scatter_c10
+  // all_reduce_c6, reduce_c6, reduce_scatter_c7, reduce_window_c13,
+  // scatter_c15, select_and_scatter_c10
   if (static_cast<int64_t>(block.getTerminator()->getOperands().size()) !=
       numInputs)
     return emitOptionalError(loc, "Reduction-region here must produce ",
@@ -556,8 +558,8 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
                              block.getTerminator()->getOperands().size(),
                              " instead");
 
-  // all_reduce_c6, reduce_c6, reduce_window_c13, scatter_c15,
-  // select_and_scatter_c10
+  // all_reduce_c6, reduce_c6, reduce_scatter_c7, reduce_window_c13,
+  // scatter_c15, select_and_scatter_c10
   SmallVector<ShapedType> accumulatorSubShapes;
   for (Value retOperand : block.getTerminator()->getOperands()) {
     auto shapedTy = retOperand.getType().dyn_cast<ShapedType>();
@@ -571,8 +573,8 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
   }
 
   for (int64_t inputIdx = 0; inputIdx < numInputs; ++inputIdx) {
-    // all_reduce_c6, reduce_c2, reduce_window_c13, scatter_c15,
-    // select_and_scatter_c10
+    // all_reduce_c6, reduce_c2, reduce_scatter_c7, reduce_window_c13,
+    // scatter_c15, select_and_scatter_c10
     if (!compatibleShapeAndElementType(accumulatorSubShapes[inputIdx],
                                        block.getArgument(inputIdx).getType()))
       return emitOptionalError(
@@ -581,8 +583,8 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
           block.getArgument(inputIdx).getType(), " vs ",
           accumulatorSubShapes[inputIdx]);
 
-    // all_reduce_c6, reduce_c2, reduce_window_c13, scatter_c15,
-    // select_and_scatter_c3, select_and_scatter_c10
+    // all_reduce_c6, reduce_c2, reduce_scatter_c7, reduce_window_c13,
+    // scatter_c15, select_and_scatter_c3, select_and_scatter_c10
     if (!compatibleShapeAndElementType(
             accumulatorSubShapes[inputIdx],
             block.getArgument(numInputs + inputIdx).getType(),
@@ -594,8 +596,8 @@ LogicalResult verifyReducerShape(std::optional<Location> loc, Block& block,
           block.getArgument(numInputs + inputIdx).getType(), " vs ",
           accumulatorSubShapes[inputIdx]);
 
-    // all_reduce_c6, reduce_c6, reduce_window_c13, reduce_window_i2,
-    // scatter_c6, scatter_c15, select_and_scatter_c10
+    // all_reduce_c6, reduce_c6, reduce_scatter_c7, reduce_window_c13,
+    // reduce_window_i2, scatter_c6, scatter_c15, select_and_scatter_c10
     if (!compatibleShapeAndElementType(accumulatorSubShapes[inputIdx],
                                        initValueTypes[inputIdx],
                                        /*ignoreFpPrecision=*/true))
@@ -1383,18 +1385,22 @@ LogicalResult inferAllToAllOp(
     int64_t concatDimension, int64_t splitCount,
     DenseIntElementsAttr replicaGroups,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  // all_to_all_c4
   if (splitCount <= 0)
     return emitOptionalError(location, "AllToAll split_count must be > 0");
 
+  // all_to_all_c5, all_to_all_c7, all_to_all_i5
   if (failed(verifyReplicaGroups(location, replicaGroups,
                                  /*allGroupsMustHaveSameSize=*/true,
                                  /*useGlobalDeviceIds=*/false, splitCount)))
     return failure();
 
+  // all_to_all_c1
   if (splitDimension < 0)
     return emitOptionalError(location,
                              "AllToAll split_dimension cannot be negative");
 
+  // all_to_all_c3
   if (concatDimension < 0)
     return emitOptionalError(location,
                              "AllToAll concat_dimension cannot be negative");
@@ -1408,19 +1414,20 @@ LogicalResult inferAllToAllOp(
   }
 
   int64_t inputRank = operandRankedType.getRank();
+  // all_to_all_c1
   if (splitDimension >= inputRank)
     return emitOptionalError(location, "AllToAll split_dimension ",
                              splitDimension,
                              " is out-of-bounds for input rank ", inputRank);
+  // all_to_all_c3
   if (concatDimension >= inputRank)
     return emitOptionalError(location, "AllToAll concat_dimension ",
                              concatDimension,
                              " is out-of-bounds for input rank ", inputRank);
 
-  // If operand is ranked, size of split dimension should be a multiple of split
-  // count.
   SmallVector<int64_t> resultShape(operandRankedType.getShape().begin(),
                                    operandRankedType.getShape().end());
+  // all_to_all_c2
   if (isStaticDimSize(resultShape[splitDimension]) &&
       resultShape[splitDimension] % splitCount != 0)
     return emitOptionalError(
@@ -3040,37 +3047,50 @@ LogicalResult inferWhileOp(std::optional<Location>, ValueRange operand,
 LogicalResult verifyAllGatherOp(std::optional<Location> location, Value operand,
                                 int64_t allGatherDim,
                                 DenseIntElementsAttr replicaGroups,
-                                bool useGlobalDeviceIds, Value result) {
-  if (failed(verifyReplicaGroups(location, replicaGroups,
-                                 /*allGroupsMustHaveSameSize=*/true,
-                                 useGlobalDeviceIds,
-                                 /*expectedGroupSize=*/std::nullopt)))
-    return failure();
-
+                                int64_t channelId, bool useGlobalDeviceIds,
+                                Value result) {
   auto operandType = operand.getType().dyn_cast<RankedTensorType>();
   auto resultType = result.getType().dyn_cast<RankedTensorType>();
 
+  // all_gather_c1
   if (allGatherDim < 0)
     return emitOptionalError(location, "all_gather_dim cannot be negative");
 
   if (operandType) {
+    // all_gather_c1
     if (allGatherDim >= operandType.getRank())
       return emitOptionalError(
           location, "all_gather_dim must be a valid index of operand");
 
+    // TODO(#1745): Sync verification of AllGather with HLO.
     if (operandType.getDimSize(allGatherDim) == 0)
       return emitOptionalError(
           location,
           "dimension size of operand at 'all_gather_dim' cannot be zero");
   }
 
+  // all_gather_i3, all_gather_c2, all_gather_c4
+  if (failed(verifyReplicaGroups(location, replicaGroups,
+                                 /*allGroupsMustHaveSameSize=*/true,
+                                 useGlobalDeviceIds,
+                                 /*expectedGroupSize=*/std::nullopt)))
+    return failure();
+
+  // all_gather_c5
+  if (useGlobalDeviceIds && channelId < 0)
+    return emitOptionalError(
+        location,
+        "channel_id cannot be negative when useGlobalDeviceIds is set");
+
+  // all_gather_c6
   if (operandType && resultType) {
     if (resultType.getRank() != operandType.getRank())
       return emitOptionalError(location,
-                               "operand and return must have the same rank");
+                               "operand and result must have the same rank");
 
     for (int64_t i = 0; i < operandType.getRank(); i++) {
       if (i == allGatherDim) continue;
+      // all_gather_c6
       if (!verifyCompatibleDims(resultType.getDimSize(i),
                                 operandType.getDimSize(i)))
         return emitOptionalError(
@@ -3083,6 +3103,7 @@ LogicalResult verifyAllGatherOp(std::optional<Location> location, Value operand,
         resultType.isDynamicDim(allGatherDim))
       return success();
 
+    // all_gather_c6
     if ((resultType.getDimSize(allGatherDim) %
          operandType.getDimSize(allGatherDim)) != 0)
       return emitOptionalError(
@@ -3691,7 +3712,7 @@ LogicalResult verifyReducePrecisionOp(std::optional<Location> location,
 LogicalResult verifyReduceScatterOp(std::optional<Location> location,
                                     Value operand, int64_t scatterDimension,
                                     DenseIntElementsAttr replicaGroups,
-                                    bool useGlobalDeviceIds,
+                                    int64_t channelId, bool useGlobalDeviceIds,
                                     Region& computation, Value result) {
   if (failed(verifyReplicaGroups(location, replicaGroups,
                                  /*allGroupsMustHaveSameSize=*/true,
@@ -3699,6 +3720,7 @@ LogicalResult verifyReduceScatterOp(std::optional<Location> location,
                                  /*expectedGroupSize=*/std::nullopt)))
     return failure();
   auto operandType = operand.getType().cast<ShapedType>();
+  // reduce_scatter_c7
   if (failed(verifyReducerShape(
           location, computation.front(), {operandType},
           {RankedTensorType::get({}, operandType.getElementType())},
@@ -3707,29 +3729,44 @@ LogicalResult verifyReduceScatterOp(std::optional<Location> location,
 
   auto resultType = result.getType().cast<ShapedType>();
   if (!operandType.hasRank() || !resultType.hasRank()) return success();
+  // reduce_scatter_c8
   if (operandType.getRank() != resultType.getRank())
     return emitOptionalError(location,
                              "operand and result should have same rank");
+
+  // reduce_scatter_c2
   if (scatterDimension < 0)
     return emitOptionalError(location, "expects scatter_dimension >= 0");
+
+  // reduce_scatter_c2
   if (scatterDimension >= operandType.getRank())
     return emitOptionalError(
         location, "scatter dim should be less than operand/result rank");
+
+  // reduce_scatter_c6
+  if (useGlobalDeviceIds && channelId <= 0)
+    return emitOptionalError(
+        location,
+        "channel_id must be positive when useGlobalDeviceIds is set but got: ",
+        channelId);
+
   if (operandType.isDynamicDim(scatterDimension) ||
       resultType.isDynamicDim(scatterDimension))
     return success();
+
   auto operandScatterDimSize = operandType.getDimSize(scatterDimension);
   auto resultScatterDimSize = resultType.getDimSize(scatterDimension);
-  if (operandScatterDimSize == 0)
-    return emitOptionalError(location,
-                             "operand scatter dimension cannot be zero");
+  // TODO(#1746): Sync verification of ReduceScatter with HLO.
   if (resultScatterDimSize == 0)
-    return emitOptionalError(location,
-                             "result scatter dimension cannot be zero");
+    return emitOptionalError(
+        location, "result dimension size at scatter_dimension cannot be zero");
 
-  // If operand and result are both ranked, then the size of the scatter
-  // dimension in the operand should be a multiple of the size of the scatter
-  // dimension in the result.
+  // TODO(#1746): Sync verification of ReduceScatter with HLO.
+  if (operandScatterDimSize == 0)
+    return emitOptionalError(
+        location, "operand dimension size at scatter_dimension cannot be zero");
+
+  // reduce_scatter_c8
   if (isStaticDimSize(operandScatterDimSize) &&
       isStaticDimSize(resultScatterDimSize) &&
       operandScatterDimSize % resultScatterDimSize != 0)
@@ -3738,7 +3775,7 @@ LogicalResult verifyReduceScatterOp(std::optional<Location> location,
         ", expected to be a multiple of result scatter dimension size ",
         resultScatterDimSize);
 
-  // Non scatter dimensions should be equal.
+  // reduce_scatter_c8
   for (auto index : llvm::seq<int64_t>(0, operandType.getRank())) {
     if (index == scatterDimension) continue;
     if (!verifyCompatibleDims(operandType.getDimSize(index),
