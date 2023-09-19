@@ -54,8 +54,9 @@ class Process {
   void outfeed(ArrayRef<Tensor> inputs);
 
   /// See `ProcessGrid::rendezvous`.
-  RendezvousResult rendezvous(ProcessGroup processGroup, ChannelId channelId,
-                              const Tensor &operand);
+  std::shared_ptr<RendezvousResult const> rendezvous(ProcessGroup processGroup,
+                                                     ChannelId channelId,
+                                                     const Tensor &operand);
 
  private:
   /// StableHLO `process_id`.
