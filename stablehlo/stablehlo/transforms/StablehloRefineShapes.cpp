@@ -11,48 +11,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-/*
-This shape refinement pass was designed to resolve the dynamic shapes in
-a StableHLO module produced by JAX serialization with shape polymorphism.
-Such a module has the following properties:
 
-  * it contains a "main" function with statically-shaped arguments;
-    the result types may be dynamically shaped.
-  * all the dynamic shapes depend only on the input shapes (no shape
-    dependency on the input array contents). We refer to the operations that
-    depend transitively only on the input shapes (e.g., as given by
-    `stablehlo.get_dimension_size`) as `dimension` operations.
-    All dimension values can be resolved to constants through inter-procedural
-    constant folding.
-  * intermediate functions may take a number of token arguments (of type
-    !stablehlo.token) at the start of the argument list, followed by some
-    dimension arguments (integer scalars).
-  * some intermediate functions may return dimension values.
-    E.g., the `floordiv` operation on dimension values may be implemented
-    using intermediate functions. These constant functions need to be
-    constant-folded.
-  * All the dynamic shapes can be resolved through shape inference from the
-    dimension values. The dimension values themselves do not depend on the
-    result of shape inference.
-
-
-For each intermediate function we compute a refinement context, including
-the values of the dimension arguments and the static shapes of the other
-arguments. We compute the refinement context when we encounter a function call,
-and then we refine the callee recursively. We abort in the presence of
-recursive calls.
-We also abort if a function is called with multiple distinct refinement
-contexts.
-
-After refinement, all operations should have static shapes, all calls to
-constant functions are replaced with constants, and all dimension arguments
-for intermediate functions are dropped and are replaced with constants.
-*/
-#include <algorithm>
 #include <cstdint>
 #include <memory>
-#include <optional>
-#include <set>
 #include <string>
 #include <utility>
 
@@ -63,10 +24,8 @@ for intermediate functions are dropped and are replaced with constants.
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -80,9 +39,7 @@ for intermediate functions are dropped and are replaced with constants.
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Support/LogicalResult.h"
-#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "stablehlo/dialect/Base.h"
 #include "stablehlo/dialect/ChloOps.h"
@@ -94,144 +51,10 @@ for intermediate functions are dropped and are replaced with constants.
 namespace mlir {
 namespace stablehlo {
 
-#define DEBUG_TYPE "stablehlo-refine-shapes"
-
 #define GEN_PASS_DEF_STABLEHLOREFINESHAPESPASS
 #include "stablehlo/transforms/Passes.h.inc"
 
 namespace {
-
-// Per-module state for shape refinement.
-class RefineShapeState {
- public:
-  // Validates that we are not attempting to refine a function with a different
-  // context than previously, and are not attempting recursive refinement.
-  // Returns failure() if validation fails. On success, returns a boolean
-  // that specifies whether the function has already been refined.
-  FailureOr<bool> validateFunctionRefinement(
-      func::FuncOp func, SmallVector<APSInt> dimensionArguments,
-      SmallVector<Type> nonDimensionArgumentTypes) {
-    StringRef funcName = func.getName();
-    auto found = refinementContexts.find(func);
-    if (found == refinementContexts.end()) {
-      return false;  // not already refined.
-    }
-    auto prevDimensionArguments = std::get<0>(found->second);
-    auto prevNonDimensionArgumentTypes = std::get<1>(found->second);
-    // Since we refine until fixed point, we will refine a call to a function
-    // both for the original function and for the refined one. In the latter
-    // case, we should have empty dimensionArguments but the same
-    // nonDimensionArgumentTypes.
-    if (prevNonDimensionArgumentTypes != nonDimensionArgumentTypes ||
-        (!dimensionArguments.empty() &&
-         prevDimensionArguments != dimensionArguments)) {
-      emitDifferentRefinementContextError(
-          func, /*dimensionArguments=*/dimensionArguments,
-          /*nonDimensionArgumentTypes=*/nonDimensionArgumentTypes,
-          /*prevDimensionArguments=*/prevDimensionArguments,
-          /*prevNonDimensionArgumentShapes=*/prevNonDimensionArgumentTypes);
-      return failure();
-    }
-    for (auto funcOnStack : functionsBeingRefined) {
-      if (funcOnStack == funcName) {
-        func.emitOpError() << "Function " << funcName
-                           << " is being refined recursively\n";
-        return failure();
-      }
-    }
-    return true;  // already refined.
-  }
-
-  // Updates the state to signal the starting of a function refinement.
-  // Callers must call `finishFunctionRefinement` when done.
-  void startFunctionRefinement(func::FuncOp func,
-                               SmallVector<APSInt> dimensionArguments,
-                               SmallVector<Type> nonDimensionArgumentTypes) {
-    StringRef funcName = func.getName();
-    functionsBeingRefined.push_back(funcName);
-    refinementContexts[func] =
-        std::make_tuple(dimensionArguments, nonDimensionArgumentTypes);
-  }
-
-  // Updates the state to signal the starting of a function refinement.
-  LogicalResult finishFunctionRefinement(func::FuncOp func) {
-    if (func.getName() !=
-        functionsBeingRefined[functionsBeingRefined.size() - 1]) {
-      func.emitOpError() << "Expected to find " << func.getName()
-                         << " at the top of the stack";
-      return failure();
-    }
-    functionsBeingRefined.pop_back();
-    return success();
-  }
-
- private:
-  // Maps refined functions to the refinement context: the values of dimension
-  // arguments and the types of non-dimension arguments. A function is added
-  // here when we start refining it.
-  DenseMap<func::FuncOp, std::tuple<SmallVector<APSInt>, SmallVector<Type>>>
-      refinementContexts;
-
-  // A stack of functions that are in the process of being refined, the current
-  // one is last.
-  SmallVector<llvm::StringRef> functionsBeingRefined;
-
-  void emitDifferentRefinementContextError(
-      func::FuncOp func, SmallVector<APSInt> dimensionArguments,
-      SmallVector<Type> nonDimensionArgumentTypes,
-      SmallVector<APSInt> prevDimensionArguments,
-      SmallVector<Type> prevNonDimensionArgumentShapes) {
-    InFlightDiagnostic msg = func.emitOpError();
-    msg << "Function " << func.getName()
-        << " has already been refined with a different "
-           "refinement context. ";
-    int countShowNonDimensionArguments =
-        std::min(prevNonDimensionArgumentShapes.size(),
-                 nonDimensionArgumentTypes.size());
-    if (prevNonDimensionArgumentShapes.size() !=
-        nonDimensionArgumentTypes.size()) {
-      msg << "Previous context had " << prevNonDimensionArgumentShapes.size()
-          << " and now we have " << nonDimensionArgumentTypes.size()
-          << " non-dimension arguments. ";
-    }
-    msg << "The differences among the first " << countShowNonDimensionArguments
-        << " non-dimension argument types are: ";
-    for (auto i = 0; i < countShowNonDimensionArguments; ++i) {
-      if (prevNonDimensionArgumentShapes[i] != nonDimensionArgumentTypes[i]) {
-        msg << "Non-dimension argument[" << i << "] previously had type "
-            << debugString(prevNonDimensionArgumentShapes[i])
-            << " and now has type " << debugString(nonDimensionArgumentTypes[i])
-            << ". ";
-      }
-    }
-    int countShowDimensionArguments =
-        std::min(prevDimensionArguments.size(), dimensionArguments.size());
-    if (prevDimensionArguments.size() != dimensionArguments.size()) {
-      msg << "Previous context had " << prevDimensionArguments.size()
-          << " and now we have " << dimensionArguments.size()
-          << " dimension arguments. ";
-    }
-    msg << "The differences among the first " << countShowDimensionArguments
-        << " dimension arguments are: ";
-    for (auto i = 0; i < countShowDimensionArguments; ++i) {
-      if (prevDimensionArguments[i] != dimensionArguments[i]) {
-        msg << "Dimension argument[" << i << "] previously was "
-            << prevDimensionArguments[i].getSExtValue() << " and now is "
-            << dimensionArguments[i].getSExtValue() << ". ";
-      }
-    }
-  }
-};
-
-// Refines a function.
-// Returns `true` if the function had already been processed with the same
-// refinement context and `false` if this is the first time we refined the
-// function. Returns failure() if we encounter an error.
-LogicalResult refineFunction(func::FuncOp func, MLIRContext* context,
-                             RefineShapeState* state,
-                             size_t nrPrefixTokenArguments,
-                             SmallVector<APSInt> dimensionArguments,
-                             SmallVector<Type> nonDimensionArgumentTypes);
 
 // DenseElementsAttr can be constructed from ArrayRef<APInt> but not from
 // ArrayRef<APSInt>. This helper bridges the gap.
@@ -602,10 +425,11 @@ LogicalResult refineValues(PatternRewriter& rewriter, Operation* op,
       diag << "refineValues failed for " << types << ": expected "
            << values.size() << " types, got " << types.size();
     });
-  // Check whether `types` contain any new information with respect to
-  // existing return types. Even if just a single dimension size out of an
-  // entire tensor type got updated, using `inferMostSpecificType` ensures
-  // that we don't miss that.
+
+  // Check whether `types` contain any new information with respect to existing
+  // return types. Even if just a single dimension size out of an entire tensor
+  // type got updated, using `inferMostSpecificType` ensures that we don't
+  // miss that.
   bool needsRefinement = false;
   SmallVector<Type> refinedTypes;
   for (auto it : llvm::zip(values.getTypes(), types)) {
@@ -645,13 +469,11 @@ LogicalResult refineValues(PatternRewriter& rewriter, Operation* op,
 
       // Simply changing operand type of `func.return` won't work because
       // that won't update the FunctionType of the enclosing `func.func`.
-      // Nonetheless, we still want to support these ops because they are
-      // widely used in StableHLO programs (although the plan of record is to
-      // replace `func.return` ops in StableHLO programs with
-      // `stablehlo.return`: https://github.com/openxla/stablehlo/issues/425).
+      // Nonetheless, we still want to support these ops because they are widely
+      // used in StableHLO programs (although the plan of record is to replace
+      // `func.return` ops in StableHLO programs with `stablehlo.return`:
+      // https://github.com/openxla/stablehlo/issues/425).
       if (isa<func::ReturnOp>(user)) continue;
-
-      if (isa<func::CallOp>(user)) continue;
 
       // Unlike in TensorFlow's type inference pass, here we work only with
       // allowlisted ops to focus our support on well-defined semantics of
@@ -668,8 +490,7 @@ LogicalResult refineValues(PatternRewriter& rewriter, Operation* op,
     value.setType(refinedType);
 
     // Special case: for `func.return`, guard the refinement with a cast
-    // and leave propagation of the refined return type to a dedicated
-    // pattern.
+    // and leave propagation of the refined return type to a dedicated pattern.
     auto isFuncReturn = [](OpOperand& use) -> bool {
       return isa<func::ReturnOp>(use.getOwner());
     };
@@ -685,8 +506,8 @@ LogicalResult refineValues(PatternRewriter& rewriter, Operation* op,
 
 // Refines the return types of the given operation using the given types.
 // This function also signals PatternRewriter that it needs to visit all the
-// users of this op if any updates to its results have happened during
-// execution of the function.
+// users of this op if any updates to its results have happened during execution
+// of the function.
 LogicalResult refineReturnTypes(PatternRewriter& rewriter, Operation* op,
                                 ArrayRef<Type> types) {
   if (failed(refineValues(rewriter, op, op->getResults(), types)))
@@ -708,12 +529,12 @@ LogicalResult refineReturnTypes(PatternRewriter& rewriter, Operation* op,
 //      traversal, and only then we apply the refinements. If there are other
 //      types, then the corresponding refinements must be completely empty.
 //   2) Encodings are not supported. In principle, TypeExtensions should be
-//      supportable, but this needs careful thinking through. Given that no
-//      one asked for support for bounded dynamism in this pass yet, this is
-//      left for future work.
+//      supportable, but this needs careful thinking through. Given that no one
+//      asked for support for bounded dynamism in this pass yet, this is left
+//      for future work.
 // This function also signals PatternRewriter that it needs to visit all the
-// users of this op if any updates to its results have happened during
-// execution of the function.
+// users of this op if any updates to its results have happened during execution
+// of the function.
 LogicalResult refineReturnTypes(PatternRewriter& rewriter, Operation* op,
                                 ArrayRef<ShapedTypeComponents> refinements) {
   SmallVector<Type> flattenedTypes;
@@ -803,8 +624,8 @@ LogicalResult refineReturnTypes(PatternRewriter& rewriter, Operation* op,
 
 // Refines the return type of the given operation using the given shape.
 // This function also signals PatternRewriter that it needs to visit all the
-// users of this op if any updates to its results have happened during
-// execution of the function.
+// users of this op if any updates to its results have happened during execution
+// of the function.
 template <typename OpType>
 LogicalResult refineReturnShape(PatternRewriter& rewriter, OpType op,
                                 ArrayRef<int64_t> shape) {
@@ -813,8 +634,8 @@ LogicalResult refineReturnShape(PatternRewriter& rewriter, OpType op,
 
 // Refines the return type of the given operation using the given shape.
 // This function also signals PatternRewriter that it needs to visit all the
-// users of this op if any updates to its results have happened during
-// execution of the function.
+// users of this op if any updates to its results have happened during execution
+// of the function.
 template <typename OpType>
 LogicalResult refineReturnShape(PatternRewriter& rewriter, OpType op,
                                 Value shapeValue) {
@@ -827,52 +648,6 @@ LogicalResult refineReturnShape(PatternRewriter& rewriter, OpType op,
   return refineReturnShape(rewriter, op, shape);
 }
 
-// Dimension arguments are leading scalar constant arguments, optionally
-// preceeded by some stablehlo.token arguments.
-SmallVector<APSInt> getDimensionArguments(func::CallOp callOp,
-                                          size_t* nrPrefixTokenArguments) {
-  *nrPrefixTokenArguments = 0;
-  SmallVector<Value> operands = callOp.getOperands();
-  SmallVector<APSInt> dimensionArguments;
-  for (size_t i = 0; i < operands.size(); ++i) {
-    if (i == *nrPrefixTokenArguments && isa<TokenType>(operands[i].getType())) {
-      (*nrPrefixTokenArguments)++;
-      continue;
-    }
-    RankedTensorType operandType =
-        dyn_cast<RankedTensorType>(operands[i].getType());
-    if (!operandType || operandType.getRank() != 0 ||
-        !operandType.getElementType().template isa<IntegerType>())
-      break;
-    SmallVector<APSInt> operand_int;
-    if (failed(hlo::matchInts(operands[i], operand_int))) {
-      break;
-    }
-    dimensionArguments.push_back(operand_int[0]);
-  }
-  return dimensionArguments;
-}
-
-std::optional<SmallVector<DenseIntElementsAttr>> isConstantFunction(
-    func::FuncOp func) {
-  LLVM_DEBUG(llvm::dbgs() << "check if " << func.getName()
-                          << " is a constant function\n");
-  SmallVector<DenseIntElementsAttr> returnedConstants;
-  func::ReturnOp ret = *func.getOps<func::ReturnOp>().begin();
-  bool isConstant = llvm::all_of(ret->getOperands(), [&](auto returnVal) {
-    DenseIntElementsAttr attr;
-    Operation* return_operand_def = returnVal.getDefiningOp();
-    if (return_operand_def &&
-        matchPattern(return_operand_def, m_Constant(&attr))) {
-      returnedConstants.push_back(attr);
-      return true;
-    }
-    return false;
-  });
-  if (isConstant) return returnedConstants;
-  return std::nullopt;
-}
-
 struct RefineAllGatherOpPattern : public OpRewritePattern<AllGatherOp> {
   using OpRewritePattern::OpRewritePattern;
   LogicalResult matchAndRewrite(AllGatherOp op,
@@ -881,9 +656,9 @@ struct RefineAllGatherOpPattern : public OpRewritePattern<AllGatherOp> {
     if (!operandType.hasRank())
       return rewriter.notifyMatchFailure(op, "expected ranked operand type");
 
-    // This represents the cross_replica_and_partition process grouping
-    // strategy that requires num_partitions to compute shardCount. Since we
-    // don't know num_partitions at this point, we error out.
+    // This represents the cross_replica_and_partition process grouping strategy
+    // that requires num_partitions to compute shardCount. Since we don't know
+    // num_partitions at this point, we error out.
     if (op.getChannelHandle() && !op.getUseGlobalDeviceIds())
       return rewriter.notifyMatchFailure(op, "unsupported strategy");
     DenseIntElementsAttr replicaGroups = op.getReplicaGroups();
@@ -904,11 +679,12 @@ struct RefineBitcastConvertOpPattern
     auto operandType = op.getOperand().getType();
     if (!operandType.hasRank())
       return rewriter.notifyMatchFailure(op, "expected ranked operand type");
-    auto resultType = op.getType();
+
     // If bit widths of the operand and the result are different, then
     // operand and result shapes have different ranks.
     // This complicates the logic quite a bit and is not needed to pass the
     // current tests, so we leave this for future work.
+    auto resultType = op.getType();
     auto getBitWidthFn = [](ShapedType type) {
       auto elementType = type.getElementType();
       if (auto complexType = elementType.dyn_cast<ComplexType>())
@@ -919,77 +695,8 @@ struct RefineBitcastConvertOpPattern
     if (getBitWidthFn(operandType) != getBitWidthFn(resultType))
       return rewriter.notifyMatchFailure(op, "unsupported bit width");
 
-    auto res = refineReturnShape(rewriter, op, operandType.getShape());
-    if (failed(res)) return failure();
-    if (op.getOperand().getType() == op.getResult().getType()) {
-      LLVM_DEBUG({ llvm::dbgs() << "    ** remove no-op bitcast convert\n"; });
-      rewriter.replaceOp(op, op.getOperand());
-    }
-    return success();
+    return refineReturnShape(rewriter, op, operandType.getShape());
   }
-};
-
-struct RefineCallOpPattern : public OpRewritePattern<func::CallOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  RefineCallOpPattern(MLIRContext* context, RefineShapeState* state)
-      : OpRewritePattern<func::CallOp>(context), _state(state) {}
-
-  LogicalResult matchAndRewrite(func::CallOp op,
-                                PatternRewriter& rewriter) const override {
-    LLVM_DEBUG({ llvm::dbgs() << "refineCallOp " << debugString(op) << "\n"; });
-
-    // We have a number of prefix token arguments, then the dimension arguments
-    size_t nrPrefixTokenArguments = 0;
-    SmallVector<APSInt> dimensionArguments =
-        getDimensionArguments(op, &nrPrefixTokenArguments);
-    SmallVector<Type> nonDimensionArgumentTypes;
-    SmallVector<Value> nonDimensionArguments;
-    SmallVector<Value> operands = op.getOperands();
-    for (size_t i = 0; i < operands.size(); ++i) {
-      // Skip the dimension arguments.
-      if (i >= nrPrefixTokenArguments &&
-          i < nrPrefixTokenArguments + dimensionArguments.size()) {
-        continue;
-      }
-      nonDimensionArgumentTypes.push_back(operands[i].getType());
-      nonDimensionArguments.push_back(operands[i]);
-    }
-    FlatSymbolRefAttr calleeName = op.getCalleeAttr();
-    const SymbolTable symbolTable(op->getParentOfType<ModuleOp>());
-    func::FuncOp callee = dyn_cast<func::FuncOp>(
-        symbolTable.lookupNearestSymbolFrom(op, calleeName.getAttr()));
-    if (!callee)
-      return rewriter.notifyMatchFailure(
-          op, "cannot find callee in the current scope");
-    if (failed(refineFunction(callee, rewriter.getContext(), _state,
-                              nrPrefixTokenArguments, dimensionArguments,
-                              nonDimensionArgumentTypes)))
-      return failure();
-
-    // Is the callee a constant function in this refinement context?
-    std::optional<SmallVector<DenseIntElementsAttr>> constantAttrs =
-        isConstantFunction(callee);
-    if (constantAttrs.has_value()) {
-      SmallVector<Value> constants;
-      for (auto constAttr : constantAttrs.value()) {
-        constants.push_back(
-            rewriter.create<ConstantOp>(op.getLoc(), constAttr));
-      }
-      rewriter.replaceOp(op, constants);
-      return success();
-    }
-    if (!dimensionArguments.empty()) {
-      // Drop the dimension arguments, but only if necessary, or else we
-      // will end up trying to refine the new CallOp forever.
-      op = rewriter.replaceOpWithNewOp<func::CallOp>(
-          op, op.getResultTypes(), callee.getSymName(), nonDimensionArguments);
-    }
-    return refineReturnTypes(rewriter, op, callee.getResultTypes());
-  }
-
- private:
-  RefineShapeState* _state;
 };
 
 struct RefineConvertOpPattern : public OpRewritePattern<ConvertOp> {
@@ -1207,9 +914,8 @@ struct RefineDynamicRngBitGeneratorOpPattern
       return rewriter.notifyMatchFailure(op, "expected constant output_shape");
 
     // We only need to refine the shape of `output` (the second result).
-    // The shape of `output_state` (the first result) is determined by the
-    // shape of `initial_state`, so we ignore it and provide an empty
-    // refinement.
+    // The shape of `output_state` (the first result) is determined by the shape
+    // of `initial_state`, so we ignore it and provide an empty refinement.
     return refineReturnTypes(rewriter, op, {{initialStateType}, {outputShape}});
   }
 };
@@ -1245,11 +951,11 @@ struct RefineInferTypeOpInterfacePattern
     if (!isa<chlo::ChloDialect, StablehloDialect>(op->getDialect()))
       return rewriter.notifyMatchFailure(op, "unsupported dialect");
 
-    // For the ops that implement InferTypeOpInterface, we reinfer their
-    // return types and see what happens. Operands of these ops might have
-    // been refined elsewhere (e.g. someone might have updated argument types
-    // of a function) or earlier during this pass, and this might enable
-    // refinement opportunities downstream.
+    // For the ops that implement InferTypeOpInterface, we reinfer their return
+    // types and see what happens.
+    // Operands of these ops might have been refined elsewhere (e.g. someone
+    // might have updated argument types of a function) or earlier during this
+    // pass, and this might enable refinement opportunities downstream.
     SmallVector<Type> inferredReturnTypes;
     if (failed(op.inferReturnTypes(getContext(), /*location=*/{},
                                    op->getOperands(), op->getAttrDictionary(),
@@ -1305,8 +1011,8 @@ struct RefineRealDynamicSliceOpPattern
           sliceSizesAttr.size(),
           RankedTensorType::get({}, startIndicesElementType));
 
-      // RealDynamicSliceOp can take tensors of integer or index element
-      // types. DynamicSliceOp::slice_sizes only supports i64 element type.
+      // RealDynamicSliceOp can take tensors of integer or index element types.
+      // DynamicSliceOp::slice_sizes only supports i64 element type.
       // Adapt accordingly in order to be compatible with inferDynamicSliceOp.
       SmallVector<int64_t> sliceSizes;
       for (auto element : sliceSizesAttr.getValues<APInt>()) {
@@ -1336,9 +1042,9 @@ struct RefineReduceScatterOpPattern : public OpRewritePattern<ReduceScatterOp> {
     if (!operandType.hasRank())
       return rewriter.notifyMatchFailure(op, "expected ranked operand type");
 
-    // This represents the cross_replica_and_partition process grouping
-    // strategy that requires num_partitions to compute shardCount. Since we
-    // don't know num_partitions at this point, we error out.
+    // This represents the cross_replica_and_partition process grouping strategy
+    // that requires num_partitions to compute shardCount. Since we don't know
+    // num_partitions at this point, we error out.
     if (op.getChannelHandle() && !op.getUseGlobalDeviceIds())
       return rewriter.notifyMatchFailure(op, "unsupported strategy");
     DenseIntElementsAttr replicaGroups = op.getReplicaGroups();
@@ -1378,9 +1084,9 @@ struct RefineWhileOpPattern : public OpRewritePattern<WhileOp> {
                                 PatternRewriter& rewriter) const override {
     // Push the potentially refined operand types into the nested regions.
     // This can lead to refinements of the return types of the body (but not
-    // of the cond since it always returns tensor<i1>), but the key insight
-    // here is that the enclosing while op doesn't care about these
-    // refinements (because its return types are equal to its operand types).
+    // of the cond since it always returns tensor<i1>), but the key insight here
+    // is that the enclosing while op doesn't care about these refinements
+    // (because its return types are equal to its operand types).
     // If we end up with incompatibilities between while's return types and
     // body's return types, the verifier will tell us about that. This means
     // that the original program wasn't well-formed. TODO(burmako): Implement
@@ -1430,8 +1136,8 @@ struct UpdateFunctionTypePattern : public OpRewritePattern<func::ReturnOp> {
       if (failed(mostSpecificType) || destType == *mostSpecificType) continue;
 
       // If the source type of the cast is more specific than the target type,
-      // then we conclude that the cast is redundant (i.e. needs to be
-      // removed) and that the return type of the function needs an update.
+      // then we conclude that the cast is redundant (i.e. needs to be removed)
+      // and that the return type of the function needs an update.
       needsUpdate = true;
       updatedResultTypes[i] = sourceType;
 
@@ -1446,6 +1152,9 @@ struct UpdateFunctionTypePattern : public OpRewritePattern<func::ReturnOp> {
     for (auto cast : castsToReplace)
       rewriter.replaceOp(cast, cast->getOperands());
 
+    // If the type of the enclosing `func.func` needs an update, we simply
+    // call setType. We can afford this simplicity because our algorithm
+    // currently supports only one function per module.
     auto func = cast<func::FuncOp>(op->getParentOp());
     func.setType(
         rewriter.getFunctionType(func.getArgumentTypes(), updatedResultTypes));
@@ -1477,186 +1186,22 @@ struct UpdateRegionTypePattern : public OpRewritePattern<ReturnOp> {
   }
 };
 
-LogicalResult applyRewritePatterns(func::FuncOp func, MLIRContext* context,
-                                   RefineShapeState* state) {
-  // TODO(#1048): Find out why .maxIterations = 1 no longer works.
-  // There have been recent refactors to applyPatternsAndFoldGreedily
-  // upstream, and that might be the reason.
-  GreedyRewriteConfig config;
-  config.useTopDownTraversal = true;
-  config.enableRegionSimplification = true;
-  config.maxIterations = 2;
-  config.maxNumRewrites = GreedyRewriteConfig::kNoLimit;
-  config.strictMode = GreedyRewriteStrictness::AnyOp;
-
-  RewritePatternSet patterns(context);
-  patterns.add<EvalAddOpPattern>(context);
-  patterns.add<EvalAndOpPattern>(context);
-  patterns.add<EvalBroadcastInDimOpPattern>(context);
-  patterns.add<EvalClampOpPattern>(context);
-  patterns.add<EvalCompareOpPattern>(context);
-  patterns.add<EvalConcatenateOpPattern>(context);
-  patterns.add<EvalConvertOpPattern>(context);
-  patterns.add<EvalDivOpPattern>(context);
-  patterns.add<EvalGetDimensionSizeOpPattern>(context);
-  patterns.add<EvalMaxOpPattern>(context);
-  patterns.add<EvalMinOpPattern>(context);
-  patterns.add<EvalMulOpPattern>(context);
-  patterns.add<EvalRemOpPattern>(context);
-  patterns.add<EvalReshapeOpPattern>(context);
-  patterns.add<EvalSelectOpPattern>(context);
-  patterns.add<EvalSignOpPattern>(context);
-  patterns.add<EvalSliceOpPattern>(context);
-  patterns.add<EvalSubtractOpPattern>(context);
-  patterns.add<RefineAllGatherOpPattern>(context);
-  patterns.add<RefineBitcastConvertOpPattern>(context);
-  patterns.add<RefineCallOpPattern>(context, state);
-  patterns.add<RefineConvertOpPattern>(context);
-  patterns.add<RefineConvolutionOpPattern>(context);
-  patterns.add<RefineCustomCallOpPattern>(context);
-  patterns.add<RefineDotGeneralOpPattern>(context);
-  patterns.add<RefineDynamicBroadcastInDimOpPattern>(context);
-  patterns.add<RefineDynamicConvOpPattern>(context);
-  patterns.add<RefineDynamicIotaOpPattern>(context);
-  patterns.add<RefineDynamicPadOpPattern>(context);
-  patterns.add<RefineDynamicReduceWindowOpPattern>(context);
-  patterns.add<RefineDynamicReshapeOpPattern>(context);
-  patterns.add<RefineDynamicRngBitGeneratorOpPattern>(context);
-  patterns.add<RefineDynamicTopKOpPattern>(context);
-  patterns.add<RefineInferTypeOpInterfacePattern>(context);
-  patterns.add<RefineRealDynamicSliceOpPattern>(context);
-  patterns.add<RefineReduceScatterOpPattern>(context);
-  patterns.add<RefineRngOpPattern>(context);
-  patterns.add<RefineUniformQuantizeOpPattern>(context);
-  patterns.add<RefineWhileOpPattern>(context);
-  patterns.add<UpdateFunctionTypePattern>(context);
-  patterns.add<UpdateRegionTypePattern>(context);
-  if (failed(applyPatternsAndFoldGreedily(func, std::move(patterns), config))) {
-    func.emitOpError() << "applyPatternsAndFoldGreedily failed";
-    return failure();
-  }
-  return success();
-}
-
-LogicalResult refineFunction(func::FuncOp func, MLIRContext* context,
-                             RefineShapeState* state,
-                             size_t nrPrefixTokenArguments,
-                             SmallVector<APSInt> dimensionArguments,
-                             SmallVector<Type> nonDimensionArgumentTypes) {
-  // The nonDimensionArgumentTypes include the prefix token arguments.
-  LLVM_DEBUG({
-    llvm::dbgs() << "refineFunction " << func.getName() << ": initial type "
-                 << debugString(func.getFunctionType()) << "\n";
-    llvm::dbgs() << "   has " << nrPrefixTokenArguments << " prefix tokens\n";
-    for (size_t i = 0; i < dimensionArguments.size(); ++i) {
-      llvm::dbgs() << "   with dimension arg[" << i
-                   << "] = " << dimensionArguments[i] << "\n";
-    }
-  });
-  // Check that the argument types have static shapes.
-  for (size_t i = 0; i < nonDimensionArgumentTypes.size(); ++i) {
-    if (i < nrPrefixTokenArguments) continue;
-    auto argType = nonDimensionArgumentTypes[i];
-    if (isa<TokenType>(argType)) continue;
-    auto argRankedTensorType = dyn_cast<RankedTensorType>(argType);
-    if (!argRankedTensorType || !argRankedTensorType.hasStaticShape()) {
-      func.emitOpError() << func.getName()
-                         << " must be refined with static shape arguments. "
-                         << "Found argument of type " << debugString(argType);
-      return failure();
-    }
-  }
-  auto alreadyRefined = state->validateFunctionRefinement(
-      func, dimensionArguments, nonDimensionArgumentTypes);
-  if (failed(alreadyRefined)) {
-    return failure();
-  }
-  if (*alreadyRefined) {
-    LLVM_DEBUG({
-      llvm::dbgs() << "refineFunction " << func.getName()
-                   << ": skipping, already refined\n";
-    });
-    return success();
-  }
-  state->startFunctionRefinement(func, dimensionArguments,
-                                 nonDimensionArgumentTypes);
-  // Only one block per function is supported at the moment.
-  // At the StableHLO level, functions are expected to only have one block,
-  // so supporting more is out of scope for this pass.
-  if (!func.getRegion().hasOneBlock()) {
-    func.emitOpError() << "must have exactly one block";
-    return failure();
-  }
-
-  // Replace all dimension arguments with constants and remove those arguments.
-  // Wrap non-dimension arguments with bitcast_convert.
-  OpBuilder op_builder(func.getRegion());
-  op_builder.setInsertionPointToStart(&func.getRegion().front());
-  size_t firstNonDimensionArg =
-      nrPrefixTokenArguments + dimensionArguments.size();
-  for (size_t i = 0; i < func.getNumArguments(); ++i) {
-    BlockArgument arg = func.getArgument(i);
-    Type argType = arg.getType();
-    if (i < nrPrefixTokenArguments) {
-      continue;
-    }
-    if (i < firstNonDimensionArg) {
-      ShapedType argShapedType = dyn_cast<ShapedType>(argType);
-      if (!argShapedType) {
-        func.emitOpError() << "dimension arguments must have shaped types";
-        return failure();
-      }
-      // We will drop the dimension arguments, replace them with constants.
-      auto replacement_op = op_builder.create<stablehlo::ConstantOp>(
-          arg.getLoc(), argType,
-          getTensorAttr(argShapedType,
-                        dimensionArguments[i - nrPrefixTokenArguments]));
-      arg.replaceAllUsesWith(replacement_op);
-    } else {
-      int nonDimensionArgumentIndex =
-          nrPrefixTokenArguments + i - firstNonDimensionArg;
-      Type refinedType = nonDimensionArgumentTypes[nonDimensionArgumentIndex];
-      if (refinedType != argType) {
-        // We add BitcastConvertOp as the only uses of the non-dimension
-        // arguments to ensure the module stays valid after we set the argument
-        // type.
-        auto replacement_op = op_builder.create<stablehlo::BitcastConvertOp>(
-            arg.getLoc(), argType, arg);
-        arg.replaceAllUsesExcept(replacement_op->getResult(0), replacement_op);
-        arg.setType(refinedType);
-      }
-    }
-  }
-  BitVector argIndices(func.getNumArguments());
-  argIndices.set(nrPrefixTokenArguments, firstNonDimensionArg);
-  func.eraseArguments(argIndices);
-  func.setType(op_builder.getFunctionType(nonDimensionArgumentTypes,
-                                          func.getResultTypes()));
-  LLVM_DEBUG({
-    llvm::dbgs() << "refineFunction " << func.getName() << ": set type to "
-                 << func.getFunctionType() << "\n";
-  });
-  if (failed(applyRewritePatterns(func, context, state))) return failure();
-  LLVM_DEBUG({
-    llvm::dbgs() << "refineFunction " << func.getName() << ": end with type "
-                 << debugString(func.getFunctionType()) << "\n";
-  });
-  if (failed(state->finishFunctionRefinement(func))) return failure();
-  return success();
-}
-
 struct StablehloRefineShapesPass
     : public impl::StablehloRefineShapesPassBase<StablehloRefineShapesPass> {
   using StablehloRefineShapesPassBase::StablehloRefineShapesPassBase;
 
   void runOnOperation() override {
+    // Only one function per module is supported at the moment to avoid the need
+    // to think about iterative type inference algorithms.
+    // Current use cases are served well by inlining multiple functions into
+    // a single function, so we leave native support for multiple functions to
+    // future work.
     // To enable modules that contain CustomCallOp::called_computations,
     // we allow multiple functions, in which case we only refine the main
     // function called "main", assuming that the called computations will have
     // static shapes. Lifting this assumption and expanding refinement to
     // multiple functions is left for future work.
     ModuleOp module = getOperation();
-    RefineShapeState state;
     auto funcs = llvm::to_vector(module.getOps<func::FuncOp>());
     if (funcs.empty()) return;
     func::FuncOp func;
@@ -1671,14 +1216,73 @@ struct StablehloRefineShapesPass
           << " function to clearly identify which function will be refined";
       return signalPassFailure();
     }
-    SmallVector<APSInt> emptyDimensionArguments;
-    SmallVector<Type> nonDimensionArgumentTypes;
-    for (auto arg : func.getArguments())
-      nonDimensionArgumentTypes.push_back(arg.getType());
-    if (failed(refineFunction(func, &getContext(), &state, 0,
-                              emptyDimensionArguments,
-                              nonDimensionArgumentTypes)))
+
+    // Similarly, only one block per function is supported at the moment.
+    // At the StableHLO level, functions are expected to only have one block,
+    // so supporting more is out of scope for this pass.
+    if (!func.getRegion().hasOneBlock()) {
+      func.emitOpError() << "must have exactly one block";
       return signalPassFailure();
+    }
+
+    // The algorithm behind this pass consists of a single traversal of the
+    // function. This is sufficient because we only support one function per
+    // program at the moment.
+    // TODO(#1048): Find out why .maxIterations = 1 no longer works.
+    // There have been recent refactors to applyPatternsAndFoldGreedily
+    // upstream, and that might be the reason.
+    GreedyRewriteConfig config;
+    config.useTopDownTraversal = true;
+    config.enableRegionSimplification = true;
+    config.maxIterations = 2;
+    config.maxNumRewrites = GreedyRewriteConfig::kNoLimit;
+    config.strictMode = GreedyRewriteStrictness::AnyOp;
+
+    RewritePatternSet patterns(&getContext());
+    patterns.add<EvalAddOpPattern>(&getContext());
+    patterns.add<EvalAndOpPattern>(&getContext());
+    patterns.add<EvalBroadcastInDimOpPattern>(&getContext());
+    patterns.add<EvalClampOpPattern>(&getContext());
+    patterns.add<EvalCompareOpPattern>(&getContext());
+    patterns.add<EvalConcatenateOpPattern>(&getContext());
+    patterns.add<EvalConvertOpPattern>(&getContext());
+    patterns.add<EvalDivOpPattern>(&getContext());
+    patterns.add<EvalGetDimensionSizeOpPattern>(&getContext());
+    patterns.add<EvalMaxOpPattern>(&getContext());
+    patterns.add<EvalMinOpPattern>(&getContext());
+    patterns.add<EvalMulOpPattern>(&getContext());
+    patterns.add<EvalRemOpPattern>(&getContext());
+    patterns.add<EvalReshapeOpPattern>(&getContext());
+    patterns.add<EvalSelectOpPattern>(&getContext());
+    patterns.add<EvalSignOpPattern>(&getContext());
+    patterns.add<EvalSliceOpPattern>(&getContext());
+    patterns.add<EvalSubtractOpPattern>(&getContext());
+    patterns.add<RefineAllGatherOpPattern>(&getContext());
+    patterns.add<RefineBitcastConvertOpPattern>(&getContext());
+    patterns.add<RefineConvertOpPattern>(&getContext());
+    patterns.add<RefineConvolutionOpPattern>(&getContext());
+    patterns.add<RefineCustomCallOpPattern>(&getContext());
+    patterns.add<RefineDotGeneralOpPattern>(&getContext());
+    patterns.add<RefineDynamicBroadcastInDimOpPattern>(&getContext());
+    patterns.add<RefineDynamicConvOpPattern>(&getContext());
+    patterns.add<RefineDynamicIotaOpPattern>(&getContext());
+    patterns.add<RefineDynamicPadOpPattern>(&getContext());
+    patterns.add<RefineDynamicReduceWindowOpPattern>(&getContext());
+    patterns.add<RefineDynamicReshapeOpPattern>(&getContext());
+    patterns.add<RefineDynamicRngBitGeneratorOpPattern>(&getContext());
+    patterns.add<RefineDynamicTopKOpPattern>(&getContext());
+    patterns.add<RefineInferTypeOpInterfacePattern>(&getContext());
+    patterns.add<RefineRealDynamicSliceOpPattern>(&getContext());
+    patterns.add<RefineReduceScatterOpPattern>(&getContext());
+    patterns.add<RefineRngOpPattern>(&getContext());
+    patterns.add<RefineUniformQuantizeOpPattern>(&getContext());
+    patterns.add<RefineWhileOpPattern>(&getContext());
+    patterns.add<UpdateFunctionTypePattern>(&getContext());
+    patterns.add<UpdateRegionTypePattern>(&getContext());
+    if (failed(
+            applyPatternsAndFoldGreedily(func, std::move(patterns), config))) {
+      return signalPassFailure();
+    }
   }
 };
 
