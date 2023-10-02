@@ -1632,16 +1632,7 @@ func.func @imag_unranked(%arg0: tensor<*xf32>) -> tensor<*xf32> {
 
 // -----
 
-func.func @infeed_non_token_second_result(%token: !stablehlo.token) -> tuple<tensor<i32>, tensor<i32>> {
-  // expected-error@+1 {{last element of result types is expected to be of token type, but got 'tensor<i32>'}}
-  %0:2 = "stablehlo.infeed"(%token) {infeed_config = "foobar", layout = [[[0]], [0]]} : (!stablehlo.token) -> (tensor<i32>, tensor<i32>)
-  %1 = "stablehlo.tuple"(%0#0, %0#1) : (tensor<i32>, tensor<i32>) -> tuple<tensor<i32>, tensor<i32>>
-  func.return %1 : tuple<tensor<i32>, tensor<i32>>
-}
-
-// -----
-
-func.func @main(%arg0: !stablehlo.token) -> tensor<3x3xi32> {
+func.func @infeed(%arg0: !stablehlo.token) -> tensor<3x3xi32> {
   // expected-error@+1 {{layout-attribute size must be 2 (which is the number of op-results - 1 (for token result)), but got 1}}
   %0:3 = "stablehlo.infeed"(%arg0) {infeed_config = "foobar", layout=[[0, 1]]} : (!stablehlo.token) -> (tensor<3x3xi32>, tensor<i1>, !stablehlo.token)
   func.return %0#0 : tensor<3x3xi32>
@@ -1649,7 +1640,7 @@ func.func @main(%arg0: !stablehlo.token) -> tensor<3x3xi32> {
 
 // -----
 
-func.func @main(%arg0: !stablehlo.token) -> !stablehlo.token {
+func.func @infeed(%arg0: !stablehlo.token) -> !stablehlo.token {
   // expected-error@+1 {{layout-attribute size must be 0 (which is the number of op-results - 1 (for token result)), but got 1}}
   %0:1 = "stablehlo.infeed"(%arg0) {infeed_config = "foobar", layout=[[]]} : (!stablehlo.token) -> (!stablehlo.token)
   func.return %0#0 : !stablehlo.token
@@ -1657,7 +1648,7 @@ func.func @main(%arg0: !stablehlo.token) -> !stablehlo.token {
 
 // -----
 
-func.func @main(%arg0: !stablehlo.token) -> tensor<3x3xi32> {
+func.func @infeed(%arg0: !stablehlo.token) -> tensor<3x3xi32> {
   // expected-error@+1 {{layout-attribute expected to have elements of type array, but got 0 : i64}}
   %0:2 = "stablehlo.infeed"(%arg0) {infeed_config = "foobar", layout=[0]} : (!stablehlo.token) -> (tensor<3x3xi32>, !stablehlo.token)
   func.return %0#0 : tensor<3x3xi32>
@@ -1665,10 +1656,36 @@ func.func @main(%arg0: !stablehlo.token) -> tensor<3x3xi32> {
 
 // -----
 
-func.func @main(%arg0: !stablehlo.token) -> tensor<3x3xi32> {
-  // expected-error@+1 {{ayout-attribute's leaf elements are expected to be of type integer, but got []}}
+func.func @infeed(%arg0: !stablehlo.token) -> tensor<3x3xi32> {
+  // expected-error@+1 {{layout-attribute's leaf elements are expected to be of type integer, but got []}}
   %0:2 = "stablehlo.infeed"(%arg0) {infeed_config = "foobar", layout=[[0,[]]]} : (!stablehlo.token) -> (tensor<3x3xi32>, !stablehlo.token)
   func.return %0#0 : tensor<3x3xi32>
+}
+
+// -----
+
+func.func @infeed_c1(%token: !stablehlo.token) -> tensor<3x3xi32> {
+  // expected-error@+1 {{result is expected to be at least of size 1, but got 0}}
+  "stablehlo.infeed"(%token) {infeed_config = "foobar", layout=[[[0]], [0]]} : (!stablehlo.token) -> ()
+  func.return
+}
+
+// -----
+
+func.func @infeed_c2(%token: !stablehlo.token) -> tuple<!stablehlo.token, !stablehlo.token> {
+  // expected-error@+1 {{all elements of result types, except the last element, are expected to be of tensor type, but got '!stablehlo.token'}}
+  %0:2 = "stablehlo.infeed"(%token) {infeed_config = "foobar", layout = [[[0]], [0]]} : (!stablehlo.token) -> (!stablehlo.token, !stablehlo.token)
+  %1 = "stablehlo.tuple"(%0#0, %0#1) : (!stablehlo.token, !stablehlo.token) -> tuple<!stablehlo.token, !stablehlo.token>
+  func.return %1 : tuple<!stablehlo.token, !stablehlo.token>
+}
+
+// -----
+
+func.func @infeed_c3(%token: !stablehlo.token) -> tuple<tensor<i32>, tensor<i32>> {
+  // expected-error@+1 {{last element of result types is expected to be of token type, but got 'tensor<i32>'}}
+  %0:2 = "stablehlo.infeed"(%token) {infeed_config = "foobar", layout = [[[0]], [0]]} : (!stablehlo.token) -> (tensor<i32>, tensor<i32>)
+  %1 = "stablehlo.tuple"(%0#0, %0#1) : (tensor<i32>, tensor<i32>) -> tuple<tensor<i32>, tensor<i32>>
+  func.return %1 : tuple<tensor<i32>, tensor<i32>>
 }
 
 // -----
@@ -1873,7 +1890,62 @@ func.func @real_unranked(%arg0: tensor<*xf32>) -> tensor<*xf32> {
 
 // -----
 
-func.func @recv_non_token_second_result(%token: !stablehlo.token) -> tuple<tensor<3x4xi32>, tensor<i32>> {
+func.func @recv_c1(%token: !stablehlo.token) -> tuple<tensor<3x4xi32>, tensor<i32>> {
+  // expected-error@+1 {{channel_type should be DEVICE_TO_DEVICE when is_host_transfer is false}}
+  %0:2 = "stablehlo.recv"(%token) {
+    channel_handle = #stablehlo.channel_handle<
+      handle = 5,
+      type = 3  // Host to device channel
+    >
+  } : (!stablehlo.token) -> (tensor<3x4xi32>, tensor<i32>)
+  %1 =  "stablehlo.tuple"(%0#0, %0#1) : (tensor<3x4xi32>, tensor<i32>) -> tuple<tensor<3x4xi32>, tensor<i32>>
+  func.return %1 : tuple<tensor<3x4xi32>, tensor<i32>>
+}
+
+// -----
+
+func.func @recv_c1(%token: !stablehlo.token) -> tuple<tensor<3x4xi32>, tensor<i32>> {
+  // expected-error@+1 {{channel_type should be HOST_TO_DEVICE when is_host_transfer is true}}
+  %0:2 = "stablehlo.recv"(%token) {
+    channel_handle = #stablehlo.channel_handle<
+      handle = 5,
+      type = 1  // Device to device channel
+    >,
+    is_host_transfer = true
+  } : (!stablehlo.token) -> (tensor<3x4xi32>, tensor<i32>)
+  %1 =  "stablehlo.tuple"(%0#0, %0#1) : (tensor<3x4xi32>, tensor<i32>) -> tuple<tensor<3x4xi32>, tensor<i32>>
+  func.return %1 : tuple<tensor<3x4xi32>, tensor<i32>>
+}
+
+// -----
+
+func.func @recv_c2(%token: !stablehlo.token) {
+  // expected-error@+1 {{result is expected to be at least of size 1, but got 0}}
+  "stablehlo.recv"(%token) {
+    channel_handle = #stablehlo.channel_handle<
+      handle = 5,
+      type = 1  // Device to device channel
+    >
+  } : (!stablehlo.token) -> ()
+  func.return
+}
+
+// -----
+
+func.func @recv_c3(%token: !stablehlo.token) -> (!stablehlo.token, !stablehlo.token) {
+  // expected-error@+1 {{everything but the last element of result types is expected to be of tensor type, but got '!stablehlo.token'}}
+  %0:2 = "stablehlo.recv"(%token) {
+    channel_handle = #stablehlo.channel_handle<
+      handle = 5,
+      type = 1  // Device to device channel
+    >
+  } : (!stablehlo.token) -> (!stablehlo.token, !stablehlo.token)
+  func.return %0#0 : !stablehlo.token
+}
+
+// -----
+
+func.func @recv_c4(%token: !stablehlo.token) -> tuple<tensor<3x4xi32>, tensor<i32>> {
   // expected-error@+1 {{last element of result types is expected to be of token type, but got 'tensor<i32>'}}
   %0:2 = "stablehlo.recv"(%token) {
     channel_handle = #stablehlo.channel_handle<
@@ -2247,6 +2319,29 @@ func.func @slice_i2(%arg0: tensor<3x4xi32>) -> tensor<1x2xi32> {
     strides = dense<[[1, 2]]> : tensor<1x2xi64>
   } : (tensor<3x4xi32>) -> tensor<1x2xi32>
   func.return %0 : tensor<1x2xi32>
+}
+
+// -----
+
+func.func @send_c1(%arg0: tensor<2x2xi64>, %arg1: !stablehlo.token) -> !stablehlo.token {
+  // expected-error@+2 {{failed to infer returned types}}
+  // expected-error@+1 {{channel_type should be DEVICE_TO_DEVICE when is_host_transfer is false}}
+  %0 = "stablehlo.send"(%arg0, %arg1) {
+    channel_handle = #stablehlo.channel_handle<handle = 1, type = 2>
+  } : (tensor<2x2xi64>, !stablehlo.token) -> !stablehlo.token
+  func.return %0 : !stablehlo.token
+}
+
+// -----
+
+func.func @send_c1(%arg0: tensor<2x2xi64>, %arg1: !stablehlo.token) -> !stablehlo.token {
+  // expected-error@+2 {{failed to infer returned types}}
+  // expected-error@+1 {{channel_type should be DEVICE_TO_HOST when is_host_transfer is true}}
+  %0 = "stablehlo.send"(%arg0, %arg1) {
+    channel_handle = #stablehlo.channel_handle<handle = 1, type = 1>,
+    is_host_transfer = true
+  } : (tensor<2x2xi64>, !stablehlo.token) -> !stablehlo.token
+  func.return %0 : !stablehlo.token
 }
 
 // -----
@@ -5296,6 +5391,13 @@ func.func @quantization_supported_ops(%arg0: tensor<1x2x2x!quant.uniform<i8:f32,
   func.return
 }
 
+func.func @per_axis_quantized_ops(%arg0: tensor<1x2x2x!quant.uniform<i8<-128:127>:f32:2, {0.1:-30, 0.5:-20}>>, %arg1: tensor<1x2x2x!quant.uniform<i8<-128:127>:f32:0, {0.1:-30}>>) {
+  %0 = stablehlo.reshape %arg0 : (tensor<1x2x2x!quant.uniform<i8<-128:127>:f32:2, {0.1:-30, 0.5:-20}>>) -> tensor<2x2x!quant.uniform<i8<-128:127>:f32:1, {0.1:-30, 0.5:-20}>>
+  %1 = "stablehlo.transpose"(%arg0) {permutation = dense<[0,2,1]> : tensor<3xi64>}: (tensor<1x2x2x!quant.uniform<i8<-128:127>:f32:2, {0.1:-30, 0.5:-20}>>) -> tensor<1x2x2x!quant.uniform<i8<-128:127>:f32:1, {0.1:-30, 0.5:-20}>>
+  %2 = "stablehlo.broadcast_in_dim"(%arg0) {broadcast_dimensions = dense<[0,1,3]> : tensor<3xi64>} : (tensor<1x2x2x!quant.uniform<i8<-128:127>:f32:2, {0.1:-30, 0.5:-20}>>) -> tensor<1x2x3x2x!quant.uniform<i8<-128:127>:f32:3, {0.1:-30, 0.5:-20}>>
+  %3 = "stablehlo.broadcast_in_dim"(%arg1) {broadcast_dimensions = dense<[0,1,2]> : tensor<3xi64>} : (tensor<1x2x2x!quant.uniform<i8<-128:127>:f32:0, {0.1:-30}>>) -> tensor<2x2x2x!quant.uniform<i8<-128:127>:f32:0, {0.1:-30, 0.1:-30}>>
+  func.return
+}
 
 // -----
 

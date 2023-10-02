@@ -102,6 +102,8 @@ SmallVector<InterpreterValue> evalIfOp(const Tensor &pred, Region &trueBranch,
                                        Region &falseBranch, Process *process,
                                        Scope &scope);
 Tensor evalImagOp(const Tensor &operand, ShapedType resultType);
+SmallVector<InterpreterValue> evalInfeedOp(Token token, Process *process,
+                                           Region &region, Scope &scope);
 Tensor evalIotaOp(Axis iotaDimension, ShapedType resultType);
 Tensor evalIsFiniteOp(const Tensor &operand, ShapedType resultType);
 Tensor evalLog1pOp(const Tensor &operand, ShapedType resultType);
@@ -126,6 +128,8 @@ Tensor evalPartitionIdOp(Process *process, MLIRContext *context);
 Tensor evalPopulationCountOp(const Tensor &operand, ShapedType resultType);
 Tensor evalPowerOp(const Tensor &lhs, const Tensor &rhs, ShapedType resultType);
 Tensor evalRealOp(const Tensor &operand, ShapedType resultType);
+SmallVector<InterpreterValue> evalRecvOp(Token token, ChannelId channelId,
+                                         Process *process);
 SmallVector<Tensor> evalReduceOp(ArrayRef<Tensor> inputs,
                                  ArrayRef<Tensor> initValues,
                                  const Axes &dimensions, Region &body,
@@ -167,6 +171,8 @@ Tensor evalSelectAndScatterOp(const Tensor &operand, const Tensor &source,
                               const Sizes &paddingLow, Region &select,
                               Region &scatter, Process *process, Scope &scope,
                               ShapedType resultType);
+Token evalSendOp(ArrayRef<Tensor> inputs, Token token, ChannelId channelId,
+                 Process *process);
 Tensor evalShiftLeftOp(const Tensor &lhs, const Tensor &rhs,
                        ShapedType resultType);
 Tensor evalShiftRightArithmeticOp(const Tensor &lhs, const Tensor &rhs,

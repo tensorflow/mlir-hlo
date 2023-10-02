@@ -2722,7 +2722,21 @@ LogicalResult inferSelectAndScatterOp(
 
 LogicalResult inferSendOp(HloDialectInterface* dialect,
                           std::optional<Location> location,
+                          bool isDeviceToDevice, bool isDeviceToHost,
+                          bool isHostTransfer,
                           SmallVectorImpl<Type>& inferredReturnTypes) {
+  // send_c1_i4
+  if (!isHostTransfer && !isDeviceToDevice)
+    return emitOptionalError(location,
+                             "channel_type should be DEVICE_TO_DEVICE when "
+                             "is_host_transfer is false");
+
+  // send_c1_i4
+  if (isHostTransfer && !isDeviceToHost)
+    return emitOptionalError(location,
+                             "channel_type should be DEVICE_TO_HOST when "
+                             "is_host_transfer is true");
+
   inferredReturnTypes.push_back(dialect->createTokenType());
   return success();
 }
@@ -3563,23 +3577,32 @@ LogicalResult verifyDynamicReshapeOp(std::optional<Location> location,
   return success();
 }
 
-// Checks that the result type is of the form `zero_or_more_type(s),
-// stablehlo::token`
 LogicalResult verifyInfeedOp(HloDialectInterface* dialect,
                              std::optional<Location> location,
                              std::optional<ArrayAttr> layout,
                              ValueRange results) {
   auto resultTypes = results.getType();
+  // infeed_c1
   if (resultTypes.empty())
     return emitOptionalError(
         location, "result is expected to be at least of size 1, but got ",
         resultTypes.size());
 
-  if (!dialect->isTokenType(resultTypes[resultTypes.size() - 1]))
+  // infeed_c2
+  for (auto resultType : results.drop_back().getTypes())
+    if (!resultType.isa<TensorType>())
+      return emitOptionalError(
+          location,
+          "all elements of result types, except the last element, are expected "
+          "to be of tensor type, but got ",
+          resultType);
+
+  // infeed_c3
+  if (!dialect->isTokenType(results.back().getType()))
     return emitOptionalError(location,
                              "last element of result types is expected to "
                              "be of token type, but got ",
-                             resultTypes[resultTypes.size() - 1]);
+                             results.back().getType());
 
   if (!layout.has_value()) return success();
   if (!layout.value())
@@ -3658,22 +3681,44 @@ LogicalResult verifyRealDynamicSliceOp(std::optional<Location> location,
   return success();
 }
 
-// Checks that the result type is of the form `zero_or_more_type(s),
-// stablehlo::token`
 LogicalResult verifyRecvOp(HloDialectInterface* dialect,
                            std::optional<Location> location,
-                           ValueRange results) {
-  auto resultTypes = results.getTypes();
-  if (resultTypes.empty())
+                           bool isDeviceToDevice, bool isHostToDevice,
+                           bool isHostTransfer, ValueRange results) {
+  // recv_c1_i3
+  if (!isHostTransfer && !isDeviceToDevice)
+    return emitOptionalError(location,
+                             "channel_type should be DEVICE_TO_DEVICE when "
+                             "is_host_transfer is false");
+
+  // recv_c1_i3
+  if (isHostTransfer && !isHostToDevice)
+    return emitOptionalError(location,
+                             "channel_type should be HOST_TO_DEVICE when "
+                             "is_host_transfer is true");
+
+  // recv_c2
+  if (results.empty())
     return emitOptionalError(
         location, "result is expected to be at least of size 1, but got ",
-        resultTypes.size());
+        results.size());
 
-  if (!dialect->isTokenType(resultTypes[resultTypes.size() - 1]))
+  // recv_c3
+  for (auto resultType : results.drop_back().getTypes())
+    if (!resultType.isa<TensorType>())
+      return emitOptionalError(
+          location,
+          "everything but the last element of result types is expected to be "
+          "of tensor type, but got ",
+          resultType);
+
+  // recv_c4
+  if (!dialect->isTokenType(results.back().getType()))
     return emitOptionalError(location,
                              "last element of result types is expected to "
                              "be of token type, but got ",
-                             resultTypes[resultTypes.size() - 1]);
+                             results.back().getType());
+
   return success();
 }
 

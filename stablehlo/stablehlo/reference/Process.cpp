@@ -40,13 +40,23 @@ ProcessGroups Process::flattenedIds(
   return grid_->flattenedIds(flattenedIdGroups);
 }
 
+StringAttr Process::infeed() { return grid_->infeed(); }
+
 ProcessId Process::getId() { return id_; }
 
 void Process::outfeed(ArrayRef<Tensor> inputs) { grid_->outfeed(inputs); }
 
+SmallVector<Tensor> Process::recv(ChannelId channelId) {
+  return grid_->recv(channelId, getId());
+}
+
 std::shared_ptr<RendezvousResult const> Process::rendezvous(
     ProcessGroup processGroup, ChannelId channelId, const Tensor &operand) {
   return grid_->rendezvous(processGroup, channelId, getId(), operand);
+}
+
+void Process::send(ArrayRef<Tensor> inputs, ChannelId channelId) {
+  grid_->send(inputs, channelId, getId());
 }
 
 }  // namespace stablehlo

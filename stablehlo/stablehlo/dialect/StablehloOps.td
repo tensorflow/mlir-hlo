@@ -1003,15 +1003,14 @@ def StableHLO_InfeedOp : StableHLO_Op<"infeed", []> {
 
     Example:
     ```mlir
-    %results:2 = "stablehlo.infeed"(%token) {
-      infeed_config = ""
-    } : (!stablehlo.token) -> (tensor<3x3x3xi32>, !stablehlo.token)
+    %results0:2 = "stablehlo.infeed"(%token) :
+        (!stablehlo.token) -> (tensor<2x2xi64>, !stablehlo.token)
     ```
   }];
 
   let arguments = (ins
-    HLO_Token:$token,
-    DefaultValuedStrAttr<StrAttr, "">:$infeed_config,
+    HLO_Token:$token, /*infeed_i1*/
+    DefaultValuedStrAttr<StrAttr, "">:$infeed_config, /*infeed_i2*/
     OptionalAttr<ArrayAttr>:$layout
   );
   let results = (outs Variadic<HLO_StaticShapeTensorOrToken>);
@@ -1054,19 +1053,17 @@ def StableHLO_SendOp : StableHLO_Op<"send",
     Example:
     ```mlir
     %result = "stablehlo.send"(%operand, %token) {
-      // channel_id = 5 : i64,
-      // channel_type = #stablehlo<channel_type DEVICE_TO_HOST>,
-      channel_handle = #stablehlo.channel_handle<handle = 5, type = 2>,
+      channel_handle = #stablehlo.channel_handle<handle = 1, type = 2>,
       is_host_transfer = true
-    } : (tensor<3x4xi32>, !stablehlo.token) -> !stablehlo.token
+    } : (tensor<2x2xi64>, !stablehlo.token) -> !stablehlo.token
     ```
   }];
 
   let arguments = (ins
-    Variadic<HLO_Tensor>:$inputs,
-    HLO_Token:$token,
-    StableHLO_ChannelHandle:$channel_handle,
-    DefaultValuedOptionalAttr<BoolAttr, "false">:$is_host_transfer
+    Variadic<HLO_Tensor>:$inputs, /*send_i1*/
+    HLO_Token:$token, /*send_i2*/
+    StableHLO_ChannelHandle:$channel_handle, /*send_i3_i4*/
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$is_host_transfer /*send_i5*/
   );
 
   let results = (outs HLO_Token);
@@ -1083,18 +1080,16 @@ def StableHLO_RecvOp : StableHLO_Op<"recv", []> {
     Example:
     ```mlir
     %results:2 = "stablehlo.recv"(%token) {
-      // channel_id = 5 : i64,
-      // channel_type = #stablehlo<channel_type HOST_TO_DEVICE>,
-      channel_handle = #stablehlo.channel_handle<handle = 5, type = 3>,
+      channel_handle = #stablehlo.channel_handle<handle = 1, type = 3>,
       is_host_transfer = true
-    } : (!stablehlo.token) -> (tensor<3x4xi32>, !stablehlo.token)
+    } : (!stablehlo.token) -> (tensor<2x2xi64>, !stablehlo.token)
     ```
   }];
 
   let arguments = (ins
-    HLO_Token:$token,
-    StableHLO_ChannelHandle:$channel_handle,
-    DefaultValuedOptionalAttr<BoolAttr, "false">:$is_host_transfer
+    HLO_Token:$token, /*recv_i1*/
+    StableHLO_ChannelHandle:$channel_handle, /*recv_i2_i3*/
+    DefaultValuedOptionalAttr<BoolAttr, "false">:$is_host_transfer /*recv_i4*/
   );
 
   let results = (outs Variadic<HLO_StaticShapeTensorOrToken>);
@@ -1860,7 +1855,7 @@ def StableHLO_BroadcastOp : StableHLO_ShapedInterfaceOp<"broadcast",
 }
 
 def StableHLO_BroadcastInDimOp : StableHLO_Op<"broadcast_in_dim",
-      [Pure, SameOperandsAndResultElementType /*broadcast_in_dim_c1*/]> {
+      [Pure, HLO_CompatibleOperandsAndResultElementType /*broadcast_in_dim_c1*/]> {
   let summary = "BroadcastInDim operation";
   let description = [{
     Expands the dimensions and/or rank of an input tensor by duplicating the
@@ -2433,7 +2428,7 @@ def StableHLO_MapOp: StableHLO_ShapedInterfaceOp<"map",
 }
 
 def StableHLO_ReshapeOp: StableHLO_Op<"reshape",
-      [Pure, SameOperandsAndResultElementType]> {
+      [Pure, HLO_CompatibleOperandsAndResultElementType]> {
   let summary = "Reshape operation";
   let description = [{
     Performs reshape of `operand` tensor to a `result` tensor.
@@ -2760,7 +2755,7 @@ def StableHLO_TraceOp: StableHLO_Op<"trace", []> {
 }
 
 def StableHLO_TransposeOp: StableHLO_ShapedInterfaceOp<"transpose",
-      [Pure, SameOperandsAndResultElementType,
+      [Pure, HLO_CompatibleOperandsAndResultElementType,
       DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let summary = "Transpose operation";
   let description = [{

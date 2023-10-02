@@ -47,16 +47,25 @@ class Process {
   ProcessGroups flattenedIds(
       SmallVector<SmallVector<uint32_t>> flattenedIdGroups);
 
+  /// See "ProcessGrid::infeed".
+  StringAttr infeed();
+
   /// Getter for the underlying StableHLO `process_id`.
   ProcessId getId();
 
   /// See `ProcessGrid::outfeed`.
   void outfeed(ArrayRef<Tensor> inputs);
 
+  /// See `ProcessGrid::recv`.
+  SmallVector<Tensor> recv(ChannelId channelId);
+
   /// See `ProcessGrid::rendezvous`.
   std::shared_ptr<RendezvousResult const> rendezvous(ProcessGroup processGroup,
                                                      ChannelId channelId,
                                                      const Tensor &operand);
+
+  /// See `ProcessGrid::send`.
+  void send(ArrayRef<Tensor> inputs, ChannelId channelId);
 
  private:
   /// StableHLO `process_id`.

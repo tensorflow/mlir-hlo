@@ -23,6 +23,7 @@ limitations under the License.
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <set>
 #include <utility>
 
 #include "mlir/Support/LLVM.h"
@@ -31,9 +32,106 @@ limitations under the License.
 namespace mlir {
 namespace stablehlo {
 
+struct ProcessId;
+class RendezvousResult;
+
+namespace detail {
+
+/// Internal storate used in `rendezvous` to manage concurrent access to the
+/// shared resource. Processes contribute their data to `values` concurrently.
+/// Once all processes have added their data, the data in `values` is moved to
+/// `result` that multiple processes can concurrently read from.
+struct RendezvousState {
+  /// Synchronization primitive used to manage concurrent access to this
+  /// object.
+  std::mutex mutex;
+
+  /// Internal storage used to store data contributed by the processes.
+  std::map<ProcessId, Tensor> values;
+
+  /// Shared pointer to the result of `rendezvous`.
+  std::shared_ptr<RendezvousResult> result;
+};
+
+struct SendRecvState {
+  /// Synchronization primitive used to manage concurrent access to this
+  /// object.
+  std::mutex mutex;
+  /// Internal storage used to store data contributed by the processes.
+  SmallVector<Tensor> result;
+};
+
+/// Stores the result of `rendezvous` represented as a map that allows
+/// concurrent access.
+/// Each call to `rendezvous`, i.e. each combination `processGroup` and
+/// `channelId`, has its own key in the map. Within the implementation of
+/// `rendezvous`, the value corresponding to this key is gradually populated
+/// with tensors arriving from different processes in the process group.
+template <typename K, typename V>
+class ThreadSafeMap {
+ public:
+  /// Returns a reference to the data associated with the `key`.
+  V &operator[](const K &key);
+
+ private:
+  /// Synchronization primitive used to manage concurrent access to the map.
+  std::mutex lock_;
+  /// Internal storage used to implement `rendezvous`.
+  std::map<K, V> map_;
+};
+
+/// Internal set that manages concurrent access to implement `send` and
+/// `recv`.
+template <typename T>
+class ThreadSafeSet {
+ public:
+  /// Returns whether the element `value` exists in the set.
+  bool contains(T value);
+
+  /// Remove `value` from the set.
+  void erase(T value);
+
+  /// Add `value` to the set.
+  void insert(T value);
+
+ private:
+  /// Synchronization primitive used to manage concurrent access to the set.
+  std::mutex lock_;
+
+  /// Internal storage used to manage `send` and `recv` order.
+  std::set<T> set_;
+};
+
+/// StableHLO `infeed` and `outfeed` represented as a queue that allows
+/// concurrent access.
+template <typename T>
+class ThreadSafeQueue {
+ public:
+  /// \name Constructors
+  /// @{
+  ThreadSafeQueue() = default;
+  ThreadSafeQueue(const std::queue<T> &queue);
+  /// @}
+
+  /// Remove the first element of the queue and return it.
+  T pop();
+
+  /// Add `inputs` to the end of the queue.
+  void push(T inputs);
+
+ private:
+  /// Synchronization primitive used to manage concurrent access to the queue.
+  std::mutex lock_;
+
+  /// Internal storage used to implement StableHLO `infeed` and `outfeed`.
+  std::queue<T> queue_;
+};
+
+}  // namespace detail
+
 using ChannelId = int64_t;
 
-// StableHLO `process_id`.
+/// StableHLO `process_id`.
 struct ProcessId {
   /// StableHLO `replica_id`.
   uint32_t replicaId;
@@ -41,21 +139,23 @@ struct ProcessId {
   /// StableHLO `partition_id`.
   uint32_t partitionId;
 
+  /// Overloaded inequality operator.
   bool operator!=(const ProcessId &other) const;
 
-  // The sort order for ProcessId is not defined in StableHLO, and it's
-  // internally used in ProcessGrid::rendezvous as part of a sorted key on the
-  // map. This operator is conveniently used to help define the ordering since
-  // ordering is defined for StableHLO process group.
+  /// The sort order for ProcessId is not defined in StableHLO, and it's
+  /// internally used in ProcessGrid::rendezvous as part of a sorted key on the
+  /// map. This operator is conveniently used to help define the ordering since
+  /// ordering is defined for StableHLO process group.
   bool operator<(const ProcessId &other) const;
 
+  /// Overloaded equality operator.
   bool operator==(const ProcessId &other) const;
 };
 
-// StableHLO `process_group`.
+/// StableHLO `process_group`.
 class ProcessGroup : public SmallVector<ProcessId> {};
 
-// StableHLO `process_groups`.
+/// StableHLO `process_groups`.
 class ProcessGroups : public SmallVector<ProcessGroup> {
  public:
   /// Iterates through the ProcessGroups and finds the first ProcessGroup
@@ -94,7 +194,8 @@ class ProcessGrid {
  public:
   /// \name Constructors
   /// @{
-  ProcessGrid(uint32_t numReplicas, uint32_t numPartitions);
+  ProcessGrid(uint32_t numReplicas, uint32_t numPartitions,
+              std::queue<StringAttr> &infeed);
   /// @}
 
   /// StableHLO `cross_partition` communication strategy.
@@ -112,8 +213,18 @@ class ProcessGrid {
   ProcessGroups flattenedIds(
       SmallVector<SmallVector<uint32_t>> flattenedIdGroups);
 
+  /// Retrieves input strings from StableHLO `infeed`.
+  StringAttr infeed();
+
   /// Inserts `inputs` to StableHLO `outfeed`.
   void outfeed(ArrayRef<Tensor> inputs);
+
+  /// Receives data from a channel with `channelId` and returns the data.
+  /// `recv` has to be called first before `send` to indicate to the sending
+  /// process that the receiver is ready to receive data. The process then waits
+  /// until there is data in the channel. The data in the channel with
+  /// `channelId` is returned.
+  SmallVector<Tensor> recv(ChannelId channelId, ProcessId processId);
 
   /// Synchronize a StableHLO process with the `processId` with other StableHLO
   /// processes in the `processGroup` using a `channelId`.
@@ -139,67 +250,53 @@ class ProcessGrid {
                                                      ProcessId processId,
                                                      const Tensor &operand);
 
+  /// Sends `inputs` to a channel with `channelId`.
+  /// The channel with `channelId` is emptied before the receiving process can
+  /// receive values. If there are multiple processes sending data to a
+  /// duplciate `channelId`, the behavior is undefined.
+  void send(ArrayRef<Tensor> inputs, ChannelId channelId, ProcessId processId);
+
  private:
-  /// Internal storate used in `rendezvous` to manage concurrent access to the
-  /// shared resource. Processes contribute their data to `values` concurrently.
-  /// Once all processes have added their data, the data in `values` is moved to
-  /// `result` that multiple processes can concurrently read from.
-  struct RendezvousState {
-    /// Synchronization primitive used to manage concurrent access to this
-    /// object.
-    std::mutex mutex;
-    /// Internal storage used to store data contributed by the processes.
-    std::map<ProcessId, Tensor> values;
-    /// Shared pointer to the result of `rendezvous`.
-    std::shared_ptr<RendezvousResult> result;
-  };
-
-  /// Stores the result of `rendezvous` represented as a map that allows
-  /// concurrent access.
-  /// Each call to `rendezvous`, i.e. each combination `processGroup` and
-  /// `channelId`, has its own key in the map. Within the implementation of
-  /// `rendezvous`, the value corresponding to this key is gradually populated
-  /// with tensors arriving from different processes in the process group.
-  template <typename K, typename V>
-  class ThreadSafeMap {
-   public:
-    /// Returns a reference to the data associated with the `key`.
-    V &operator[](const K &key);
-
-   private:
-    /// Synchronization primitive used to manage concurrent access to the map.
-    std::mutex lock_;
-    /// Internal storage used to implement `rendezvous`.
-    std::map<K, V> map_;
-  };
-
-  /// StableHLO `outfeed` represented as a queue that allows concurrent access.
-  class ThreadSafeQueue {
-   public:
-    /// Add `inputs` to the end of the queue.
-    void push(ArrayRef<Tensor> inputs);
-
-   private:
-    /// Synchronization primitive used to manage concurrent access to the queue.
-    std::mutex lock_;
-    /// Internal storage used to implement StableHLO `outfeed`.
-    std::queue<SmallVector<Tensor>> queue_;
-  };
-
   /// StableHLO `num_replicas`.
   const uint32_t numReplicas_;
 
   /// StableHLO `num_partitions`.
   const uint32_t numPartitions_;
 
-  /// See `ThreadSafeQueue`.
-  ThreadSafeQueue outfeed_;
+  /// Internal queue of strings which represents `func::FuncOp` mnemonic that
+  /// returns a vector of Tensor. The function name is stored instead of the
+  /// vector of tensors to save memory. See `ThreadSafeQueue`.
+  detail::ThreadSafeQueue<StringAttr> infeed_;
+
+  /// Internal queue of vector of Tensor which represents `inputs` stored in
+  /// StableHLO `outfeed`. See `ThreadSafeQueue`.
+  detail::ThreadSafeQueue<SmallVector<Tensor>> outfeed_;
+
+  /// Internal storage used to implement `send` and `recv`.
+  /// `send` can write its data to the channel with ChannelId once the ops are
+  /// ready to communicate. `recv` receives data from the same channel once the
+  /// data is ready to read.
+  detail::ThreadSafeMap<ChannelId, detail::SendRecvState> sendRecvChannels_;
+
+  /// Synchronization primitive used to manage concurrent access to
+  /// `sendRecvChannels_`.
+  std::map<ChannelId, std::condition_variable> sendRecvConditions_;
+
+  /// Synchronization primitive used to signal send and recv operations are
+  /// ready to communicate.
+  /// The presence of a ChannelId in the set indicates that the receiving
+  /// process is ready to receive data using this ChannelId from the sender
+  /// process.
+  detail::ThreadSafeSet<ChannelId> sendRecvReady_;
 
   /// See `ThreadSafeMap`.
-  ThreadSafeMap<std::pair<ProcessGroup, ChannelId>, RendezvousState> channels_;
+  detail::ThreadSafeMap<std::pair<ProcessGroup, ChannelId>,
+                        detail::RendezvousState>
+      channels_;
 
   /// Synchronization primitive used to manage concurrent access to `channels_`.
-  ThreadSafeMap<std::pair<ProcessGroup, ChannelId>, std::condition_variable>
+  detail::ThreadSafeMap<std::pair<ProcessGroup, ChannelId>,
+                        std::condition_variable>
       channelConditions_;
 };
 
