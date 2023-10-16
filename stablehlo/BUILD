@@ -138,6 +138,7 @@ cc_library(
         ":base",
         ":check_ops_inc_gen",
         ":reference_errors",
+        ":reference_numpy",
         ":reference_tensor",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
@@ -348,6 +349,7 @@ cc_library(
     deps = [
         ":interpreter_ops_inc_gen",
         ":reference_interpretervalue",
+        ":reference_numpy",
         ":reference_ops",
         ":reference_process_grid",
         "@llvm-project//llvm:Support",
@@ -463,6 +465,24 @@ cc_library(
         ":reference_token",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
+    ],
+)
+
+cc_library(
+    name = "reference_numpy",
+    srcs = [
+        "stablehlo/reference/NumPy.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/NumPy.h",
+    ],
+    strip_include_prefix = ".",
+    deps = [
+        ":reference_index",
+        ":reference_tensor",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
     ],
 )
 
@@ -945,6 +965,7 @@ cc_binary(
         ":interpreter_ops",
         ":reference_errors",
         ":reference_interpretervalue",
+        ":reference_numpy",
         ":reference_ops",
         ":reference_process_grid",
         ":reference_scope",
