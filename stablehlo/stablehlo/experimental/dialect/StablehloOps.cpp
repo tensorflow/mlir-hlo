@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "stablehlo/dialect/ExperimentalOps.h"
+#include "stablehlo/experimental/dialect/StablehloOps.h"
 
 #include <optional>
 
@@ -27,6 +27,7 @@ limitations under the License.
 
 namespace mlir {
 namespace stablehlo {
+namespace experimental {
 
 LogicalResult DynamicReduceWindowOpAdaptor::verify() {
   // Before checking the constraints inherited from ReduceWindowOp,
@@ -500,5 +501,6 @@ std::optional<DynamicTopKOpAdaptor> getDynamicTopKOp(
   return DynamicTopKOpAdaptor(op);
 }
 
+}  // namespace experimental
 }  // namespace stablehlo
 }  // namespace mlir

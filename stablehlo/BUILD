@@ -320,24 +320,6 @@ cc_library(
 )
 
 cc_library(
-    name = "experimental_ops",
-    srcs = [
-        "stablehlo/dialect/ExperimentalOps.cpp",
-    ],
-    hdrs = [
-        "stablehlo/dialect/ExperimentalOps.h",
-    ],
-    includes = ["."],
-    deps = [
-        ":stablehlo_ops",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:FuncDialect",
-        "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:Support",
-    ],
-)
-
-cc_library(
     name = "interpreter_ops",
     srcs = [
         "stablehlo/reference/InterpreterOps.cpp",
@@ -833,7 +815,6 @@ cc_library(
     deps = [
         ":base",
         ":chlo_ops",
-        ":experimental_ops",
         ":stablehlo_ops",
         ":stablehlo_ops_inc_gen",
         ":stablehlo_pass_inc_gen",
@@ -1010,6 +991,7 @@ filegroup(
     data = [
         ":stablehlo-opt",
         ":stablehlo-translate",
+        "//third_party/stablehlo/stablehlo/experimental:experimental-stablehlo-opt",
         "@llvm-project//llvm:FileCheck",
         "@llvm-project//llvm:not",
     ],

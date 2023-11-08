@@ -24,14 +24,17 @@ limitations under the License.
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "stablehlo/dialect/ChloOps.h"
 #include "stablehlo/dialect/StablehloOps.h"
-#include "stablehlo/transforms/Passes.h"
+#include "stablehlo/experimental/dialect/StablehloOps.h"
+#include "stablehlo/experimental/transforms/Passes.h"
 
 namespace mlir {
 namespace stablehlo {
+namespace experimental {
 
 #define GEN_PASS_DEF_STABLEHLOCANONICALIZEDYNAMISMPASS
-#include "stablehlo/transforms/Passes.h.inc"
+#include "stablehlo/experimental/transforms/Passes.h.inc"
 
 namespace {
 
@@ -198,6 +201,54 @@ struct CanonicalizeDynamicPadOpPattern : public OpRewritePattern<DynamicPadOp> {
   }
 };
 
+struct CanonicalizeDynamicReduceWindowOpPattern
+    : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto maybeOp = getDynamicReduceWindowOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicReduceWindowOpAdaptor op = *maybeOp;
+
+    // ReduceWindowOp supports dynamic shapes for operands and results, so we
+    // don't check for that here unlike in some other patterns in this pass.
+    SmallVector<int64_t> windowDimensions, windowStrides, baseDilations,
+        windowDilations, padding;
+    if (failed(hlo::matchInts(op.getWindowDimensions(), windowDimensions)))
+      return rewriter.notifyMatchFailure(op,
+                                         "expected static window_dimensions");
+    if (failed(hlo::matchInts(op.getWindowStrides(), windowStrides)))
+      return rewriter.notifyMatchFailure(op, "expected static window_strides");
+    if (failed(hlo::matchInts(op.getBaseDilations(), baseDilations)))
+      return rewriter.notifyMatchFailure(op, "expected static base_dilations");
+    if (failed(hlo::matchInts(op.getWindowDilations(), windowDilations)))
+      return rewriter.notifyMatchFailure(op,
+                                         "expected static window_dilations");
+    if (failed(hlo::matchInts(op.getPadding(), padding)))
+      return rewriter.notifyMatchFailure(op, "expected static padding");
+    auto newOp = rewriter.create<ReduceWindowOp>(
+        op->getLoc(), op->getResultTypes(), op.getInputs(), op.getInitValues(),
+        rewriter.getI64TensorAttr(windowDimensions),
+        rewriter.getI64TensorAttr(windowStrides),
+        rewriter.getI64TensorAttr(baseDilations),
+        rewriter.getI64TensorAttr(windowDilations),
+        hlo::getPaddingAttr(&rewriter, padding));
+
+    // Inline the called computation into newOp.
+    // This is somewhat annoying because we also have to rewrite the original
+    // func::ReturnOp into stablehlo::ReturnOp.
+    rewriter.cloneRegionBefore(op.getBody(), newOp.getBody(),
+                               newOp.getBody().end());
+    auto funcReturnOp =
+        cast<func::ReturnOp>(newOp.getBody().front().getTerminator());
+    rewriter.setInsertionPointToEnd(&newOp.getBody().front());
+    rewriter.replaceOpWithNewOp<stablehlo::ReturnOp>(
+        funcReturnOp, funcReturnOp.getOperands());
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+};
+
 struct CanonicalizeDynamicReshapeOpPattern
     : public OpRewritePattern<DynamicReshapeOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -210,6 +261,56 @@ struct CanonicalizeDynamicReshapeOpPattern
     if (!op.getType().hasStaticShape())
       return rewriter.notifyMatchFailure(op, "expected static result type");
     rewriter.replaceOpWithNewOp<ReshapeOp>(op, op.getType(), op.getOperand());
+    return success();
+  }
+};
+
+struct CanonicalizeDynamicRngBitGeneratorOpPattern
+    : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto maybeOp = getDynamicRngBitGeneratorOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicRngBitGeneratorOpAdaptor op = *maybeOp;
+
+    // This pattern ignores and discards the output_shape operand. We rely on
+    // the verifier to make sure that its value is consistent with result type.
+    if (!succeeded(hlo::matchInts(op.getOutputShape())))
+      return rewriter.notifyMatchFailure(op, "expected static output_shape");
+    if (!op.getOutput().getType().cast<ShapedType>().hasStaticShape())
+      return rewriter.notifyMatchFailure(op, "expected static output type");
+    rewriter.replaceOpWithNewOp<RngBitGeneratorOp>(
+        op, op->getResultTypes(), op.getRngAlgorithm(), op.getInitialState());
+    return success();
+  }
+};
+
+struct CanonicalizeDynamicTopKOpPattern
+    : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto maybeOp = getDynamicTopKOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicTopKOpAdaptor op = *maybeOp;
+
+    SmallVector<int64_t> k;
+    if (failed(hlo::matchInts(op.getK(), k)))
+      return rewriter.notifyMatchFailure(impl, "expected constant k");
+
+    // We rely on many of the properties checked by verification.
+    auto valuesType = op.getValues().getType().cast<ShapedType>();
+    auto valuesLastDimSize = valuesType.getShape()[valuesType.getRank() - 1];
+    if (hlo::isDynamicDimSize(valuesLastDimSize) ||
+        valuesLastDimSize != k[0])
+      return rewriter.notifyMatchFailure(
+          op,
+          "expected value of k to match the values last dimension size of "
+          "static values type (result #0)");
+
+    rewriter.replaceOpWithNewOp<chlo::TopKOp>(
+        op, op->getResultTypes(), op.getOperand(), k[0]);
     return success();
   }
 };
@@ -320,7 +421,10 @@ struct StablehloCanonicalizeDynamismPass
     patterns.add<CanonicalizeDynamicGatherOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicIotaOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicPadOpPattern>(&getContext());
+    patterns.add<CanonicalizeDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicReshapeOpPattern>(&getContext());
+    patterns.add<CanonicalizeDynamicRngBitGeneratorOpPattern>(&getContext());
+    patterns.add<CanonicalizeDynamicTopKOpPattern>(&getContext());
     patterns.add<CanonicalizeRealDynamicSliceOpToDynamicSliceOpPattern>(
         &getContext());
     patterns.add<CanonicalizeRealDynamicSliceOpToSliceOpPattern>(&getContext());
@@ -332,5 +436,6 @@ struct StablehloCanonicalizeDynamismPass
 };
 
 }  // namespace
+}  // namespace experimental
 }  // namespace stablehlo
 }  // namespace mlir

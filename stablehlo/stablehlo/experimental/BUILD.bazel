@@ -1,0 +1,98 @@
+# Copyright 2023 The StableHLO Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    licenses = ["notice"],
+)
+
+cc_library(
+    name = "experimental_stablehlo_ops",
+    srcs = [
+        "dialect/StablehloOps.cpp",
+    ],
+    hdrs = [
+        "dialect/StablehloOps.h",
+    ],
+    deps = [
+        "//:stablehlo_ops",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+gentbl_cc_library(
+    name = "experimental_stablehlo_pass_inc_gen",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+            ],
+            "transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "transforms/Passes.td",
+    deps = ["@llvm-project//mlir:PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "experimental_stablehlo_passes",
+    srcs = [
+        "transforms/StablehloCanonicalizeDynamism.cpp",
+        "transforms/StablehloRefineShapes.cpp",
+    ],
+    hdrs = [
+        "transforms/Passes.h",
+    ],
+    deps = [
+        ":experimental_stablehlo_ops",
+        ":experimental_stablehlo_pass_inc_gen",
+        "//:base",
+        "//:chlo_ops",
+        "//:stablehlo_ops",
+        "//:stablehlo_ops_inc_gen",
+        "//:stablehlo_type_inference",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:InferTypeOpInterface",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TransformUtils",
+        "@llvm-project//mlir:Transforms",
+    ],
+)
+
+cc_binary(
+    name = "experimental-stablehlo-opt",
+    srcs = [
+        "tools/StablehloOptMain.cpp",
+    ],
+    deps = [
+        ":experimental_stablehlo_passes",
+        "//:interpreter_ops",
+        "//:register",
+        "//:stablehlo_passes",
+        "//:test_utils",
+        "//:tosa_passes",
+        "@llvm-project//mlir:AllExtensions",
+        "@llvm-project//mlir:AllPassesAndDialects",
+        "@llvm-project//mlir:MlirOptLib",
+        "@llvm-project//mlir:TosaDialect",
+    ],
+)

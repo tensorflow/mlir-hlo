@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef STABLEHLO_DIALECT_EXPERIMENTAL_OPS_H
-#define STABLEHLO_DIALECT_EXPERIMENTAL_OPS_H
+#ifndef STABLEHLO_EXPERIMENTAL_DIALECT_STABLEHLO_OPS_H
+#define STABLEHLO_EXPERIMENTAL_DIALECT_STABLEHLO_OPS_H
 
 // This file supports XLA-specific experiments with the StableHLO opset.
 // These experiments are not yet ready to be upstreamed to openxla/stablehlo
@@ -34,6 +34,7 @@ limitations under the License.
 
 namespace mlir {
 namespace stablehlo {
+namespace experimental {
 
 // The DynamicReduceWindowOp experiment provides a dynamic version of
 // ReduceWindowOp. Once the dynamism RFC is figured out, we expect to have an
@@ -221,7 +222,8 @@ class DynamicTopKOpAdaptor {
 // "stablehlo.dynamic_top_k".
 std::optional<DynamicTopKOpAdaptor> getDynamicTopKOp(CustomCallOp op);
 
+}  // namespace experimental
 }  // namespace stablehlo
 }  // namespace mlir
 
-#endif  // STABLEHLO_DIALECT_EXPERIMENTAL_OPS_H
+#endif  // STABLEHLO_EXPERIMENTAL_DIALECT_STABLEHLO_OPS_H
