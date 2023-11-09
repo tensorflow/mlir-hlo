@@ -407,6 +407,9 @@ cc_library(
 
 cc_library(
     name = "reference_errors",
+    srcs = [
+        "stablehlo/reference/Errors.cpp",
+    ],
     hdrs = [
         "stablehlo/reference/Errors.h",
     ],
@@ -428,6 +431,49 @@ cc_library(
     deps = [
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
+    name = "reference_interpreter_api",
+    srcs = [
+        "stablehlo/reference/InterpreterApi.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/InterpreterApi.h",
+    ],
+    strip_include_prefix = ".",
+    deps = [
+        ":interpreter_ops",
+        ":reference_errors",
+        ":reference_interpreterconfiguration",
+        ":reference_interpretervalue",
+        ":reference_numpy",
+        ":reference_ops",
+        ":reference_process",
+        ":reference_scope",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
+    name = "reference_interpreterconfiguration",
+    srcs = [
+        "stablehlo/reference/InterpreterConfiguration.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/InterpreterConfiguration.h",
+    ],
+    strip_include_prefix = ".",
+    deps = [
+        ":reference_errors",
+        ":reference_process",
+        ":reference_scope",
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Support",
     ],
 )
@@ -482,6 +528,7 @@ cc_library(
         ":reference_element",
         ":reference_errors",
         ":reference_index",
+        ":reference_interpreterconfiguration",
         ":reference_interpretervalue",
         ":reference_process",
         ":reference_process_grid",
@@ -945,6 +992,7 @@ cc_binary(
         ":check_ops",
         ":interpreter_ops",
         ":reference_errors",
+        ":reference_interpreter_api",
         ":reference_interpretervalue",
         ":reference_numpy",
         ":reference_ops",
@@ -955,6 +1003,7 @@ cc_binary(
         ":stablehlo_ops",
         ":stablehlo_serialization",
         ":test_utils",
+        ":version",
         ":vhlo_ops",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:AllPassesAndDialects",
