@@ -330,10 +330,10 @@ cc_library(
     includes = ["."],
     deps = [
         ":interpreter_ops_inc_gen",
-        ":reference_interpretervalue",
         ":reference_numpy",
         ":reference_ops",
         ":reference_process_grid",
+        ":reference_value",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
@@ -372,6 +372,31 @@ td_library(
 )
 
 cc_library(
+    name = "reference_api",
+    srcs = [
+        "stablehlo/reference/Api.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/Api.h",
+    ],
+    strip_include_prefix = ".",
+    deps = [
+        ":interpreter_ops",
+        ":reference_configuration",
+        ":reference_errors",
+        ":reference_numpy",
+        ":reference_ops",
+        ":reference_process",
+        ":reference_scope",
+        ":reference_value",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
     name = "reference_axes",
     srcs = [
         "stablehlo/reference/Axes.cpp",
@@ -383,6 +408,24 @@ cc_library(
     deps = [
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
+    ],
+)
+
+cc_library(
+    name = "reference_configuration",
+    srcs = [
+        "stablehlo/reference/Configuration.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/Configuration.h",
+    ],
+    strip_include_prefix = ".",
+    deps = [
+        ":reference_errors",
+        ":reference_process",
+        ":reference_scope",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:Support",
     ],
 )
 
@@ -436,67 +479,6 @@ cc_library(
 )
 
 cc_library(
-    name = "reference_interpreter_api",
-    srcs = [
-        "stablehlo/reference/InterpreterApi.cpp",
-    ],
-    hdrs = [
-        "stablehlo/reference/InterpreterApi.h",
-    ],
-    strip_include_prefix = ".",
-    deps = [
-        ":interpreter_ops",
-        ":reference_errors",
-        ":reference_interpreterconfiguration",
-        ":reference_interpretervalue",
-        ":reference_numpy",
-        ":reference_ops",
-        ":reference_process",
-        ":reference_scope",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:FuncDialect",
-        "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:Support",
-    ],
-)
-
-cc_library(
-    name = "reference_interpreterconfiguration",
-    srcs = [
-        "stablehlo/reference/InterpreterConfiguration.cpp",
-    ],
-    hdrs = [
-        "stablehlo/reference/InterpreterConfiguration.h",
-    ],
-    strip_include_prefix = ".",
-    deps = [
-        ":reference_errors",
-        ":reference_process",
-        ":reference_scope",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:Support",
-    ],
-)
-
-cc_library(
-    name = "reference_interpretervalue",
-    srcs = [
-        "stablehlo/reference/InterpreterValue.cpp",
-    ],
-    hdrs = [
-        "stablehlo/reference/InterpreterValue.h",
-    ],
-    includes = ["."],
-    deps = [
-        ":reference_errors",
-        ":reference_tensor",
-        ":reference_token",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:IR",
-    ],
-)
-
-cc_library(
     name = "reference_numpy",
     srcs = [
         "stablehlo/reference/NumPy.cpp",
@@ -525,17 +507,17 @@ cc_library(
     includes = ["."],
     deps = [
         ":reference_axes",
+        ":reference_configuration",
         ":reference_element",
         ":reference_errors",
         ":reference_index",
-        ":reference_interpreterconfiguration",
-        ":reference_interpretervalue",
         ":reference_process",
         ":reference_process_grid",
         ":reference_scope",
         ":reference_tensor",
         ":reference_token",
         ":reference_types",
+        ":reference_value",
         ":stablehlo_ops",
         ":stablehlo_type_inference",
         "@llvm-project//llvm:Support",
@@ -586,9 +568,9 @@ cc_library(
     ],
     includes = ["."],
     deps = [
-        ":reference_interpretervalue",
         ":reference_tensor",
         ":reference_token",
+        ":reference_value",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:Support",
     ],
@@ -642,6 +624,24 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        "@llvm-project//mlir:IR",
+    ],
+)
+
+cc_library(
+    name = "reference_value",
+    srcs = [
+        "stablehlo/reference/Value.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/Value.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":reference_errors",
+        ":reference_tensor",
+        ":reference_token",
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
     ],
 )
@@ -991,14 +991,14 @@ cc_binary(
     deps = [
         ":check_ops",
         ":interpreter_ops",
+        ":reference_api",
         ":reference_errors",
-        ":reference_interpreter_api",
-        ":reference_interpretervalue",
         ":reference_numpy",
         ":reference_ops",
         ":reference_process_grid",
         ":reference_scope",
         ":reference_tensor",
+        ":reference_value",
         ":register",
         ":stablehlo_ops",
         ":stablehlo_serialization",
