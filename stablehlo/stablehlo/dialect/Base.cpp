@@ -600,18 +600,5 @@ ShapedType createShapedType(ShapedTypeComponents components) {
   return UnrankedTensorType::get(components.getElementType());
 }
 
-DenseIntElementsAttr getPaddingAttr(MLIRContext* context,
-                                    ArrayRef<int64_t> values) {
-  return DenseIntElementsAttr::get(
-      RankedTensorType::get({static_cast<int64_t>(values.size()) / 2, 2},
-                            IntegerType::get(context, 64)),
-      values);
-}
-
-DenseIntElementsAttr getPaddingAttr(Builder* builder,
-                                    ArrayRef<int64_t> values) {
-  return getPaddingAttr(builder->getContext(), values);
-}
-
 }  // namespace hlo
 }  // namespace mlir

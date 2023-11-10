@@ -194,10 +194,6 @@ LogicalResult unflattenTupleTypes(TypeRange prototype, TypeRange types,
 
 ShapedType createShapedType(ShapedTypeComponents components);
 
-DenseIntElementsAttr getPaddingAttr(MLIRContext *context,
-                                    ArrayRef<int64_t> value);
-DenseIntElementsAttr getPaddingAttr(Builder *builder, ArrayRef<int64_t> value);
-
 // This interface is implemented by both StableHLO and MHLO dialects
 // and is used as the foundation for sharing verification, type inference and
 // prettyprinting logic between them.
@@ -375,4 +371,4 @@ class CompatibleOperandsAndResultType
 }  // namespace hlo
 }  // namespace mlir
 
-#endif
+#endif  // STABLEHLO_DIALECT_BASE_H

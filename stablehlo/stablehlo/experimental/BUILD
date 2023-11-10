@@ -14,6 +14,21 @@ filegroup(
 )
 
 cc_library(
+    name = "experimental_base",
+    srcs = [
+        "dialect/Base.cpp",
+    ],
+    hdrs = [
+        "dialect/Base.h",
+    ],
+    includes = ["../.."],
+    deps = [
+        "//third_party/llvm/llvm-project/llvm:Support",
+        "//third_party/llvm/llvm-project/mlir:IR",
+    ],
+)
+
+cc_library(
     name = "experimental_stablehlo_ops",
     srcs = [
         "dialect/StablehloOps.cpp",
@@ -21,7 +36,9 @@ cc_library(
     hdrs = [
         "dialect/StablehloOps.h",
     ],
+    includes = ["../.."],
     deps = [
+        ":experimental_base",
         "//third_party/llvm/llvm-project/llvm:Support",
         "//third_party/llvm/llvm-project/mlir:FuncDialect",
         "//third_party/llvm/llvm-project/mlir:IR",
@@ -54,6 +71,7 @@ cc_library(
     hdrs = [
         "transforms/Passes.h",
     ],
+    includes = ["../.."],
     deps = [
         ":experimental_stablehlo_ops",
         ":experimental_stablehlo_pass_inc_gen",
@@ -78,6 +96,7 @@ cc_binary(
     srcs = [
         "tools/StablehloOptMain.cpp",
     ],
+    includes = ["../.."],
     deps = [
         ":experimental_stablehlo_passes",
         "//third_party/llvm/llvm-project/mlir:AllExtensions",

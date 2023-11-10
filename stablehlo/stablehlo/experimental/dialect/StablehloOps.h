@@ -31,6 +31,7 @@ limitations under the License.
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LogicalResult.h"
 #include "stablehlo/dialect/StablehloOps.h"
+#include "stablehlo/experimental/dialect/Base.h"
 
 namespace mlir {
 namespace stablehlo {

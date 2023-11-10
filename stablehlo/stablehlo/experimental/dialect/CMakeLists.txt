@@ -13,6 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+add_mlir_library(ExperimentalStablehloBase
+  PARTIAL_SOURCES_INTENDED
+  Base.cpp
+
+  LINK_LIBS PUBLIC
+  MLIRIR
+)
+
 add_mlir_dialect_library(ExperimentalStablehloOps
   PARTIAL_SOURCES_INTENDED
   StablehloOps.cpp
@@ -21,6 +29,7 @@ add_mlir_dialect_library(ExperimentalStablehloOps
   StablehloOpsIncGen
 
   LINK_LIBS PUBLIC
+  ExperimentalStablehloBase
   MLIRFuncDialect
   MLIRIR
   MLIRSupport

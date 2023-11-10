@@ -19,6 +19,20 @@ package(
 )
 
 cc_library(
+    name = "experimental_base",
+    srcs = [
+        "dialect/Base.cpp",
+    ],
+    hdrs = [
+        "dialect/Base.h",
+    ],
+    deps = [
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+    ],
+)
+
+cc_library(
     name = "experimental_stablehlo_ops",
     srcs = [
         "dialect/StablehloOps.cpp",
@@ -27,6 +41,7 @@ cc_library(
         "dialect/StablehloOps.h",
     ],
     deps = [
+        ":experimental_base",
         "//:stablehlo_ops",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
