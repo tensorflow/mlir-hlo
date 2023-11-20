@@ -371,6 +371,71 @@ td_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "linalg_pass_inc_gen",
+    strip_include_prefix = ".",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=StablehloLinalgTransforms",
+            ],
+            "stablehlo/conversions/linalg/transforms/Passes.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "stablehlo/conversions/linalg/transforms/Passes.td",
+    deps = ["@llvm-project//mlir:PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "linalg_passes",
+    srcs = [
+        "stablehlo/conversions/linalg/transforms/LegalizeToLinalgUtils.cpp",
+        "stablehlo/conversions/linalg/transforms/StablehloLegalizeToLinalg.cpp",
+        "stablehlo/conversions/linalg/transforms/StablehloToArith.cpp",
+        "stablehlo/conversions/linalg/transforms/StablehloToLinalgConvolution.cpp",
+        "stablehlo/conversions/linalg/transforms/StablehloToLinalgDotProduct.cpp",
+        "stablehlo/conversions/linalg/transforms/StablehloToLinalgPointwise.cpp",
+        "stablehlo/conversions/linalg/transforms/StablehloToLinalgRandom.cpp",
+        "stablehlo/conversions/linalg/transforms/StablehloToLinalgReduce.cpp",
+        "stablehlo/conversions/linalg/transforms/TypeConversion.cpp",
+    ],
+    hdrs = [
+        "stablehlo/conversions/linalg/transforms/LegalizeToLinalgUtils.h",
+        "stablehlo/conversions/linalg/transforms/MapStablehloToScalarOp.h",
+        "stablehlo/conversions/linalg/transforms/PassDetail.h",
+        "stablehlo/conversions/linalg/transforms/Passes.h",
+        "stablehlo/conversions/linalg/transforms/Rewriters.h",
+        "stablehlo/conversions/linalg/transforms/TypeConversion.h",
+    ],
+    strip_include_prefix = ".",
+    deps = [
+        ":chlo_ops",
+        ":linalg_pass_inc_gen",
+        ":stablehlo_ops",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:ArithDialect",
+        "@llvm-project//mlir:BufferizationDialect",
+        "@llvm-project//mlir:ComplexDialect",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:LinalgDialect",
+        "@llvm-project//mlir:LinalgTransforms",
+        "@llvm-project//mlir:LinalgUtils",
+        "@llvm-project//mlir:MathDialect",
+        "@llvm-project//mlir:MemRefDialect",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:SCFDialect",
+        "@llvm-project//mlir:ShapeDialect",
+        "@llvm-project//mlir:SparseTensorDialect",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:Transforms",
+        "@llvm-project//mlir:VectorDialect",
+    ],
+)
+
 cc_library(
     name = "reference_api",
     srcs = [
@@ -1023,6 +1088,7 @@ cc_binary(
     ],
     deps = [
         ":interpreter_ops",
+        ":linalg_passes",
         ":register",
         ":stablehlo_passes",
         ":test_utils",
