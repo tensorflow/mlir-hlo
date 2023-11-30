@@ -1106,7 +1106,6 @@ filegroup(
     data = [
         ":stablehlo-opt",
         ":stablehlo-translate",
-        "//third_party/stablehlo/stablehlo/experimental:experimental-stablehlo-opt",
         "@llvm-project//llvm:FileCheck",
         "@llvm-project//llvm:not",
     ],

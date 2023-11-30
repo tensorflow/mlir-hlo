@@ -44,6 +44,7 @@ expand_template(
             "lit.site.cfg.py",
             "//:stablehlo-opt",
             "//:stablehlo-translate",
+            "//stablehlo/experimental:experimental-stablehlo-opt",
             "@llvm-project//llvm:FileCheck",
             "@llvm-project//llvm:not",
         ] + glob(["%s.bc" % src]),

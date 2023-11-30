@@ -1,3 +1,4 @@
+load("//third_party/llvm/build_defs:lit.bzl", "glob_lit_tests")
 load("//third_party/llvm/llvm-project/mlir:tblgen.bzl", "gentbl_cc_library")
 load("//third_party/tensorflow:tensorflow.google.bzl", "get_compatible_with_portable")
 load("//third_party/tensorflow/core/platform:rules_cc.bzl", "cc_library")
@@ -108,5 +109,14 @@ cc_binary(
         "//third_party/stablehlo:stablehlo_passes",
         "//third_party/stablehlo:test_utils",
         "//third_party/stablehlo:tosa_passes",
+    ],
+)
+
+filegroup(
+    name = "test_data",
+    testonly = True,
+    data = [
+        ":experimental-stablehlo-opt",
+        "//third_party/stablehlo:test_data",
     ],
 )
