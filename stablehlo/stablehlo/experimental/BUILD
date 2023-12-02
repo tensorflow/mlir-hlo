@@ -88,6 +88,7 @@ cc_library(
         "//third_party/stablehlo:chlo_ops",
         "//third_party/stablehlo:stablehlo_ops",
         "//third_party/stablehlo:stablehlo_ops_inc_gen",
+        "//third_party/stablehlo:stablehlo_passes",
         "//third_party/stablehlo:stablehlo_type_inference",
     ],
 )

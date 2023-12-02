@@ -81,6 +81,7 @@ cc_library(
         "//:chlo_ops",
         "//:stablehlo_ops",
         "//:stablehlo_ops_inc_gen",
+        "//:stablehlo_passes",
         "//:stablehlo_type_inference",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",

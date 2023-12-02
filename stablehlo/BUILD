@@ -922,6 +922,7 @@ cc_library(
     hdrs = [
         "stablehlo/transforms/MapStablehloToVhlo.h",
         "stablehlo/transforms/Passes.h",
+        "stablehlo/transforms/StablehloRefineShapes.h",
     ],
     includes = ["."],
     deps = [

@@ -33,6 +33,7 @@ add_mlir_dialect_library(ExperimentalStablehloPasses
   MLIRTransformUtils
   ExperimentalStablehloOps
   StablehloBase
-  StablehloTypeInference
   StablehloOps
+  StablehloPasses
+  StablehloTypeInference
 )
