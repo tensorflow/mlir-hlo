@@ -1,12 +1,11 @@
 // RUN: stablehlo-opt --mlir-print-op-generic %s.bc | FileCheck %s
-// RUN: stablehlo-translate --deserialize %s.bc | stablehlo-translate --serialize --target=0.15.0 | stablehlo-opt --mlir-print-op-generic | FileCheck %s
+// RUN: stablehlo-translate --deserialize %s.bc | stablehlo-translate --serialize --target=0.16.0 | stablehlo-opt --mlir-print-op-generic | FileCheck %s
 // RUN: stablehlo-translate --deserialize %s.bc | stablehlo-opt > %t.0
 // RUN: stablehlo-opt --strip-debuginfo %s > %t.1
 // RUN: diff %t.0 %t.1
-// RUN: stablehlo-translate --serialize --target=0.15.0 --strip-debuginfo %s > %t.2
+// RUN: stablehlo-translate --serialize --target=0.16.0 --strip-debuginfo %s > %t.2
 // RUN: diff %s.bc %t.2
 
-// CHECK-WARN-NOT: Not Implemented
 
 // ============ ATTRIBUTES ============
 
@@ -400,6 +399,18 @@ func.func @default_collective_permute(%arg0: tensor<16x8xf32>) -> tensor<16x8xf3
   //          CHECK-SAME: }> : (!vhlo.tensor_v1<16x8x!vhlo.f32_v1>) -> !vhlo.tensor_v1<16x8x!vhlo.f32_v1>
   %0 = "stablehlo.collective_permute"(%arg0) {
     source_target_pairs = dense<[[0, 1], [1, 2], [2, 3]]> : tensor<3x2xi64>
+  } : (tensor<16x8xf32>) -> tensor<16x8xf32>
+  func.return %0 : tensor<16x8xf32>
+}
+
+// CHECK-LABEL: "default_collective_broadcast"
+func.func @default_collective_broadcast(%arg0: tensor<16x8xf32>) -> tensor<16x8xf32> {
+  //               CHECK: "vhlo.collective_broadcast_v1"(%arg0) <{
+  //          CHECK-SAME:   channel_id = #vhlo.integer_v1<0 : i64>,
+  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.tensor_v1<dense<[[0, 1]]> : tensor<1x2xi64>>
+  //          CHECK-SAME: }> : (!vhlo.tensor_v1<16x8x!vhlo.f32_v1>) -> !vhlo.tensor_v1<16x8x!vhlo.f32_v1>
+  %0 = "stablehlo.collective_broadcast"(%arg0) {
+    replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
   } : (tensor<16x8xf32>) -> tensor<16x8xf32>
   func.return %0 : tensor<16x8xf32>
 }

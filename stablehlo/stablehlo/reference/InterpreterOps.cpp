@@ -28,6 +28,7 @@ limitations under the License.
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Support/DebugStringHelper.h"
 #include "mlir/Support/LLVM.h"
 #include "stablehlo/reference/NumPy.h"
 #include "stablehlo/reference/Ops.h"
@@ -44,7 +45,7 @@ namespace {
 
 // Appends a new line item to an instrumentation metadata file, `index.json` in
 // the form: `probeId,probeOutputDir/filename`.
-llvm::Error writeProbeMetadata(StringRef probeId, StringRef filename,
+llvm::Error writeProbeMetadata(StringRef probeId, Type type, StringRef filename,
                                StringRef probeOutputDir) {
   if (probeOutputDir.empty())
     return createStringError(llvm::errc::invalid_argument,
@@ -61,7 +62,8 @@ llvm::Error writeProbeMetadata(StringRef probeId, StringRef filename,
                              "Failed to open instrumentation metadata file.");
 
   llvm::raw_fd_ostream out(fd, /*shouldClose=*/true);
-  out << probeId.str() << ',' << filename.str() << '\n';
+  out << probeId.str() << ',' << debugString(type) << ',' << filename.str()
+      << '\n';
 
   return llvm::Error::success();
 }
@@ -193,17 +195,17 @@ SmallVector<InterpreterValue> evalRunParallelOp(
   return results;
 }
 
+// `serializedProbeFileId` should be a unique positive integer which can be used
+// to unambiguously derive a serialized filename for a given `probeId`.
 llvm::Error evalProbeOp(InterpreterValue input, StringRef probeId,
                         StringRef probeOutputDir,
-                        llvm::StringMap<int32_t> &probeIterations) {
+                        int64_t serializedProbeFileId) {
   llvm::SmallString<128> filepath(probeOutputDir);
 
-  // To properly support loops, append a suffix denoting how many times this
-  // specific probe_id has executed.
-  const int32_t numTimesExecuted = ++probeIterations[probeId];
-
+  // Use an increasing unique integer to write to disk to avoid any odd file
+  // names as a result of unsafe probe_id values.
   llvm::sys::path::append(
-      filepath, probeId + "_" + std::to_string(numTimesExecuted) + ".npy");
+      filepath, "probe" + std::to_string(serializedProbeFileId) + ".npy");
   auto tensor = input.getTensor();
   if (auto serializationResultError =
           numpy::serializeTensor(filepath, tensor.getType(), tensor.getData()))
@@ -212,7 +214,7 @@ llvm::Error evalProbeOp(InterpreterValue input, StringRef probeId,
   // After the tensor has been serialized to disk, append it to a metadata file
   // to associate the serialized probe_id with the filepath. By default, this
   // will live in an `index.csv` file generated in specified `probeOutputDir`.
-  return writeProbeMetadata(probeId, filepath, probeOutputDir);
+  return writeProbeMetadata(probeId, input.getType(), filepath, probeOutputDir);
 }
 
 }  // namespace interpreter

@@ -406,6 +406,18 @@ func.func @default_collective_permute(%arg0: tensor<16x8xf32>) -> tensor<16x8xf3
   func.return %0 : tensor<16x8xf32>
 }
 
+// CHECK-LABEL: "default_collective_broadcast"
+func.func @default_collective_broadcast(%arg0: tensor<16x8xf32>) -> tensor<16x8xf32> {
+  //               CHECK: "vhlo.collective_broadcast_v1"(%arg0) <{
+  //          CHECK-SAME:   channel_id = #vhlo.integer_v1<0 : i64>,
+  // CHECK-SAME{LITERAL}:   replica_groups = #vhlo.tensor_v1<dense<[[0, 1]]> : tensor<1x2xi64>>
+  //          CHECK-SAME: }> : (!vhlo.tensor_v1<16x8x!vhlo.f32_v1>) -> !vhlo.tensor_v1<16x8x!vhlo.f32_v1>
+  %0 = "stablehlo.collective_broadcast"(%arg0) {
+    replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
+  } : (tensor<16x8xf32>) -> tensor<16x8xf32>
+  func.return %0 : tensor<16x8xf32>
+}
+
 // CHECK-LABEL: "default_compare"
 func.func @default_compare(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<i1> {
   //      CHECK: "vhlo.compare_v1"(%arg0, %arg1) <{
