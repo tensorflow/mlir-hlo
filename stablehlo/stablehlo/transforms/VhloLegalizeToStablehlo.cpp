@@ -426,11 +426,35 @@ LogicalResult implodeSpecial(const OpConversionPattern<VhloOpTy>& pattern,
   return success();
 }
 
+SpecialResult convertDenseArray(StringAttr vhloName, Attribute vhloAttr,
+                                SmallVector<NamedAttribute>& stablehloAttrs) {
+  auto tensorAttr = dyn_cast<vhlo::TensorV1Attr>(vhloAttr);
+  if (!tensorAttr) return specialFailure();
+
+  auto data = ArrayRef<int64_t>(
+                  reinterpret_cast<const int64_t*>(tensorAttr.getData().data()),
+                  tensorAttr.getData().size() / sizeof(int64_t))
+                  .vec();
+
+  // Handle splats
+  if (data.size() == 1) {
+    auto tensorType = tensorAttr.getType().dyn_cast<vhlo::RankedTensorV1Type>();
+    if (!tensorType || (tensorType.getShape().size() != 1))
+      return specialFailure();
+    auto size = tensorType.getShape()[0];
+    data.resize(size, data[0]);
+  }
+
+  stablehloAttrs.emplace_back(
+      vhloName, DenseI64ArrayAttr::get(vhloAttr.getContext(), data));
+  return specialSuccess();
+}
+
 template <typename VhloOpTy>
 SpecialResult convertSpecial(const OpConversionPattern<VhloOpTy>& pattern,
-                             StringRef vhloName, Attribute vhloAttr,
+                             StringAttr vhloName, Attribute vhloAttr,
                              SmallVector<NamedAttribute>& stablehloAttrs) {
-  StringRef stablehloName = vhloName;
+  StringAttr stablehloName = vhloName;
   Attribute stablehloAttr;
   if constexpr (std::is_same<VhloOpTy, vhlo::AllGatherOpV1>::value ||
                 std::is_same<VhloOpTy, vhlo::AllReduceOpV1>::value ||
@@ -464,9 +488,38 @@ SpecialResult convertSpecial(const OpConversionPattern<VhloOpTy>& pattern,
     }
   }
   if (stablehloAttr) {
-    stablehloAttrs.emplace_back(
-        StringAttr::get(pattern.getContext(), stablehloName), stablehloAttr);
+    stablehloAttrs.emplace_back(stablehloName, stablehloAttr);
     return specialSuccess();
+  }
+  if constexpr (std::is_same<VhloOpTy, vhlo::FftOpV1>::value) {
+    if (vhloName == "fft_length")
+      return convertDenseArray(vhloName, vhloAttr, stablehloAttrs);
+  }
+  if constexpr (std::is_same<VhloOpTy, vhlo::BroadcastOpV1>::value) {
+    if (vhloName == "broadcast_sizes")
+      return convertDenseArray(vhloName, vhloAttr, stablehloAttrs);
+  }
+  if constexpr (std::is_same<VhloOpTy, vhlo::DynamicSliceOpV1>::value) {
+    if (vhloName == "slice_sizes")
+      return convertDenseArray(vhloName, vhloAttr, stablehloAttrs);
+  }
+  if constexpr (std::is_same<VhloOpTy, vhlo::ReverseOpV1>::value) {
+    if (vhloName == "dimensions")
+      return convertDenseArray(vhloName, vhloAttr, stablehloAttrs);
+  }
+  if constexpr (std::is_same<VhloOpTy, vhlo::TransposeOpV1>::value) {
+    if (vhloName == "permutation")
+      return convertDenseArray(vhloName, vhloAttr, stablehloAttrs);
+  }
+  if constexpr (std::is_same<VhloOpTy, vhlo::PadOpV1>::value) {
+    if (vhloName == "edge_padding_low" || vhloName == "edge_padding_high" ||
+        vhloName == "interior_padding")
+      return convertDenseArray(vhloName, vhloAttr, stablehloAttrs);
+  }
+  if constexpr (std::is_same<VhloOpTy, vhlo::SliceOpV1>::value) {
+    if (vhloName == "start_indices" || vhloName == "limit_indices" ||
+        vhloName == "strides")
+      return convertDenseArray(vhloName, vhloAttr, stablehloAttrs);
   }
   return notSpecial();
 }

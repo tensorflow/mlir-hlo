@@ -27,7 +27,8 @@ namespace stablehlo {
 
 /// Return the current version for portable API.
 /// Increments on all meaningful changes to this file.
-inline int64_t getApiVersion() { return 4; }
+/// Or on large breaking source changes that are difficult to integrate.
+inline int64_t getApiVersion() { return 5; }
 
 // Get the current StableHLO version.
 //
