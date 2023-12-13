@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "stablehlo/experimental/dialect/StablehloOps.h"
 
+#include <cstdint>
 #include <optional>
 
 #include "llvm/ADT/ArrayRef.h"
@@ -41,8 +42,7 @@ LogicalResult DynamicReduceWindowOpAdaptor::verify() {
     // api_version and backend_config have default values.
     // call_target_name should be "stablehlo.dynamic_reduce_window".
     // called_computations carries the body.
-    if (attr.getName() != "api_version" &&
-        attr.getName() != "backend_config" &&
+    if (attr.getName() != "api_version" && attr.getName() != "backend_config" &&
         attr.getName() != "call_target_name" &&
         attr.getName() != "called_computations")
       return op_.emitError()
@@ -423,8 +423,8 @@ LogicalResult DynamicTopKOpAdaptor::verify() {
 
   // dynamic_top_k_i2
   auto kType = k.getType().dyn_cast<ShapedType>();
-  if (!kType || !kType.hasRank() ||
-      kType.getRank() != 0 || !kType.getElementType().isIntOrIndex())
+  if (!kType || !kType.hasRank() || kType.getRank() != 0 ||
+      !kType.getElementType().isIntOrIndex())
     return op_.emitError()
            << "expects k (operand #1) "
            << "to be a 0-dimensional tensor of integer or index type";
@@ -486,7 +486,6 @@ TypedValue<ShapedType> DynamicTopKOpAdaptor::getK() {
   return op_.getInputs()[1].cast<TypedValue<ShapedType>>();
 }
 
-
 TypedValue<ShapedType> DynamicTopKOpAdaptor::getValues() {
   return op_.getResults()[0].cast<TypedValue<ShapedType>>();
 }
@@ -495,10 +494,120 @@ TypedValue<ShapedType> DynamicTopKOpAdaptor::getIndices() {
   return op_.getResults()[1].cast<TypedValue<ShapedType>>();
 }
 
-std::optional<DynamicTopKOpAdaptor> getDynamicTopKOp(
-    CustomCallOp op) {
+std::optional<DynamicTopKOpAdaptor> getDynamicTopKOp(CustomCallOp op) {
   if (op.getCallTargetName() != "stablehlo.dynamic_top_k") return {};
   return DynamicTopKOpAdaptor(op);
+}
+
+LogicalResult TopKOpAdaptor::verify() {
+  if (op_->getNumOperands() != 1)
+    return op_.emitError("expects size(operands) = 1");
+  if (op_->getNumResults() != 2)
+    return op_.emitError("expects size(results) = 2");
+  if (!op_.getBackendConfig().empty())
+    return op_.emitError() << "expects an empty backend_config";
+  if (op_.getCallTargetName() != "mhlo.topk")
+    return op_.emitError() << "expects @mhlo.topk";
+
+  auto operand = op_.getInputs()[0];
+  auto values = op_.getResults()[0];
+  auto indices = op_.getResults()[1];
+  DictionaryAttr topkAttributes =
+      op_->getAttrOfType<DictionaryAttr>("mhlo.attributes");
+  if (!topkAttributes) {
+    return op_.emitError()
+           << "mhlo.attributes missing or not a dictionary attribute";
+  }
+
+  IntegerAttr k_attr = topkAttributes.get("k").dyn_cast_or_null<IntegerAttr>();
+  if (!k_attr) {
+    return op_.emitError() << "mhlo.attributes.k not present or not an integer";
+  }
+  int64_t k = k_attr.getInt();
+
+  // mhlo.topk_c5
+  if (k < 0) return op_.emitError() << "expects k >= 0";
+
+  // mhlo.topk_i1
+  auto operandType = operand.getType().dyn_cast<ShapedType>();
+  if (!operandType || !operandType.hasRank() || operandType.getRank() < 1 ||
+      !operandType.getElementType().isIntOrFloat())
+    return op_.emitError()
+           << "expects operand #0 "
+           << "to be a tensor of integer or floating-point type "
+           << "of rank at least 1";
+
+  // mhlo.topk_o1
+  auto valuesType = values.getType().dyn_cast<ShapedType>();
+  if (!valuesType || !valuesType.hasRank() || valuesType.getRank() < 1 ||
+      !valuesType.getElementType().isIntOrFloat())
+    return op_.emitError()
+           << "expects values (result #0) "
+           << "to be a tensor of integer or floating-point type "
+           << "of rank at least 1";
+
+  // mhlo.topk_o2
+  auto indicesType = indices.getType().dyn_cast<ShapedType>();
+  if (!indicesType || !indicesType.hasRank() || indicesType.getRank() < 1 ||
+      !indicesType.getElementType().isSignlessInteger(32))
+    return op_.emitError() << "expects indices (result #1) "
+                           << "to be a tensor of si32 of rank at least 1";
+
+  // mhlo.topk_c1 && mhlo.topk_c2
+  auto operandLastDim = operandType.getRank() - 1;
+  SmallVector<int64_t> expectedValuesShape(operandType.getShape());
+  expectedValuesShape[operandLastDim] = k;
+  if (failed(verifyCompatibleShape(expectedValuesShape, valuesType.getShape())))
+    return op_.emitError() << "expects the values shape to match the operand "
+                              "shape in all but the last dimension, and "
+                              "that the last dimension of the values shape "
+                              "has a size k";
+
+  // mhlo.topk_c3
+  if (valuesType.getElementType() != operandType.getElementType())
+    return op_.emitError()
+           << "expects the values element type to be the same as the operand "
+           << "element type";
+
+  // mhlo.topk_c4
+  if (failed(
+          verifyCompatibleShape(indicesType.getShape(), valuesType.getShape())))
+    return op_.emitError()
+           << "expects the indices shape to match the values shape";
+
+  return success();
+}
+
+TypedValue<ShapedType> TopKOpAdaptor::getOperand() {
+  return op_.getInputs()[0].cast<TypedValue<ShapedType>>();
+}
+
+TypedValue<ShapedType> TopKOpAdaptor::getValues() {
+  return op_.getResults()[0].cast<TypedValue<ShapedType>>();
+}
+
+TypedValue<ShapedType> TopKOpAdaptor::getIndices() {
+  return op_.getResults()[1].cast<TypedValue<ShapedType>>();
+}
+
+int64_t TopKOpAdaptor::getK() {
+  DictionaryAttr topkAttributes =
+      op_->getAttrOfType<DictionaryAttr>("mhlo.attributes");
+  return topkAttributes.get("k").cast<mlir::IntegerAttr>().getInt();
+}
+
+bool TopKOpAdaptor::getLargest() {
+  DictionaryAttr topkAttributes =
+      op_->getAttrOfType<DictionaryAttr>("mhlo.attributes");
+  IntegerAttr largest =
+      topkAttributes.get("largest").dyn_cast_or_null<mlir::IntegerAttr>();
+
+  return (!largest) ? true : largest.getInt();
+}
+
+std::optional<TopKOpAdaptor> getTopKOp(CustomCallOp op) {
+  if (op.getCallTargetName() != "mhlo.topk") return {};
+  return TopKOpAdaptor(op);
 }
 
 }  // namespace experimental

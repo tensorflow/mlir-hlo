@@ -223,6 +223,75 @@ class DynamicTopKOpAdaptor {
 // "stablehlo.dynamic_top_k".
 std::optional<DynamicTopKOpAdaptor> getDynamicTopKOp(CustomCallOp op);
 
+///////////////////
+// MHLO Op Wrappers
+// There are some ops in MHLO which have experimental support in StableHLO
+// programs by representing them as custom_calls with the target `mhlo.op_name`.
+// The level of support of these ops is similar to the other custom_calls in
+// this file. Generally these ops will be added to StableHLO and their
+// experimental support can be deprecated in favor of op's type inference.
+///////////////////
+
+// The TopK experiment provides a StableHLO adapter to MHLO TopKOp.
+// In the future we expect stablehlo.top_k to be added which will use the same
+// refinement rules.
+//
+// Within this experiment, TopKOp is represented via the serialized MHLO
+// `stablehlo.custom_call @mhlo.topk` custom call.
+//
+// The semantics of experimental TopKOp are inherited from the semantics of
+// mhlo.topk.
+//
+// #### Inputs
+//
+// | Label | Name            | Type                                         |
+// |-------|-----------------|----------------------------------------------|
+// | (I1)  | `operand`       | tensor of integer or floating-point type     |
+// | (I2)  | `k`             | constant of type si64                        |
+// | (I3)  | `largest`       | constant of type i1                          |
+//
+// #### Outputs
+//
+// | Name           | Type                                     |
+// |----------------|------------------------------------------|
+// | `values`       | tensor of integer or floating-point type |
+// | `indices`      | tensor of si32 type                      |
+//
+// #### Constraints
+//
+// * (C1) `shape(values)[:-1] = shape(operand)[:-1]`
+// * (C2) `shape(values)[-1] = k`
+// * (C3) `element_type(values) = element_type(operand)`
+// * (C4) `shape(indices) = shape(values)`
+// * (C5) `k >= 0`
+//
+class TopKOpAdaptor {
+ public:
+  TopKOpAdaptor(CustomCallOp op) : op_(op) {}
+  operator Operation*() { return op_; }
+  Operation* operator->() { return op_; }
+
+  // These accessors assume that the operation is well-formed (i.e. that it
+  // can pass verification).
+  TypedValue<ShapedType> getOperand();
+  TypedValue<ShapedType> getValues();
+  TypedValue<ShapedType> getIndices();
+  int64_t getK();
+  bool getLargest();
+
+  // Verifies the constraints documented above.
+  // Emits errors if errors are detected.
+  LogicalResult verify();
+
+ private:
+  CustomCallOp op_;
+};
+
+// Wraps a custom call in a TopKOpAdaptor.
+// Fails if the call_target_name of the custom call doesn't match
+// "mhlo.topk".
+std::optional<TopKOpAdaptor> getTopKOp(CustomCallOp op);
+
 }  // namespace experimental
 }  // namespace stablehlo
 }  // namespace mlir
