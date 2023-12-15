@@ -831,6 +831,31 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "stablehlo_types_inc_gen",
+    tbl_outs = [
+        (
+            [
+                "-gen-typedef-decls",
+                "--typedefs-dialect=stablehlo",
+            ],
+            "stablehlo/dialect/StablehloTypeDefs.h.inc",
+        ),
+        (
+            [
+                "-gen-typedef-defs",
+                "--typedefs-dialect=stablehlo",
+            ],
+            "stablehlo/dialect/StablehloTypeDefs.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "stablehlo/dialect/StablehloOps.td",
+    deps = [
+        ":stablehlo_ops_td_files",
+    ],
+)
+
+gentbl_cc_library(
     name = "stablehlo_ops_inc_gen",
     tbl_outs = [
         (
@@ -883,6 +908,7 @@ td_library(
         "stablehlo/dialect/StablehloAttrs.td",
         "stablehlo/dialect/StablehloEnums.td",
         "stablehlo/dialect/StablehloOps.td",
+        "stablehlo/dialect/StablehloTypes.td",
     ],
     includes = ["."],
     deps = [
@@ -1037,6 +1063,7 @@ cc_library(
         ":stablehlo_enums_inc_gen",
         ":stablehlo_ops_inc_gen",
         ":stablehlo_type_inference",
+        ":stablehlo_types_inc_gen",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:ComplexDialect",
