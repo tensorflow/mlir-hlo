@@ -138,6 +138,18 @@ struct RefineTopKOpPattern : public OpRewritePattern<CustomCallOp> {
   }
 };
 
+struct RefineTanOpPattern : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto maybeOp = getTanOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    TanOpAdaptor op = *maybeOp;
+    return refineReturnShape(rewriter, op,
+                             op.getOperand().getType().getShape());
+  }
+};
+
 struct StablehloRefineShapesPass
     : public impl::StablehloRefineShapesPassBase<StablehloRefineShapesPass> {
   using StablehloRefineShapesPassBase::StablehloRefineShapesPassBase;
@@ -164,6 +176,7 @@ struct StablehloRefineShapesPass
     patterns.add<RefineDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<RefineDynamicRngBitGeneratorOpPattern>(&getContext());
     patterns.add<RefineDynamicTopKOpPattern>(&getContext());
+    patterns.add<RefineTanOpPattern>(&getContext());
     patterns.add<RefineTopKOpPattern>(&getContext());
     if (failed(
             applyPatternsAndFoldGreedily(func, std::move(patterns), config))) {

@@ -610,6 +610,32 @@ std::optional<TopKOpAdaptor> getTopKOp(CustomCallOp op) {
   return TopKOpAdaptor(op);
 }
 
+LogicalResult TanOpAdaptor::verify() {
+  if (op_->getNumOperands() != 1)
+    return op_.emitError("expects size(operands) = 1");
+  if (op_->getNumResults() != 1)
+    return op_.emitError("expects size(results) = 1");
+  auto operand = op_.getInputs()[0];
+  auto result = op_.getResults()[0];
+
+  // tan_c1
+  auto operandType = operand.getType().dyn_cast<ShapedType>();
+  auto resultType = result.getType().dyn_cast<ShapedType>();
+  if (!hlo::isCompatibleForHloTypeInference(operandType, resultType))
+    return op_.emitError()
+           << "expects operand and result to have compatible shapes";
+  return success();
+}
+
+TypedValue<ShapedType> TanOpAdaptor::getOperand() {
+  return op_.getInputs()[0].cast<TypedValue<ShapedType>>();
+}
+
+std::optional<TanOpAdaptor> getTanOp(CustomCallOp op) {
+  if (op.getCallTargetName() != "mhlo.tan") return {};
+  return TanOpAdaptor(op);
+}
+
 }  // namespace experimental
 }  // namespace stablehlo
 }  // namespace mlir

@@ -150,3 +150,47 @@ func.func @refine_mhlo_error_c5_negative_k(%arg0: tensor<5x16xf32>) -> (tensor<?
   } : (tensor<5x16xf32>) -> (tensor<?x?xf32>, tensor<?x?xi32>)
   return %0#0, %0#1 : tensor<?x?xf32>, tensor<?x?xi32>
 }
+
+
+// -----
+
+// CHECK-LABEL: @refine_tan
+func.func @refine_tan(%arg0: tensor<16xf32>) -> tensor<?xf32> {
+  // CHECK: mhlo.tan{{.*}} -> tensor<16xf32>
+  %0 = "stablehlo.custom_call"(%arg0) {
+    call_target_name = "mhlo.tan",
+    mhlo.attributes = {},
+    mhlo.version = 1 : i64
+  } : (tensor<16xf32>) -> tensor<?xf32>
+  func.return %0 : tensor<?xf32>
+}
+
+// -----
+
+// tan_op I1
+// CHECK-LABEL: func @tan_op_error_too_many_inputs
+func.func @tan_op_error_too_many_inputs(%arg0: tensor<1xf32>) -> (tensor<1xf32>) {
+  // expected-error@+1{{expects size(operands) = 1}}
+  %0 = "stablehlo.custom_call"(%arg0, %arg0) {call_target_name = "mhlo.tan", mhlo.attributes = {}, mhlo.version = 1 : i64} : (tensor<1xf32>, tensor<1xf32>) -> tensor<1xf32>
+  return %0 : tensor<1xf32>
+}
+
+// -----
+
+// tan_op O1
+// CHECK-LABEL: func @tan_op_error_too_many_outputs
+func.func @tan_op_error_too_many_outputs(%arg0: tensor<1xf32>) -> (tensor<1xf32>) {
+  // expected-error@+1{{expects size(results) = 1}}
+  %0:2 = "stablehlo.custom_call"(%arg0) {call_target_name = "mhlo.tan", mhlo.attributes = {}, mhlo.version = 1 : i64} : (tensor<1xf32>) -> (tensor<1xf32>, tensor<1xf32>)
+  return %0#1 : tensor<1xf32>
+}
+
+// -----
+
+// tan_op C1
+// CHECK-LABEL: func @tan_op_error_values_bad_element_type
+func.func @tan_op_error_values_bad_element_type(%arg0: tensor<1xf32>) -> (tensor<1xi32>) {
+  // expected-error@+1{{expects operand and result to have compatible shapes}}
+  %0 = "stablehlo.custom_call"(%arg0) {call_target_name = "mhlo.tan", mhlo.attributes = {}, mhlo.version = 1 : i64} : (tensor<1xf32>) -> tensor<1xi32>
+  return %0 : tensor<1xi32>
+}

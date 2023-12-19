@@ -292,6 +292,54 @@ class TopKOpAdaptor {
 // "mhlo.topk".
 std::optional<TopKOpAdaptor> getTopKOp(CustomCallOp op);
 
+// The TanOp experiment provides a StableHLO adapter to MHLO TanOp.
+// In the future we expect stablehlo.tan to be added which will use the same
+// refinement rules.
+//
+// Within this experiment, TanOp is represented via the serialized MHLO
+// `stablehlo.custom_call @mhlo.tan` custom call. S
+//
+// Semantics of experimental TanOp are inherited from semantics of mhlo.tan.
+//
+// #### Inputs
+//
+// | Label | Name            | Type                                         |
+// |-------|-----------------|----------------------------------------------|
+// | (I1)  | `operand`       | tensor of floating-point or complex type     |
+//
+// #### Outputs
+//
+// | Name           | Type                                     |
+// |----------------|------------------------------------------|
+// | `result`       | tensor of floating-point or complex type |
+//
+// #### Constraints
+//
+// * (C1) baseline_type(operand) = baseline_type(result)
+//
+class TanOpAdaptor {
+ public:
+  TanOpAdaptor(CustomCallOp op) : op_(op) {}
+  operator Operation*() { return op_; }
+  Operation* operator->() { return op_; }
+
+  // These accessors assume that the operation is well-formed (i.e. that it
+  // can pass verification).
+  TypedValue<ShapedType> getOperand();
+
+  // Verifies the constraints documented above.
+  // Emits errors if errors are detected.
+  LogicalResult verify();
+
+ private:
+  CustomCallOp op_;
+};
+
+// Wraps a custom call in a TanOpAdaptor.
+// Fails if the call_target_name of the custom call doesn't match
+// "mhlo.tan".
+std::optional<TanOpAdaptor> getTanOp(CustomCallOp op);
+
 }  // namespace experimental
 }  // namespace stablehlo
 }  // namespace mlir
