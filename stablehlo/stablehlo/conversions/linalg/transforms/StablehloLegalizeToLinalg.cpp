@@ -469,15 +469,12 @@ struct HloBroadcastInDimConverter final
     SmallVector<AffineExpr> dimExprs;
     dimExprs.reserve(nloops);
 
-    if (broadcastOp.getBroadcastDimensions()) {
-      for (auto [idx, broadcastDim] : llvm::enumerate(
-               broadcastOp.getBroadcastDimensions().getValues<APInt>())) {
-        int size = broadcastDim.getSExtValue();
-        bool expansionNeeded =
-            operandShape[idx] == 1 && resultType.getShape()[size] != 1;
-        dimExprs.push_back(expansionNeeded ? b->getAffineConstantExpr(0)
-                                           : b->getAffineDimExpr(size));
-      }
+    for (auto [idx, broadcastDim] :
+         llvm::enumerate(broadcastOp.getBroadcastDimensions())) {
+      bool expansionNeeded =
+          operandShape[idx] == 1 && resultType.getShape()[broadcastDim] != 1;
+      dimExprs.push_back(expansionNeeded ? b->getAffineConstantExpr(0)
+                                         : b->getAffineDimExpr(broadcastDim));
     }
     return {
         AffineMap::get(nloops, /*symbolCount=*/0, dimExprs, b->getContext()),
@@ -566,7 +563,7 @@ struct BroadcastInDimOpToBroadcastConverter final
     Location loc = op.getLoc();
 
     SmallVector<int64_t> broadcastDimensions =
-        llvm::to_vector(op.getBroadcastDimensions().getValues<int64_t>());
+        llvm::to_vector(op.getBroadcastDimensions());
 
     Value operand = adaptor.getOperand();
     auto operandTy = llvm::cast<ShapedType>(operand.getType());
@@ -630,10 +627,7 @@ struct HloDynamicBroadcastInDimConverter final
     SmallVector<AffineExpr> dimExprs(operandType.getRank(), nullptr);
 
     // Use static type info.
-    auto bcastDims =
-        llvm::map_to_vector(op.getBroadcastDimensions(), [](const APInt &d) {
-          return static_cast<int64_t>(d.getLimitedValue());
-        });
+    auto bcastDims = op.getBroadcastDimensions();
     for (auto [idx, dim] : llvm::enumerate(operandType.getShape())) {
       if (ShapedType::isDynamic(dim)) continue;
 
@@ -643,17 +637,13 @@ struct HloDynamicBroadcastInDimConverter final
     }
 
     // Use annotated expansion behavior, if available.
-    if (op.getKnownExpandingDimensions()) {
-      for (const auto &it :
-           op.getKnownExpandingDimensions()->getValues<APInt>()) {
-        auto i = it.getLimitedValue();
+    if (auto dims = op.getKnownExpandingDimensions()) {
+      for (const auto &i : *dims) {
         dimExprs[i] = rewriter.getAffineConstantExpr(0);
       }
     }
-    if (op.getKnownNonexpandingDimensions()) {
-      for (const auto &it :
-           op.getKnownNonexpandingDimensions()->getValues<APInt>()) {
-        auto i = it.getLimitedValue();
+    if (auto dims = op.getKnownNonexpandingDimensions()) {
+      for (const auto &i : *dims) {
         dimExprs[i] = rewriter.getAffineDimExpr(bcastDims[i]);
       }
     }
@@ -700,7 +690,7 @@ struct DynamicBroadcastInDimOpToBroadcastConverter final
     if (!resultTy) return failure();
 
     SmallVector<int64_t> broadcastDimensions =
-        llvm::to_vector(op.getBroadcastDimensions().getValues<int64_t>());
+        llvm::to_vector(op.getBroadcastDimensions());
 
     SmallVector<std::optional<bool>> expansionBehavior(
         broadcastDimensions.size());
@@ -712,16 +702,14 @@ struct DynamicBroadcastInDimOpToBroadcastConverter final
     }
 
     // Use annotated expansion behavior, if available.
-    if (op.getKnownExpandingDimensions()) {
-      for (const auto &it :
-           op.getKnownExpandingDimensions()->getValues<int64_t>()) {
-        expansionBehavior[it] = true;
+    if (auto dims = op.getKnownExpandingDimensions()) {
+      for (const auto &i : *dims) {
+        expansionBehavior[i] = true;
       }
     }
-    if (op.getKnownNonexpandingDimensions()) {
-      for (const auto &it :
-           op.getKnownNonexpandingDimensions()->getValues<int64_t>()) {
-        expansionBehavior[it] = false;
+    if (auto dims = op.getKnownNonexpandingDimensions()) {
+      for (const auto &i : *dims) {
+        expansionBehavior[i] = false;
       }
     }
 
