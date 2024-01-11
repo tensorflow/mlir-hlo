@@ -89,6 +89,7 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":base",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:ShapeDialect",
@@ -411,6 +412,7 @@ cc_library(
     ],
     strip_include_prefix = ".",
     deps = [
+        ":base",
         ":chlo_ops",
         ":linalg_pass_inc_gen",
         ":stablehlo_ops",
@@ -454,9 +456,11 @@ cc_library(
         ":reference_process",
         ":reference_scope",
         ":reference_value",
+        ":register",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Parser",
         "@llvm-project//mlir:Support",
     ],
 )
@@ -724,6 +728,7 @@ cc_library(
         ":interpreter_ops",
         ":stablehlo_ops",
         ":vhlo_ops",
+        "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:QuantOps",
         "@llvm-project//mlir:ShapeDialect",

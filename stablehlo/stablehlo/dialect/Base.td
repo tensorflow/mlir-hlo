@@ -95,12 +95,6 @@ def HLO_QuantizedUnsignedInt : StableHLO_UniformQuantizedUnsignedIntOfWidths<[4,
 def HLO_QuantizedInt :
     AnyTypeOf<[HLO_QuantizedSignedInt, HLO_QuantizedUnsignedInt]>;
 
-// The broadcasting dimensions correspond to a tuple that describes how a
-// smaller rank shape is broadcast into a larger rank shape. For example,
-// given a 2x3x4 cuboid and a 3x4 matrix, a broadcasting tuple (1,2) means
-// matching the matrix to dimensions 1 and 2 of the cuboid.
-defvar BroadcastDimAttr = I64ElementsAttr;
-
 // Token type.
 def HLO_Token : Type<CPred<"$_self.isa<TokenType>()">, "token">;
 
@@ -234,6 +228,19 @@ def HLO_BoundedAttrInterface : AttrInterface<"BoundedAttrInterface"> {
     "Get the attribute's bounds",
     "::llvm::ArrayRef<int64_t>", "getBounds"
   >];
+}
+
+//===----------------------------------------------------------------------===//
+// Common attrs.
+//===----------------------------------------------------------------------===//
+
+def I64Elements1D : And<[I64ElementsAttr.predicate,  CPred<"$_self.cast<DenseIntElementsAttr>().getType().getRank() == 1">]>;
+
+// TODO(#1578) migrate uses to DenseI64ArrayAttr and delete this attr
+def I64DenseArrayOrElements1DAttr : Attr<Or<[DenseI64ArrayAttr.predicate, I64Elements1D]>, "either a DenseI64ArrayAttr or a 1-dimensional I64ElementsAttr."> {
+  let storageType = "mlir::Attribute";
+  let returnType = "SmallVector<int64_t>";
+  let convertFromStorage = "hlo::getI64Array($_self)";
 }
 
 #endif // STABLEHLO_DIALECT_BASE

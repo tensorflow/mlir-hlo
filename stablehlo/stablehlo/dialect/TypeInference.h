@@ -120,6 +120,10 @@ LogicalResult inferAllToAllOp(
     DenseIntElementsAttr replicaGroups,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
+LogicalResult inferAllReduceOp(
+    std::optional<Location> location, Value operand, Region& computation,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
+
 LogicalResult inferBatchNormGradOp(
     std::optional<Location> location, Value operand, Value scale, Value mean,
     Value variance, Value gradOutput, int64_t featureIndex,
@@ -172,13 +176,12 @@ LogicalResult inferConvertOp(
 
 LogicalResult inferConvolutionOp(
     std::optional<Location> location, Type lhsType, Type rhsType,
-    std::optional<DenseIntElementsAttr> windowStrides,
+    std::optional<ArrayRef<int64_t>> windowStrides,
     std::optional<DenseIntElementsAttr> padding,
-    std::optional<DenseIntElementsAttr> lhsDilation,
-    std::optional<DenseIntElementsAttr> rhsDilation,
-    std::optional<DenseElementsAttr> windowReversal,
-    int64_t inputBatchDimension, int64_t inputFeatureDimension,
-    ArrayRef<int64_t> inputSpatialDimensions,
+    std::optional<ArrayRef<int64_t>> lhsDilation,
+    std::optional<ArrayRef<int64_t>> rhsDilation,
+    std::optional<ArrayRef<bool>> windowReversal, int64_t inputBatchDimension,
+    int64_t inputFeatureDimension, ArrayRef<int64_t> inputSpatialDimensions,
     int64_t kernelInputFeatureDimension, int64_t kernelOutputFeatureDimension,
     ArrayRef<int64_t> kernelSpatialDimensions, int64_t outputBatchDimension,
     int64_t outputFeatureDimension, ArrayRef<int64_t> outputSpatialDimensions,
@@ -230,7 +233,7 @@ LogicalResult inferGatherOp(
     std::optional<Location> location, Value operand, Value startIndices,
     ArrayRef<int64_t> offsetDims, ArrayRef<int64_t> collapsedSliceDims,
     ArrayRef<int64_t> startIndexMap, int64_t indexVectorDim,
-    DenseIntElementsAttr sliceSizes,
+    ArrayRef<int64_t> sliceSizes,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
 LogicalResult inferGetDimensionSizeOp(
@@ -254,7 +257,7 @@ LogicalResult inferIfOp(std::optional<Location> location, Value pred,
 
 LogicalResult inferMapOp(
     std::optional<Location> location, ValueRange inputs,
-    DenseIntElementsAttr dimensions, Region& computation,
+    ArrayRef<int64_t> dimensions, Region& computation,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
 LogicalResult inferOptimizationBarrierOp(
@@ -281,16 +284,16 @@ LogicalResult inferRealOp(std::optional<Location> location, Value operand,
 
 LogicalResult inferReduceOp(
     std::optional<Location> location, TypeRange inputTypes,
-    TypeRange initValueTypes, DenseIntElementsAttr dimensions,
+    TypeRange initValueTypes, ArrayRef<int64_t> dimensions, Region& body,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
 LogicalResult inferReduceWindowOp(
     std::optional<Location> location, ValueRange inputs, ValueRange initValues,
-    DenseIntElementsAttr windowDimensions,
-    std::optional<DenseIntElementsAttr> windowStrides,
-    std::optional<DenseIntElementsAttr> baseDilations,
-    std::optional<DenseIntElementsAttr> windowDilations,
-    std::optional<DenseIntElementsAttr> padding,
+    ArrayRef<int64_t> windowDimensions,
+    std::optional<ArrayRef<int64_t>> windowStrides,
+    std::optional<ArrayRef<int64_t>> baseDilations,
+    std::optional<ArrayRef<int64_t>> windowDilations,
+    std::optional<DenseIntElementsAttr> padding, Region& body,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
 LogicalResult inferReplicaIdOp(MLIRContext* context, std::optional<Location>,
@@ -306,7 +309,7 @@ LogicalResult inferRngOp(
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
 LogicalResult inferScatterOp(std::optional<Location> location,
-                             ValueRange inputs,
+                             ValueRange inputs, Region& update_computation,
                              SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferSelectOp(
@@ -314,7 +317,7 @@ LogicalResult inferSelectOp(
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
 LogicalResult inferSelectAndScatterOp(
-    Value operand, SmallVectorImpl<Type>& inferredReturnTypes);
+    Value operand, Region& scatter, SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferSendOp(HloDialectInterface* dialect,
                           std::optional<Location> location,
@@ -396,13 +399,12 @@ LogicalResult verifyCollectivePermuteOp(std::optional<Location> location,
 
 LogicalResult verifyConvolutionOp(
     std::optional<Location> location, Type lhsType, Type rhsType,
-    std::optional<DenseIntElementsAttr> windowStrides,
+    std::optional<ArrayRef<int64_t>> windowStrides,
     std::optional<DenseIntElementsAttr> padding,
-    std::optional<DenseIntElementsAttr> lhsDilation,
-    std::optional<DenseIntElementsAttr> rhsDilation,
-    std::optional<DenseElementsAttr> windowReversal,
-    int64_t inputBatchDimension, int64_t inputFeatureDimension,
-    ArrayRef<int64_t> inputSpatialDimensions,
+    std::optional<ArrayRef<int64_t>> lhsDilation,
+    std::optional<ArrayRef<int64_t>> rhsDilation,
+    std::optional<ArrayRef<bool>> windowReversal, int64_t inputBatchDimension,
+    int64_t inputFeatureDimension, ArrayRef<int64_t> inputSpatialDimensions,
     int64_t kernelInputFeatureDimension, int64_t kernelOutputFeatureDimension,
     ArrayRef<int64_t> kernelSpatialDimensions, int64_t outputBatchDimension,
     int64_t outputFeatureDimension, ArrayRef<int64_t> outputSpatialDimensions,
@@ -459,7 +461,7 @@ LogicalResult verifyRecvOp(HloDialectInterface* dialect,
 
 LogicalResult verifyReduceOp(std::optional<Location> location,
                              ValueRange inputs, ValueRange initValues,
-                             DenseIntElementsAttr dimensions, Region& body);
+                             ArrayRef<int64_t> dimensions, Region& body);
 
 LogicalResult verifyReducePrecisionOp(std::optional<Location> location,
                                       int32_t exponentBits,
@@ -473,10 +475,10 @@ LogicalResult verifyReduceScatterOp(std::optional<Location> location,
 
 LogicalResult verifyReduceWindowOp(
     std::optional<Location> location, ValueRange inputs, ValueRange initValues,
-    DenseIntElementsAttr windowDimensions,
-    std::optional<DenseIntElementsAttr> windowStrides,
-    std::optional<DenseIntElementsAttr> baseDilations,
-    std::optional<DenseIntElementsAttr> windowDilations,
+    ArrayRef<int64_t> windowDimensions,
+    std::optional<ArrayRef<int64_t>> windowStrides,
+    std::optional<ArrayRef<int64_t>> baseDilations,
+    std::optional<ArrayRef<int64_t>> windowDilations,
     std::optional<DenseIntElementsAttr> padding, Region& body);
 
 LogicalResult verifyReshapeOp(std::optional<Location> location, Value operand,
@@ -499,8 +501,8 @@ LogicalResult verifyScatterOp(std::optional<Location> location,
 
 LogicalResult verifySelectAndScatterOp(
     std::optional<Location> location, Value operand, Value source,
-    Value initValue, std::optional<DenseIntElementsAttr> windowDimensions,
-    std::optional<DenseIntElementsAttr> windowStrides,
+    Value initValue, std::optional<ArrayRef<int64_t>> windowDimensions,
+    std::optional<ArrayRef<int64_t>> windowStrides,
     std::optional<DenseIntElementsAttr> padding, Region& select,
     Region& scatter);
 

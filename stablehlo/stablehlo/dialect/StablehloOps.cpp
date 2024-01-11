@@ -72,6 +72,7 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "stablehlo/dialect/AssemblyFormat.h"
+#include "stablehlo/dialect/Base.h"
 #include "stablehlo/dialect/StablehloBytecode.h"
 #include "stablehlo/dialect/StablehloOps.h.inc"
 #include "stablehlo/dialect/TypeInference.h"
@@ -156,7 +157,6 @@ LogicalResult ReduceScatterOp::verify() {
   }
 
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(AddOp)
-INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(AllReduceOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(AndOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(Atan2Op)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(CbrtOp)
@@ -614,7 +614,7 @@ namespace {
 void getSliceSizeValues(GatherOp* gather, OpBuilder& builder, Location loc,
                         ValueRange operands,
                         SmallVectorImpl<Value>& sliceSizes) {
-  for (int64_t val : gather->getSliceSizes().getValues<int64_t>())
+  for (int64_t val : gather->getSliceSizes())
     sliceSizes.push_back(builder.create<arith::ConstantIndexOp>(loc, val));
 }
 
@@ -917,6 +917,15 @@ LogicalResult AllReduceOp::verify() {
   return hlo::verifyAllReduceOp(getLoc(), getOperand(), getReplicaGroups(),
                                 channelId, getUseGlobalDeviceIds(),
                                 getComputation());
+}
+
+LogicalResult AllReduceOp::inferReturnTypeComponents(
+    MLIRContext*, std::optional<Location> location, ValueShapeRange operands,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  AllReduceOp::Adaptor adaptor(operands, attributes, properties, regions);
+  return hlo::inferAllReduceOp(location, adaptor.getOperand(),
+                               adaptor.getComputation(), inferredReturnShapes);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1379,7 +1388,7 @@ LogicalResult ReduceWindowOp::inferReturnTypeComponents(
       location, adaptor.getInputs(), adaptor.getInitValues(),
       adaptor.getWindowDimensions(), adaptor.getWindowStrides(),
       adaptor.getBaseDilations(), adaptor.getWindowDilations(),
-      adaptor.getPadding(), inferredReturnShapes);
+      adaptor.getPadding(), adaptor.getBody(), inferredReturnShapes);
 }
 
 LogicalResult ReduceWindowOp::verify() {
@@ -1484,9 +1493,7 @@ bool hasSameOperandAndResultTypes(Operation& op) {
 //     first input-operand.
 // E4. The  arguments of the region's only basic block are forwarded perfectly
 //     to inner-op's operands.
-// E5. The reduce-op, inner-op, blocks arguments, and the return-op all have the
-//     same location.
-// E6. The single operation result is perfectly forwarded to the reduce op
+// E5. The single operation result is perfectly forwarded to the reduce op
 //     return.
 static bool isEligibleForCompactPrint(ReduceOp op) {
   // Check E1.
@@ -1520,14 +1527,6 @@ static bool isEligibleForCompactPrint(ReduceOp op) {
   auto retOp = dyn_cast<ReturnOp>(block.getTerminator());
   if (!retOp) return false;
 
-  auto blockArgLoc = block.getArgument(0).getLoc();
-  if (blockArgLoc != block.getArgument(1).getLoc()) return false;
-
-  if (innerOp.getLoc() != op.getLoc() || retOp.getLoc() != op.getLoc() ||
-      blockArgLoc != op.getLoc())
-    return false;
-
-  // Check E6.
   return llvm::equal(innerOp.getResults(), retOp.getOperands());
 }
 
@@ -1555,14 +1554,14 @@ void ReduceOp::print(OpAsmPrinter& p) {
     printEscapedString(innerOp.getName().getStringRef(), p.getStream());
 
     p << " across dimensions = [";
-    llvm::interleaveComma(getDimensions().getValues<int64_t>(), p);
+    llvm::interleaveComma(getDimensions(), p);
     p << "]";
     p.printOptionalAttrDict(getOperation()->getAttrs(), {"dimensions"});
     p << " : ";
     p.printFunctionalType(*this);
   } else {
     p << " across dimensions = [";
-    llvm::interleaveComma(getDimensions().getValues<int64_t>(), p);
+    llvm::interleaveComma(getDimensions(), p);
     p << "]";
     p.printOptionalAttrDict(getOperation()->getAttrs(), {"dimensions"});
     p << " : ";
@@ -1771,7 +1770,6 @@ ParseResult ReduceOp::parse(OpAsmParser& parser, OperationState& result) {
   result.addTypes(reduceOpFnType.getResults());
   result.location = innerOp->getLoc();
   result.addAttribute("dimensions", builder.getI64TensorAttr(dimensions));
-
   return success();
 }
 
@@ -1782,7 +1780,8 @@ LogicalResult ReduceOp::inferReturnTypeComponents(
   ReduceOp::Adaptor adaptor(operands, attributes, properties, regions);
   return hlo::inferReduceOp(location, adaptor.getInputs().getTypes(),
                             adaptor.getInitValues().getTypes(),
-                            adaptor.getDimensions(), inferredReturnShapes);
+                            adaptor.getDimensions(), adaptor.getBody(),
+                            inferredReturnShapes);
 }
 
 LogicalResult ReduceOp::verify() {
@@ -1802,8 +1801,7 @@ LogicalResult ReduceOp::reifyReturnTypeShapes(
 
   Location loc = this->getLoc();
   SmallVector<Value, 4> shapeValues;
-  SmallVector<int64_t, 4> dimensions(
-      this->getDimensions().getValues<int64_t>());
+  SmallVector<int64_t, 4> dimensions(this->getDimensions());
   shapeValues.reserve(operandType.getRank());
   Type shapeScalarType = builder.getIndexType();
   auto toShapeScalarType = [&](Value v) {
@@ -2295,8 +2293,8 @@ LogicalResult SelectAndScatterOp::inferReturnTypes(
     SmallVectorImpl<Type>& inferredReturnTypes) {
   SelectAndScatterOp::Adaptor adaptor(operands, attributes, properties,
                                       regions);
-  return hlo::inferSelectAndScatterOp(adaptor.getOperand(),
-                                      inferredReturnTypes);
+  return hlo::inferSelectAndScatterOp(
+      adaptor.getOperand(), adaptor.getScatter(), inferredReturnTypes);
 }
 
 LogicalResult SelectAndScatterOp::verify() {
@@ -2316,6 +2314,7 @@ LogicalResult ScatterOp::inferReturnTypes(
     SmallVectorImpl<Type>& inferredReturnTypes) {
   ScatterOp::Adaptor adaptor(operands, attributes, properties, regions);
   return hlo::inferScatterOp(location, adaptor.getInputs(),
+                             adaptor.getUpdateComputation(),
                              inferredReturnTypes);
 }
 
@@ -3092,42 +3091,30 @@ Attribute ConvDimensionNumbersAttr::parse(AsmParser& parser, Type type) {
 
 namespace {
 // Custom formatting for convolution window attributes.
-void printWindowAttribute(OpAsmPrinter& p, DenseElementsAttr attribute) {
-  if (attribute.getElementType().isInteger(/*width=*/1)) {
-    // boolean attribute.
-    llvm::interleaveComma(attribute.getValues<bool>(), p,
-                          [&](bool b) { p << (b ? 1 : 0); });
-    return;
+void printWindowPadding(OpAsmPrinter& p, DenseElementsAttr padding) {
+  // Padding is Nx2 attribute.
+  auto it = padding.value_begin<int64_t>();
+  std::vector<std::pair<int64_t, int64_t>> values(padding.getNumElements() / 2);
+  for (auto& item : values) {
+    int64_t first = *it;
+    ++it;
+    int64_t second = *it;
+    ++it;
+    item = {first, second};
   }
-  if (attribute.getType().getRank() == 2) {
-    // Padding is Nx2 attribute.
-    auto it = attribute.value_begin<int64_t>();
-    std::vector<std::pair<int64_t, int64_t>> values(attribute.getNumElements() /
-                                                    2);
-    for (auto& item : values) {
-      int64_t first = *it;
-      ++it;
-      int64_t second = *it;
-      ++it;
-      item = {first, second};
-    }
-    llvm::interleaveComma(
-        values, p, [&](const std::pair<int64_t, int64_t> pair) {
-          p << '[' << pair.first << ", " << pair.second << ']';
-        });
-  } else {
-    llvm::interleaveComma(attribute.getValues<int64_t>(), p);
-  }
+  llvm::interleaveComma(values, p, [&](const std::pair<int64_t, int64_t> pair) {
+    p << '[' << pair.first << ", " << pair.second << ']';
+  });
 }
 }  // namespace
 
 void printWindowAttributes(OpAsmPrinter& p, Operation* /*op*/,
-                           std::optional<DenseIntElementsAttr> windowStrides,
+                           std::optional<Attribute> windowStrides,
                            std::optional<DenseIntElementsAttr> padding,
-                           std::optional<DenseIntElementsAttr> lhsDilation,
-                           std::optional<DenseIntElementsAttr> rhsDilation,
-                           std::optional<DenseElementsAttr> windowReversal) {
-  using pair_t = std::pair<DenseElementsAttr, StringRef>;
+                           std::optional<Attribute> lhsDilation,
+                           std::optional<Attribute> rhsDilation,
+                           std::optional<Attribute> windowReversal) {
+  using pair_t = std::pair<Attribute, StringRef>;
   std::array<pair_t, 5> printedAttributes = {{
       {windowStrides ? *windowStrides : nullptr, "stride"},
       {padding ? *padding : nullptr, "pad"},
@@ -3141,19 +3128,26 @@ void printWindowAttributes(OpAsmPrinter& p, Operation* /*op*/,
       printedAttributes,
       [](const pair_t& a) { return static_cast<bool>(a.first); });
 
-  llvm::interleaveComma(nonNullAttributes, p, [&](const pair_t& a) {
-    p << a.second << " = [";
-    printWindowAttribute(p, a.first);
-    p << "]";
+  llvm::interleaveComma(nonNullAttributes, p, [&](const pair_t& attr) {
+    p << attr.second << " = [";
+
+    if (attr.second == "pad") {
+      printWindowPadding(p, attr.first.dyn_cast<DenseIntElementsAttr>());
+    } else if (attr.second == "reverse") {
+      llvm::interleaveComma(hlo::getBoolArray(attr.first), p);
+    } else {
+      llvm::interleaveComma(hlo::getI64Array(attr.first), p);
+    }
+
+    p << ']';
   });
 }
 
-ParseResult parseWindowAttributes(OpAsmParser& parser,
-                                  DenseIntElementsAttr& windowStrides,
+ParseResult parseWindowAttributes(OpAsmParser& parser, Attribute& windowStrides,
                                   DenseIntElementsAttr& padding,
-                                  DenseIntElementsAttr& lhsDilation,
-                                  DenseIntElementsAttr& rhsDilation,
-                                  DenseElementsAttr& windowReversal) {
+                                  Attribute& lhsDilation,
+                                  Attribute& rhsDilation,
+                                  Attribute& windowReversal) {
   StringRef attributeName;
 
   llvm::StringSet<> allowedAttributeNames{
@@ -3207,9 +3201,8 @@ ParseResult parseWindowAttributes(OpAsmParser& parser,
       if (parser.parseCommaSeparatedList(AsmParser::Delimiter::Square,
                                          int64Parser))
         return failure();
-      const int64_t size = static_cast<int64_t>(values.size());
       if (attributeName == "reverse") {
-        auto ty = RankedTensorType::get({size},
+        auto ty = RankedTensorType::get({static_cast<int64_t>(values.size())},
                                         parser.getBuilder().getIntegerType(1));
         auto boolVector = llvm::to_vector<4>(
             llvm::map_range(values, [](int64_t v) { return v != 0; }));

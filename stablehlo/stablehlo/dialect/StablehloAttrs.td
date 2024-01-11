@@ -160,17 +160,6 @@ def StableHLO_FlatSymbolRefArrayAttr :
   let constBuilderCall = "::mlir::ArrayAttr::get($_builder.getContext(), $0)";
 }
 
-def StableHLO_BoolElementsAttr :
-    ElementsAttrBase<
-      And<[CPred<"$_self.isa<::mlir::DenseIntOrFPElementsAttr>()">,
-           CPred<"$_self.cast<::mlir::DenseIntOrFPElementsAttr>().getType().getElementType().isInteger(1)">]>,
-      "constant boolean vector/tensor attribute"> {
-  let storageType = [{ ::mlir::DenseElementsAttr }];
-  let returnType = [{ ::mlir::DenseElementsAttr }];
-
-  let convertFromStorage = "$_self";
-}
-
 def StableHLO_ConvDimensionNumbers : AttrDef<StableHLO_Dialect, "ConvDimensionNumbers"> {
   let mnemonic = "conv";
   let summary = "Structure of dimension information for conv op";
@@ -190,39 +179,40 @@ def StableHLO_ConvDimensionNumbers : AttrDef<StableHLO_Dialect, "ConvDimensionNu
   let hasCustomAssemblyFormat = 1;
 }
 
+def StableHLO_BoolElementsAttr :
+    ElementsAttrBase<
+      And<[CPred<"$_self.isa<::mlir::DenseIntOrFPElementsAttr>()">,
+           CPred<"$_self.cast<::mlir::DenseIntOrFPElementsAttr>().getType().getElementType().isInteger(1)">]>,
+      "constant boolean vector/tensor attribute"> {
+  let storageType = [{ ::mlir::DenseElementsAttr }];
+  let returnType = [{ ::mlir::DenseElementsAttr }];
+
+  let convertFromStorage = "$_self";
+}
+
+def BoolDenseArrayOrElementsAttr : Attr<Or<[DenseBoolArrayAttr.predicate, StableHLO_BoolElementsAttr.predicate]>, "either a DenseBoolArrayAttr or a StableHLO_BoolElementsAttr"> {
+  let storageType = "mlir::Attribute";
+  let returnType = "SmallVector<bool>";
+  let convertFromStorage = "hlo::getBoolArray($_self)";
+}
+
 def StableHLO_ConvolutionAttributes {
   dag attributes = (ins
     // Default value: one for each of the spatial dimension.
-    OptionalAttr<I64ElementsAttr>:$window_strides,
+    OptionalAttr<I64DenseArrayOrElements1DAttr>:$window_strides,
     // Default value: two zeros for each of the spatial dimension.
     OptionalAttr<I64ElementsAttr>:$padding,
     // Default value: one for each of the spatial dimension.
-    OptionalAttr<I64ElementsAttr>:$lhs_dilation,
+    OptionalAttr<I64DenseArrayOrElements1DAttr>:$lhs_dilation,
     // Default value: one for each of the spatial dimension.
-    OptionalAttr<I64ElementsAttr>:$rhs_dilation,
+    OptionalAttr<I64DenseArrayOrElements1DAttr>:$rhs_dilation,
     // Default value: false for each of the spatial dimension.
-    OptionalAttr<StableHLO_BoolElementsAttr>:$window_reversal,
+    OptionalAttr<BoolDenseArrayOrElementsAttr>:$window_reversal,
     StableHLO_ConvDimensionNumbers:$dimension_numbers,
     I64Attr:$feature_group_count,
     I64Attr:$batch_group_count,
     StableHLO_PrecisionConfigAttr:$precision_config
   );
-}
-
-def I64Elements1D : And<[I64ElementsAttr.predicate,  CPred<"$_self.cast<DenseIntElementsAttr>().getType().getRank() == 1">]>;
-
-// TODO(#1578) migrate uses to DenseI64ArrayAttr and delete this attr
-def I64DenseArrayOrElements1DAttr : Attr<Or<[DenseI64ArrayAttr.predicate, I64Elements1D]>, "either a DenseI64ArrayAttr or a 1-dimensional I64ElementsAttr."> {
-  let storageType = "Attribute";
-  let returnType = "SmallVector<int64_t>";
-  let convertFromStorage = [{
-    [&]() -> SmallVector<int64_t> {
-      if (auto elems = $_self.dyn_cast<DenseIntElementsAttr>()) {
-        return llvm::to_vector(elems.getValues<int64_t>());
-      }
-      return llvm::to_vector($_self.cast<DenseI64ArrayAttr>().asArrayRef());
-    }()
-  }];
 }
 
 #endif // STABLEHLO_DIALECT_STABLEHLO_ATTRS

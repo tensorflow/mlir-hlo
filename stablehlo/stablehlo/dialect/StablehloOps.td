@@ -1327,7 +1327,7 @@ def StableHLO_AllGatherOp : StableHLO_Op<"all_gather",
 }
 
 def StableHLO_AllReduceOp : StableHLO_Op<"all_reduce",
-    [HLO_CompatibleOperandsAndResultType /*all_reduce_c6*/]> {
+    [InferTensorType /*all_reduce_c6, all_reduce_c7*/]> {
   let summary = "AllReduce operation";
   let description = [{
     Within each process group in the process grid, applies a reduction function
@@ -1362,8 +1362,7 @@ def StableHLO_AllReduceOp : StableHLO_Op<"all_reduce",
   let hasVerifier = 1;
 }
 
-def StableHLO_ReduceScatterOp : StableHLO_Op<"reduce_scatter",
-    [SameOperandsAndResultElementType /*reduce_scatter_c8*/]> {
+def StableHLO_ReduceScatterOp : StableHLO_Op<"reduce_scatter", []> {
   let summary = "ReduceScatter operation";
   let description = [{
      Within each process group in the process grid, performs reduction, using
@@ -1448,7 +1447,7 @@ def StableHLO_AllToAllOp : StableHLO_Op<"all_to_all",
 def StableHLO_ReduceOp: StableHLO_ShapedInterfaceOp<"reduce", [
       RecursiveMemoryEffects,
       SameVariadicOperandSize /*reduce_c3*/,
-      InferTensorTypeWithReify /*reduce_c7*/,
+      InferTensorTypeWithReify /*reduce_c7, reduce_c8*/,
       SingleBlockImplicitTerminator<"ReturnOp">
     ]> { /*reduce_c7*/
   let summary = "Reduce operation";
@@ -1466,17 +1465,15 @@ def StableHLO_ReduceOp: StableHLO_ShapedInterfaceOp<"reduce", [
         %0 = stablehlo.add %arg0, %arg1 : tensor<i64>
         stablehlo.return %0 : tensor<i64>
     }) {
-      dimensions = dense<1> : tensor<1xi64>
+      dimensions = array<i64: 1>
     } : (tensor<1x6xi64>, tensor<i64>) -> tensor<1xi64>
     ```
   }];
   let arguments = (ins
     Variadic<HLO_Tensor>:$inputs, /*reduce_i1*/
     Variadic<HLO_Tensor>:$init_values, /*reduce_i2*/
-    I64ElementsAttr:$dimensions /*reduce_i3*/
+    I64DenseArrayOrElements1DAttr:$dimensions /*reduce_i3*/
   );
-  // TODO(hinsu): Verify that the attached body arguments and results are
-  // compatible with reduce op's operands.
   let regions = (region SizedRegion<1>:$body /*reduce_i4*/);
 
   let results = (outs Variadic<HLO_Tensor>);
@@ -1606,9 +1603,9 @@ def StableHLO_SliceOp: StableHLO_Op<
     // The `4:8:2` above is parsed into the second entry of `start_indices`,
     // `limit_indices` and `strides` respectively.
     %result = "stablehlo.slice" (%operand) {
-      start_indices = dense<[1, 4]> : tensor<2xi64>,
-      limit_indices = dense<[3, 8]> : tensor<2xi64>,
-      strides = dense<[1, 2]> : tensor<2xi64>
+      start_indices = array<i64: 1, 4>,
+      limit_indices = array<i64: 3, 8>,
+      strides = array<i64: 1, 2>
     } : (tensor<3x8xi64>) -> tensor<2x2xi64>
     ```
   }];
@@ -2105,11 +2102,11 @@ def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure]> {
     Example:
     ```mlir
     %result = "stablehlo.convolution"(%lhs, %rhs) {
-      window_strides = dense<4> : tensor<2xi64>,
+      window_strides = array<i64: 4, 4>,
       padding = dense<0> : tensor<2x2xi64>,
-      lhs_dilation = dense<2> : tensor<2xi64>,
-      rhs_dilation = dense<1> : tensor<2xi64>,
-      window_reversal = dense<false> : tensor<2xi1>,
+      lhs_dilation = array<i64: 2, 2>,
+      rhs_dilation = array<i64: 1, 1>,
+      window_reversal = array<i1: false, false>,
       dimension_numbers = #stablehlo.conv<[b, 0, 1, f]x[0, 1, i, o]->[b, 0, 1, f]>,
       feature_group_count = 1 : i64,
       batch_group_count = 1 : i64,
@@ -2129,8 +2126,7 @@ def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure]> {
   let extraClassDeclaration = [{
     bool hasWindowReversal() {
       auto reversal = getWindowReversalAttr();
-      return reversal && llvm::any_of(reversal.getValues<bool>(),
-                                      [](bool v) { return v; });
+      return reversal && llvm::any_of(hlo::getBoolArray(reversal), [](bool v) { return v; });
     }
   }];
 
@@ -2390,7 +2386,7 @@ def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify /*gathe
         collapsed_slice_dims = [0],
         start_index_map = [1, 0],
         index_vector_dim = 2>,
-      slice_sizes = dense<[1, 2, 2]> : tensor<3xi64>,
+      slice_sizes = array<i64: 1, 2, 2>,
       indices_are_sorted = false
     } : (tensor<3x4x2xi32>, tensor<2x3x2xi64>) -> tensor<2x3x2x2xi32>
     ```
@@ -2400,7 +2396,7 @@ def StableHLO_GatherOp: StableHLO_Op<"gather", [InferTensorTypeWithReify /*gathe
     HLO_Tensor:$operand /*gather_i1*/,
     HLO_IntTensor:$start_indices /*gather_i2*/,
     StableHLO_GatherDimensionNumbers:$dimension_numbers /*gather_i3, gather_i4, gather_i5, gather_i6*/,
-    I64ElementsAttr:$slice_sizes /*gather_i7*/,
+    I64DenseArrayOrElements1DAttr:$slice_sizes /*gather_i7*/,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$indices_are_sorted /*gather_i8*/
   );
 
@@ -2453,13 +2449,13 @@ def StableHLO_MapOp: StableHLO_ShapedInterfaceOp<"map",
         %0 = stablehlo.multiply %arg0, %arg1 : tensor<i64>
         stablehlo.return %0 : tensor<i64>
     }) {
-      dimensions = dense<[0, 1]> : tensor<2xi64>
+      dimensions = array<i64: 0, 1>
     } : (tensor<2x2xi64>, tensor<2x2xi64>) -> tensor<2x2xi64>
     ```
   }];
   let arguments = (ins
     Variadic<HLO_Tensor>:$inputs /*map_i1*/,
-    I64ElementsAttr:$dimensions /*map_i2*/
+    I64DenseArrayOrElements1DAttr:$dimensions /*map_i2*/
   );
   let regions = (region SizedRegion<1>:$computation /*map_i3*/);
   let results = (outs HLO_Tensor);
@@ -2514,7 +2510,8 @@ def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape", [
 
 def StableHLO_ScatterOp: StableHLO_Op<"scatter", [RecursiveMemoryEffects,
       SameVariadicOperandSize /*scatter_c5*/,
-      DeclareOpInterfaceMethods<InferTypeOpInterface> /*scatter_c16*/]> {
+      DeclareOpInterfaceMethods<InferTypeOpInterface> /*scatter_c16,
+      scater_c17*/]> {
   let summary = "Scatter operation";
   let description = [{
     Produces `results` tensors which are equal to `inputs` tensors except that
@@ -2587,8 +2584,8 @@ def StableHLO_SelectOp: StableHLO_Op<"select", [Pure, HLO_BroadcastingElementwis
 }
 
 def StableHLO_SelectAndScatterOp: StableHLO_Op<"select_and_scatter",
-      [DeclareOpInterfaceMethods<InferTypeOpInterface> /*select_and_scatter_c11*/,
-       RecursiveMemoryEffects]> {
+      [DeclareOpInterfaceMethods<InferTypeOpInterface> /*select_and_scatter_c11,
+      select_and_scatter_c12*/, RecursiveMemoryEffects]> {
   let summary = "SelectAndScatter operation";
   let description = [{
     Scatters the values from the `source` tensor using `scatter` based on the
@@ -2619,8 +2616,8 @@ def StableHLO_SelectAndScatterOp: StableHLO_Op<"select_and_scatter",
     HLO_Tensor:$operand, /*select_and_scatter_i1*/
     HLO_Tensor:$source, /*select_and_scatter_i2*/
     HLO_Tensor:$init_value, /*select_and_scatter_i3*/
-    OptionalAttr<I64ElementsAttr>:$window_dimensions, /*select_and_scatter_i4*/
-    OptionalAttr<I64ElementsAttr>:$window_strides, /*select_and_scatter_i5*/
+    OptionalAttr<I64DenseArrayOrElements1DAttr>:$window_dimensions, /*select_and_scatter_i4*/
+    OptionalAttr<I64DenseArrayOrElements1DAttr>:$window_strides, /*select_and_scatter_i5*/
     OptionalAttr<I64ElementsAttr>:$padding /*select_and_scatter_i6*/
   );
 
@@ -2872,10 +2869,10 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
         %0 = stablehlo.add %arg0, %arg1 : tensor<i64>
         stablehlo.return %0 : tensor<i64>
     }) {
-      window_dimensions = dense<[2, 1]> : tensor<2xi64>,
-      window_strides = dense<[4, 1]> : tensor<2xi64>,
-      base_dilations = dense<[2, 1]> : tensor<2xi64>,
-      window_dilations = dense<[3, 1]> : tensor<2xi64>,
+      window_dimensions = array<i64: 2, 1>,
+      window_strides = array<i64: 4, 1>,
+      base_dilations = array<i64: 2, 1>,
+      window_dilations = array<i64: 3, 1>,
       padding = dense<[[2, 1], [0, 0]]> : tensor<2x2xi64>
     } : (tensor<3x2xi64>, tensor<i64>) -> tensor<2x2xi64>
     ```
@@ -2884,13 +2881,13 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
   let arguments = (ins
     Variadic<HLO_Tensor>:$inputs /*reduce_window_i1*/,
     Variadic<HLO_Tensor>:$init_values /*reduce_window_i2*/,
-    I64ElementsAttr:$window_dimensions /*reduce_window_i3*/,
+    I64DenseArrayOrElements1DAttr:$window_dimensions /*reduce_window_i3*/,
     // If strides or dilations attributes are missing then the default value is
     // one for each of the operand dimensions. Similarly, padding values are zero
     // for both low and high in each of the dimensions, if not specified.
-    OptionalAttr<I64ElementsAttr>:$window_strides /*reduce_window_i4*/,
-    OptionalAttr<I64ElementsAttr>:$base_dilations /*reduce_window_i5*/,
-    OptionalAttr<I64ElementsAttr>:$window_dilations /*reduce_window_i6*/,
+    OptionalAttr<I64DenseArrayOrElements1DAttr>:$window_strides /*reduce_window_i4*/,
+    OptionalAttr<I64DenseArrayOrElements1DAttr>:$base_dilations /*reduce_window_i5*/,
+    OptionalAttr<I64DenseArrayOrElements1DAttr>:$window_dilations /*reduce_window_i6*/,
     OptionalAttr<I64ElementsAttr>:$padding /*reduce_window_i7*/
   );
 
@@ -2899,6 +2896,7 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
   let regions = (region SizedRegion<1>:$body /*reduce_window_i8*/);
 
   let hasVerifier = 1;
+
 
   // Builder for non-variadic version of the operation.
   let builders = [
@@ -2924,7 +2922,6 @@ def StableHLO_ReduceWindowOp: StableHLO_Op<"reduce_window", [
       "function_ref<void(OpBuilder &, Location, ValueRange)>":$bodyBuilder
     )>,
   ];
-
   // TODO(hinsu): Implement custom printer and parser.
 }
 
@@ -2945,7 +2942,7 @@ def StableHLO_ReturnOp : StableHLO_Op<"return", [Pure, Terminator]> {
         %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<i32>, tensor<i32>) -> tensor<i32>
         "stablehlo.return"(%0) : (tensor<i32>) -> ()
     }) {
-      dimensions = dense<1> : tensor<1xi64>
+      dimensions = array<i64: 1>
     } : (tensor<1x6xi32>, tensor<i32>) -> tensor<1xi32>
     ```
   }];

@@ -70,11 +70,16 @@ struct RefineDynamicReduceWindowOpPattern
     SmallVector<ShapedTypeComponents> inferredReturnTypes;
     if (failed(hlo::inferReduceWindowOp(
             /*location=*/{}, op.getInputs(), op.getInitValues(),
-            rewriter.getI64TensorAttr(windowDimensions),
-            rewriter.getI64TensorAttr(windowStrides),
-            rewriter.getI64TensorAttr(baseDilations),
-            rewriter.getI64TensorAttr(windowDilations),
-            hlo::getPaddingAttr(&rewriter, padding), inferredReturnTypes)))
+            llvm::to_vector(rewriter.getI64TensorAttr(windowDimensions)
+                                .getValues<int64_t>()),
+            llvm::to_vector(
+                rewriter.getI64TensorAttr(windowStrides).getValues<int64_t>()),
+            llvm::to_vector(
+                rewriter.getI64TensorAttr(baseDilations).getValues<int64_t>()),
+            llvm::to_vector(rewriter.getI64TensorAttr(windowDilations)
+                                .getValues<int64_t>()),
+            hlo::getPaddingAttr(&rewriter, padding), op.getBody(),
+            inferredReturnTypes)))
       return rewriter.notifyMatchFailure(op, "inferReduceWindowOp failed");
     return refineReturnTypes(rewriter, op, inferredReturnTypes);
   }

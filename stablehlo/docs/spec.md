@@ -1682,11 +1682,11 @@ Afterwards, `result@process` is given by:
 
 #### Inputs
 
-| Label | Name                    | Type                                                             | Constraints |
-|-------|-------------------------|------------------------------------------------------------------|-------------|
-| (I1)  | `operand`               | tensor                                                           | (C3)        |
-| (I2)  | `replica_groups`        | variadic number of 1-dimensional tensor constants of type `si64` | (C1), (C2)  |
-| (I3)  | `channel_id`            | constant of type `si64`                                          |             |
+| Label | Name             | Type                                                             | Constraints |
+|-------|------------------|------------------------------------------------------------------|-------------|
+| (I1)  | `operand`        | tensor                                                           | (C3)        |
+| (I2)  | `replica_groups` | variadic number of 1-dimensional tensor constants of type `si64` | (C1), (C2)  |
+| (I3)  | `channel_id`     | constant of type `si64`                                          |             |
 
 #### Outputs
 
@@ -4305,7 +4305,7 @@ The following diagram shows how elements in `results...` are computed from
 
 More formally,
 `results...[result_index] = reduce(windows, init_values, axes(inputs...), body)`
-where:
+(see [reduce](#reduce)) where:
 
 * `padded_inputs = pad(inputs..., init_values..., padding[:, 0], padding[:, 1],
   base_dilations - 1)`.
@@ -4998,8 +4998,8 @@ More formally:
 
    where `E = element_type(operand)`, and `reduce_window_without_init` works
    exactly like `reduce_window`, except that the `schedule` of the underlying
-   `reduce` doesn't include init values. It is currently unspecified what
-   happens if the corresponding window doesn't have values
+   `reduce` (see [reduce](#reduce)) doesn't include init values. It is currently
+   unspecified what happens if the corresponding window doesn't have values
    ([#731](https://github.com/openxla/stablehlo/issues/731)).
 * `result[result_index] = reduce([source_values], [init_value], [0], scatter)`
  where:

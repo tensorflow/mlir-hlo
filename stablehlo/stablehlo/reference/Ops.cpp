@@ -81,8 +81,8 @@ SmallVector<Tensor> evalReduceOp(ArrayRef<Tensor> inputs,
   SmallVector<ShapedTypeComponents> inferredReduceTypes;
   Builder builder(inputs[0].getType().getContext());
   auto reduceStatus = hlo::inferReduceOp(
-      /*location=*/{}, inputTypes, initValueTypes,
-      builder.getI64TensorAttr(dimensions), inferredReduceTypes);
+      /*location=*/{}, inputTypes, initValueTypes, dimensions, body,
+      inferredReduceTypes);
   if (failed(reduceStatus))
     report_fatal_error(
         invalidArgument("Could not infer ReduceOp's return type"));
@@ -603,18 +603,15 @@ SmallVector<InterpreterValue> eval(Region &region,
 
       Sizes windowStrides(rank, 1);
       if (auto windowStridesAttr = reduceWindowOp.getWindowStrides())
-        windowStrides.assign(windowStridesAttr->value_begin<int64_t>(),
-                             windowStridesAttr->value_end<int64_t>());
+        windowStrides = Sizes(*windowStridesAttr);
 
       Sizes baseDilations(rank, 1);
       if (auto baseDilationsAttr = reduceWindowOp.getBaseDilations())
-        baseDilations.assign(baseDilationsAttr->value_begin<int64_t>(),
-                             baseDilationsAttr->value_end<int64_t>());
+        baseDilations = Sizes(*baseDilationsAttr);
 
       Sizes windowDilations(rank, 1);
       if (auto windowDilationsAttr = reduceWindowOp.getWindowDilations())
-        windowDilations.assign(windowDilationsAttr->value_begin<int64_t>(),
-                               windowDilationsAttr->value_end<int64_t>());
+        windowDilations = Sizes(*windowDilationsAttr);
 
       Sizes paddingLow(rank, 0), paddingHigh(rank, 0);
       if (auto paddingAttr = reduceWindowOp.getPadding()) {
@@ -699,14 +696,13 @@ SmallVector<InterpreterValue> eval(Region &region,
 
       Sizes windowDimensions(rank, 1);
       if (auto windowDimensionsAttr = selectAndScatterOp.getWindowDimensions())
-        windowDimensions.assign(
-            windowDimensionsAttr->getValues<int64_t>().begin(),
-            windowDimensionsAttr->getValues<int64_t>().end());
+        windowDimensions.assign(windowDimensionsAttr->begin(),
+                                windowDimensionsAttr->end());
 
       Sizes windowStrides(rank, 1);
       if (auto windowStridesAttr = selectAndScatterOp.getWindowStrides())
-        windowStrides.assign(windowStridesAttr->getValues<int64_t>().begin(),
-                             windowStridesAttr->getValues<int64_t>().end());
+        windowStrides.assign(windowStridesAttr->begin(),
+                             windowStridesAttr->end());
 
       Sizes paddingLow(rank, 0);
       if (auto padding = selectAndScatterOp.getPadding()) {

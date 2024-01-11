@@ -27,6 +27,40 @@ func.func @all_reduce(%operand: tensor<10xf32>) -> tensor<10xf32> {
   func.return %0 : tensor<10xf32>
 }
 
+// -----
+
+// CHECK-LABEL: func @all_reduce_with_promotable_types
+func.func @all_reduce_with_promotable_types(%operand: tensor<f32>) -> tensor<f64> {
+
+  %result = "stablehlo.all_reduce"(%operand) ({
+    ^bb0(%arg0: tensor<f64>, %arg1: tensor<f64>):
+      %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<f64>, tensor<f64>) -> tensor<f64>
+      "stablehlo.return"(%0) : (tensor<f64>) -> ()
+  }) {
+    replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>,
+    channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
+  } : (tensor<f32>) -> tensor<f64>
+
+  func.return %result : tensor<f64>
+}
+
+// -----
+
+// CHECK-LABEL: func @all_reduce_with_promotable_quantized_types
+func.func @all_reduce_with_promotable_quantized_types(%operand: tensor<!quant.uniform<i8:f32, 2.000000e+00:15>>)
+    -> tensor<!quant.uniform<i32:f32, 2.000000e+00:15>> {
+
+  %result = "stablehlo.all_reduce"(%operand) ({
+    ^bb0(%arg0: tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>, %arg1: tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>):
+      %0 = stablehlo.add %arg0, %arg1 : tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>
+      "stablehlo.return"(%0) : (tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>) -> ()
+  }) {
+    replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>,
+    channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
+  } : (tensor<!quant.uniform<i8:f32, 2.000000e+00:15>>) -> tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>
+
+  func.return %result : tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>
+}
 
 // -----
 
@@ -186,7 +220,7 @@ func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
 // -----
 
 func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
-  // expected-error@+1 {{The type of reduction-region's result type at index 0 differs from the op's corresponding init-value type: 'tensor<i32>' vs 'tensor<f32>'}}
+  // expected-error@+1 {{The element-type of reduction-region's result type at index 0 is expected to be promotable from the op's corresponding init-value element-type: 'tensor<i32>' vs 'tensor<f32>'}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<i32>, %arg1: tensor<i32>):
     %max = stablehlo.maximum %arg0, %arg1 : tensor<i32>
@@ -201,7 +235,7 @@ func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
 // -----
 
 func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
-  // expected-error@+1 {{The type of reduction-region's result type at index 0 differs from the op's corresponding init-value type: 'tensor<4xf32>' vs 'tensor<f32>'}}
+  // expected-error@+1 {{The shape of reduction-region's result type at index 0 differs from the op's corresponding init-value type: 'tensor<4xf32>' vs 'tensor<f32>'}}
   %0 = "stablehlo.all_reduce"(%operand) ({
   ^bb0(%arg0: tensor<4xf32>, %arg1: tensor<4xf32>):
     %max = stablehlo.maximum %arg0, %arg1 : tensor<4xf32>
@@ -211,6 +245,40 @@ func.func @all_reduce_c5(%operand: tensor<10xf32>) -> tensor<10xf32> {
     replica_groups = dense<[[0, 2, 4, 6], [1, 3, 5, 7]]> : tensor<2x4xi64>
   } : (tensor<10xf32>) -> tensor<10xf32>
   func.return %0 : tensor<10xf32>
+}
+
+// -----
+
+func.func @all_reduce_c5(%operand: tensor<i32>) -> tensor<i8> {
+
+  // expected-error@+1 {{The element-type of reduction-region's result type at index 0 is expected to be promotable from the op's corresponding init-value element-type: 'tensor<i8>' vs 'tensor<i32>'}}
+  %result = "stablehlo.all_reduce"(%operand) ({
+    ^bb0(%arg0: tensor<i8>, %arg1: tensor<i8>):
+      %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<i8>, tensor<i8>) -> tensor<i8>
+      "stablehlo.return"(%0) : (tensor<i8>) -> ()
+  }) {
+    replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>,
+    channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
+  } : (tensor<i32>) -> tensor<i8>
+
+  func.return %result : tensor<i8>
+}
+// -----
+
+func.func @all_reduce_c5(%operand: tensor<!quant.uniform<i8:f32, 2.000000e+00:15>>)
+    -> tensor<!quant.uniform<i32:f64, 2.000000e+00:15>> {
+
+  // expected-error@+1 {{The element-type of reduction-region's result type at index 0 is expected to be promotable from the op's corresponding init-value element-type: 'tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>' vs 'tensor<!quant.uniform<i8:f32, 2.000000e+00:15>>'}}
+  %result = "stablehlo.all_reduce"(%operand) ({
+    ^bb0(%arg0: tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>, %arg1: tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>):
+      %0 = stablehlo.add %arg0, %arg1 : tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>
+      "stablehlo.return"(%0) : (tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>) -> ()
+  }) {
+    replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>,
+    channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
+  } : (tensor<!quant.uniform<i8:f32, 2.000000e+00:15>>) -> tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>
+
+  func.return %result : tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>
 }
 
 // -----
@@ -241,6 +309,38 @@ func.func @reduce_scatter_dynamic(%data: tensor<?x?xf32>) -> tensor<?x?xf32> {
       channel_handle = #stablehlo.channel_handle<handle = 1, type = 0>,
       use_global_device_ids} : (tensor<?x?xf32>) -> tensor<?x?xf32>
   func.return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @reduce_scatter_with_promotable_types
+func.func @reduce_scatter_with_promotable_types(%data: tensor<4x16xf32>) -> tensor<4x4xf64> {
+  %0 = "stablehlo.reduce_scatter"(%data) ({
+    ^bb0(%arg2: tensor<f64>, %arg3: tensor<f64>):
+    %1 = stablehlo.add %arg2, %arg3 : tensor<f64>
+    "stablehlo.return"(%1) : (tensor<f64>) -> ()
+  }) {replica_groups = dense<[[0, 1, 2, 3]]> : tensor<1x4xi64>,
+      scatter_dimension = 1 : i64,
+      channel_handle = #stablehlo.channel_handle<handle = 1, type = 0>,
+      use_global_device_ids} : (tensor<4x16xf32>) -> tensor<4x4xf64>
+  func.return %0 : tensor<4x4xf64>
+}
+
+// -----
+
+// CHECK-LABEL: func @reduce_scatter_with_promotable_quantized_types
+func.func @reduce_scatter_with_promotable_quantized_types(
+    %data: tensor<4x16x!quant.uniform<i8:f32, 2.000000e+00:15>>) ->
+    tensor<4x4x!quant.uniform<i32:f32, 2.000000e+00:15>> {
+  %0 = "stablehlo.reduce_scatter"(%data) ({
+    ^bb0(%arg2: tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>, %arg3: tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>):
+    %1 = stablehlo.add %arg2, %arg3 : tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>
+    "stablehlo.return"(%1) : (tensor<!quant.uniform<i32:f32, 2.000000e+00:15>>) -> ()
+  }) {replica_groups = dense<[[0, 1, 2, 3]]> : tensor<1x4xi64>,
+      scatter_dimension = 1 : i64,
+      channel_handle = #stablehlo.channel_handle<handle = 1, type = 0>,
+      use_global_device_ids} : (tensor<4x16x!quant.uniform<i8:f32, 2.000000e+00:15>>) -> tensor<4x4x!quant.uniform<i32:f32, 2.000000e+00:15>>
+  func.return %0 : tensor<4x4x!quant.uniform<i32:f32, 2.000000e+00:15>>
 }
 
 // -----
@@ -404,7 +504,7 @@ func.func @reduce_scatter_c7(%data: tensor<4x16xf32>) -> tensor<4x4xf32> {
 // -----
 
 func.func @reduce_scatter_c7(%data: tensor<4x16xf32>) -> tensor<4x4xf32> {
-  // expected-error@+1 {{The type of reduction-region's result type at index 0 differs from the op's corresponding init-value type: 'tensor<i32>' vs 'tensor<f32>'}}
+  // expected-error@+1 {{The element-type of reduction-region's result type at index 0 is expected to be promotable from the op's corresponding init-value element-type: 'tensor<i32>' vs 'tensor<f32>'}}
   %0 = "stablehlo.reduce_scatter"(%data) ({
     ^bb0(%arg2: tensor<i32>, %arg3: tensor<i32>):
     %1 = stablehlo.add %arg2, %arg3 : tensor<i32>
@@ -412,6 +512,39 @@ func.func @reduce_scatter_c7(%data: tensor<4x16xf32>) -> tensor<4x4xf32> {
   }) {replica_groups = dense<[[0, 1, 2, 3]]> : tensor<1x4xi64>,
       scatter_dimension = 1 : i64} : (tensor<4x16xf32>) -> tensor<4x4xf32>
   func.return %0 : tensor<4x4xf32>
+}
+
+// -----
+
+func.func @reduce_scatter_c7(%data: tensor<4x16xi32>) -> tensor<4x4xi8> {
+
+  // expected-error@+1 {{The element-type of reduction-region's result type at index 0 is expected to be promotable from the op's corresponding init-value element-type: 'tensor<i8>' vs 'tensor<i32>'}}
+  %0 = "stablehlo.reduce_scatter"(%data) ({
+    ^bb0(%arg2: tensor<i8>, %arg3: tensor<i8>):
+    %1 = stablehlo.add %arg2, %arg3 : tensor<i8>
+    "stablehlo.return"(%1) : (tensor<i8>) -> ()
+  }) {replica_groups = dense<[[0, 1, 2, 3]]> : tensor<1x4xi64>,
+      scatter_dimension = 1 : i64,
+      channel_handle = #stablehlo.channel_handle<handle = 1, type = 0>,
+      use_global_device_ids} : (tensor<4x16xi32>) -> tensor<4x4xi8>
+  func.return %0 : tensor<4x4xi8>
+}
+
+// -----
+
+func.func @reduce_scatter_c7(%data: tensor<4x16x!quant.uniform<i8:f32, 2.000000e+00:15>>)
+  -> tensor<4x4x!quant.uniform<i32:f64, 2.000000e+00:15>> {
+
+  // expected-error@+1 {{The element-type of reduction-region's result type at index 0 is expected to be promotable from the op's corresponding init-value element-type: 'tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>' vs 'tensor<!quant.uniform<i8:f32, 2.000000e+00:15>>'}}
+  %0 = "stablehlo.reduce_scatter"(%data) ({
+    ^bb0(%arg2: tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>, %arg3: tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>):
+    %1 = stablehlo.add %arg2, %arg3 : tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>
+    "stablehlo.return"(%1) : (tensor<!quant.uniform<i32:f64, 2.000000e+00:15>>) -> ()
+  }) {replica_groups = dense<[[0, 1, 2, 3]]> : tensor<1x4xi64>,
+      scatter_dimension = 1 : i64,
+      channel_handle = #stablehlo.channel_handle<handle = 1, type = 0>,
+      use_global_device_ids} : (tensor<4x16x!quant.uniform<i8:f32, 2.000000e+00:15>>) -> tensor<4x4x!quant.uniform<i32:f64, 2.000000e+00:15>>
+  func.return %0 : tensor<4x4x!quant.uniform<i32:f64, 2.000000e+00:15>>
 }
 
 // -----
@@ -451,6 +584,21 @@ func.func @reduce_scatter_c8(%data: tensor<4x16xf32>) -> tensor<3x4xf32> {
   }) {replica_groups = dense<[[0, 1, 2, 3]]> : tensor<1x4xi64>,
       scatter_dimension = 1 : i64} : (tensor<4x16xf32>) -> tensor<3x4xf32>
   func.return %0 : tensor<3x4xf32>
+}
+
+// -----
+
+func.func @reduce_scatter_c9(%data: tensor<4x16xf32>) -> tensor<4x4xf32> {
+  // expected-error@+1 {{result element-type is expected to be 'f64', but got 'f32'}}
+  %0 = "stablehlo.reduce_scatter"(%data) ({
+    ^bb0(%arg2: tensor<f64>, %arg3: tensor<f64>):
+    %1 = stablehlo.add %arg2, %arg3 : tensor<f64>
+    "stablehlo.return"(%1) : (tensor<f64>) -> ()
+  }) {replica_groups = dense<[[0, 1, 2, 3]]> : tensor<1x4xi64>,
+      scatter_dimension = 1 : i64,
+      channel_handle = #stablehlo.channel_handle<handle = 1, type = 0>,
+      use_global_device_ids} : (tensor<4x16xf32>) -> tensor<4x4xf32>
+  func.return %0 : tensor<4x4xf32>
 }
 
 // -----
@@ -1711,7 +1859,7 @@ func.func @map(%arg0: tensor<4x5xf32>, %arg1: tensor<4x5xf32>) -> tensor<4x5xf32
 
 func.func @map_c3(%arg0: tensor<4x5xf32>, %arg1: tensor<4x5xf32>) -> tensor<4x5xf32> {
   // expected-error@+2 {{failed to infer returned types}}
-  // expected-error@+1 {{requires monotonically increasing dimension numbers, but got: dense<[1, 0]> : tensor<2xi64>}}
+  // expected-error@+1 {{requires monotonically increasing dimension numbers, but got: 1, 0}}
   %0 = "stablehlo.map"(%arg0, %arg1) ({
     ^bb0(%arg2: tensor<f32>, %arg3: tensor<f32>):
     %1 = stablehlo.add %arg2, %arg3 : tensor<f32>
@@ -1812,8 +1960,7 @@ func.func @map_heterogeneous_inputs(%arg0: tensor<2xf32>, %arg1: tensor<2xi32>) 
 // -----
 
 func.func @map_i2(%arg0: tensor<4x5xf32>, %arg1: tensor<4x5xf32>) -> tensor<4x5xf32> {
-  // expected-error@+2 {{failed to infer returned types}}
-  // expected-error@+1 {{dimensions should be rank 1 but got rank 2}}
+  // expected-error@+1 {{attribute 'dimensions' failed to satisfy constraint: either a DenseI64ArrayAttr or a 1-dimensional I64ElementsAttr.}}
   %0 = "stablehlo.map"(%arg0, %arg1) ({
     ^bb0(%arg2: tensor<f32>, %arg3: tensor<f32>):
     %1 = stablehlo.constant dense<2.0> : tensor<f32>
@@ -3888,8 +4035,7 @@ func.func @gather_c14(%operand : tensor<*xi32>, %start_indices : tensor<?x?x?xi3
 // -----
 
 func.func @gather_i7(%operand : tensor<2x4x9xi32>, %start_indices : tensor<1x5x2xi32>) -> tensor<1x5x8xi32> {
-  // expected-error@+2 {{failed to infer returned types}}
-  // expected-error@+1 {{slice_sizes.rank != 1}}
+  // expected-error@+1 {{attribute 'slice_sizes' failed to satisfy constraint: either a DenseI64ArrayAttr or a 1-dimensional I64ElementsAttr.}}
   %res = "stablehlo.gather"(%operand, %start_indices) {
     dimension_numbers = #stablehlo.gather<
       offset_dims = [2],
@@ -5640,7 +5786,7 @@ func.func @dynamic_iota_output_shape_mismatching_size() -> tensor<4xf32> {
   func.return %1 : tensor<4xf32>
 }
 
-// Tests for I64DenseArrayOrElementsAttr.
+// Tests for I64DenseArrayOrElements1DAttr.
 
 // -----
 
@@ -5658,3 +5804,32 @@ func.func @broadcast_in_dim_dense_array(%arg0: tensor<1x2xi32>) -> tensor<1x2x2x
   func.return %0 : tensor<1x2x2xi32>
 }
 
+// Tests for BoolDenseArrayOrElementsAttr.
+
+// -----
+
+// CHECK-LABEL: func @convolution_elements
+// CHECK: reverse = [true, false]
+func.func @convolution_elements(%arg0: tensor<1x8x8x207xf32>, %arg1: tensor<3x3x207x16xf32>) -> tensor<1x6x6x16xf32> {
+  %0 = "stablehlo.convolution"(%arg0, %arg1) {
+    window_reversal = dense<[true, false]> : tensor<2xi1>,
+    dimension_numbers = #stablehlo.conv<[b, 0, 1, f]x[0, 1, i, o]->[b, 0, 1, f]>,
+    feature_group_count = 1 : i64,
+    batch_group_count = 1 : i64
+  } : (tensor<1x8x8x207xf32>, tensor<3x3x207x16xf32>) -> tensor<1x6x6x16xf32>
+  func.return %0 : tensor<1x6x6x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @convolution_array
+// CHECK: reverse = [true, false]
+func.func @convolution_array(%arg0: tensor<1x8x8x207xf32>, %arg1: tensor<3x3x207x16xf32>) -> tensor<1x6x6x16xf32> {
+  %0 = "stablehlo.convolution"(%arg0, %arg1) {
+    window_reversal = array<i1: true, false>,
+    dimension_numbers = #stablehlo.conv<[b, 0, 1, f]x[0, 1, i, o]->[b, 0, 1, f]>,
+    feature_group_count = 1 : i64,
+    batch_group_count = 1 : i64
+  } : (tensor<1x8x8x207xf32>, tensor<3x3x207x16xf32>) -> tensor<1x6x6x16xf32>
+  func.return %0 : tensor<1x6x6x16xf32>
+}

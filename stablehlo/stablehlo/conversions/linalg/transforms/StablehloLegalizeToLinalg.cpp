@@ -1558,7 +1558,8 @@ struct MapOpToGenericConverter final
     if (!resultType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
-    assert(op.getDimensions().size() == resultType.getRank() &&
+    assert(static_cast<int64_t>(op.getDimensions().size()) ==
+               resultType.getRank() &&
            "Expected a pointwise map");
 
     Location loc = op.getLoc();
@@ -1609,7 +1610,8 @@ struct MapOpToMapConverter final : OpConversionPattern<mlir::stablehlo::MapOp> {
     auto resultType = getTypeConverter()->convertType<ShapedType>(op.getType());
     if (!resultType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
-    assert(op.getDimensions().size() == resultType.getRank() &&
+    assert(static_cast<int64_t>(op.getDimensions().size()) ==
+               resultType.getRank() &&
            "Expected a pointwise map");
 
     Location loc = op.getLoc();
@@ -1685,7 +1687,7 @@ struct GatherConversion final : OpConversionPattern<mlir::stablehlo::GatherOp> {
     int64_t resultRank = resultType.getRank();
     // slice_sizes has to have the same size as operand.rank, and doing it this
     // way permits an unranked operand.
-    int64_t operandRank = gatherOp.getSliceSizes().getNumElements();
+    int64_t operandRank = gatherOp.getSliceSizes().size();
 
     int64_t indexVectorDim = gatherOp.getDimensionNumbers().getIndexVectorDim();
 
@@ -1899,10 +1901,8 @@ struct SelectAndScatterNoOverlapConverter final
     if (!op.getWindowDimensions().has_value())
       return rewriter.notifyMatchFailure(op, "no window dimensions found");
 
-    auto strides =
-        llvm::to_vector(op.getWindowStridesAttr().getValues<int64_t>());
-    auto window =
-        llvm::to_vector(op.getWindowDimensionsAttr().getValues<int64_t>());
+    auto strides = op.getWindowStrides().value();
+    auto window = op.getWindowDimensions().value();
 
     if (static_cast<int64_t>(strides.size()) != operandTy.getRank() ||
         static_cast<int64_t>(window.size()) != operandTy.getRank())
