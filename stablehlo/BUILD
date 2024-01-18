@@ -1135,6 +1135,20 @@ cc_binary(
     ],
 )
 
+glob_lit_tests(
+    name = "all_tests",
+    data = [":test_data"],
+    driver = "@llvm-project//mlir:run_lit.sh",
+    exclude = [
+        # TODO(#268): Fix lit checks with floating-point ops having
+        # implementation defined precision.
+        "stablehlo/tests/interpret_rsqrt.mlir",
+        "stablehlo/tests/interpret_sqrt.mlir",
+        "stablehlo/tests/interpret_tanh.mlir",
+    ],
+    test_file_exts = ["mlir"],
+)
+
 filegroup(
     name = "test_data",
     testonly = True,

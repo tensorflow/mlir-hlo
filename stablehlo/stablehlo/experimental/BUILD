@@ -113,6 +113,13 @@ cc_binary(
     ],
 )
 
+glob_lit_tests(
+    name = "all_tests",
+    data = [":test_data"],
+    driver = "//third_party/llvm/llvm-project/mlir:run_lit.sh",
+    test_file_exts = ["mlir"],
+)
+
 filegroup(
     name = "test_data",
     testonly = True,
