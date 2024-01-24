@@ -64,10 +64,10 @@ struct CanonicalizeDynamicReduceWindowOpPattern
       return rewriter.notifyMatchFailure(op, "expected static padding");
     auto newOp = rewriter.create<ReduceWindowOp>(
         op->getLoc(), op->getResultTypes(), op.getInputs(), op.getInitValues(),
-        rewriter.getI64TensorAttr(windowDimensions),
-        rewriter.getI64TensorAttr(windowStrides),
-        rewriter.getI64TensorAttr(baseDilations),
-        rewriter.getI64TensorAttr(windowDilations),
+        rewriter.getDenseI64ArrayAttr(windowDimensions),
+        rewriter.getDenseI64ArrayAttr(windowStrides),
+        rewriter.getDenseI64ArrayAttr(baseDilations),
+        rewriter.getDenseI64ArrayAttr(windowDilations),
         hlo::getPaddingAttr(&rewriter, padding));
 
     // Inline the called computation into newOp.
