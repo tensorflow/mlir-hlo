@@ -172,7 +172,7 @@ struct StablehloRefineShapesPass
     GreedyRewriteConfig config;
     config.useTopDownTraversal = true;
     config.enableRegionSimplification = true;
-    config.maxIterations = 2;
+    config.maxIterations = 3;
     config.maxNumRewrites = GreedyRewriteConfig::kNoLimit;
     config.strictMode = GreedyRewriteStrictness::AnyOp;
 
@@ -185,6 +185,9 @@ struct StablehloRefineShapesPass
     patterns.add<RefineTopKOpPattern>(&getContext());
     if (failed(
             applyPatternsAndFoldGreedily(func, std::move(patterns), config))) {
+      func.emitError()
+          << "Greedy rewriter in StablehloRefineShapes does not converge after "
+          << config.maxIterations << " iterations.";
       return signalPassFailure();
     }
   }
