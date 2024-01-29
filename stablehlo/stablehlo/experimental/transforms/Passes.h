@@ -24,9 +24,8 @@ limitations under the License.
 namespace mlir {
 namespace stablehlo {
 namespace experimental {
-  
-#define GEN_PASS_DECL_STABLEHLOCANONICALIZEDYNAMISMPASS
-#define GEN_PASS_DECL_STABLEHLOREFINESHAPESPASS
+
+#define GEN_PASS_DECL
 #define GEN_PASS_REGISTRATION
 #include "stablehlo/experimental/transforms/Passes.h.inc"
 

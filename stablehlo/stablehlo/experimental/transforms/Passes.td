@@ -29,3 +29,11 @@ def StablehloRefineShapesPass : Pass<"experimental-stablehlo-refine-shapes", "Mo
     Experimental version of the --stablehlo-refine-shapes pass.
   }];
 }
+
+def ChloRecomposeOpsPass : Pass<"experimental-chlo-recompose-ops", "ModuleOp"> {
+  let summary = "(Experimental) Recompose CHLO ops serialized as custom calls.";
+  let description = [{
+    Experimental version of CHLO serialization support.
+  }];
+  let dependentDialects = ["chlo::ChloDialect"];
+}

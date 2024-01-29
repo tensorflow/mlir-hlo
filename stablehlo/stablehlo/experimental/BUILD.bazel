@@ -68,6 +68,7 @@ gentbl_cc_library(
 cc_library(
     name = "experimental_stablehlo_passes",
     srcs = [
+        "transforms/ChloRecomposeOps.cpp",
         "transforms/StablehloCanonicalizeDynamism.cpp",
         "transforms/StablehloRefineShapes.cpp",
     ],

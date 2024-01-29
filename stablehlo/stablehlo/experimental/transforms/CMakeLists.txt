@@ -18,6 +18,7 @@ add_public_tablegen_target(ExperimentalPassesIncGen)
 
 add_mlir_dialect_library(ExperimentalStablehloPasses
   PARTIAL_SOURCES_INTENDED
+  ChloRecomposeOps.cpp
   StablehloCanonicalizeDynamism.cpp
   StablehloRefineShapes.cpp
 
