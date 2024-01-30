@@ -154,8 +154,12 @@ struct StablehloCanonicalizeDynamismPass
     patterns.add<CanonicalizeDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicRngBitGeneratorOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicTopKOpPattern>(&getContext());
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
+
+    auto funcOp = getOperation();
+    if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns),
                                             config))) {
+      funcOp.emitError("Failed to converge StablehloCanonicalizeDynamism in ")
+          << config.maxIterations << " iterations";
       return signalPassFailure();
     }
   }

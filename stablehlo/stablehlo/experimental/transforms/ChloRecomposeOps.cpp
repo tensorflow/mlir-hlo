@@ -15,6 +15,7 @@ limitations under the License.
 #include <cstdint>
 #include <functional>
 
+#include "llvm/ADT/SmallVector.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -126,21 +127,27 @@ struct ChloRecomposeOpsPass
   using ChloRecomposeOpsPassBase::ChloRecomposeOpsPassBase;
 
   void runOnOperation() override {
-    // Do a single traversal to recompose CHLO ops.
-    // TODO(#1048): Find out why .maxIterations = 1 no longer works.
+    // Do a single traversal to recompose CustomCallOp to CHLO ops.
     GreedyRewriteConfig config;
     config.useTopDownTraversal = true;
     config.enableRegionSimplification = true;
-    config.maxIterations = 2;
+    config.maxIterations = 1;
     config.maxNumRewrites = GreedyRewriteConfig::kNoLimit;
-    config.strictMode = GreedyRewriteStrictness::AnyOp;
+    config.strictMode = GreedyRewriteStrictness::ExistingOps;
 
     RewritePatternSet patterns(&getContext());
     patterns.add<TopKOpRecomposePattern>(&getContext());
     patterns.add<TanOpRecomposePattern>(&getContext());
 
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
-                                            config))) {
+    // Only apply to CustomCallOps
+    auto moduleOp = getOperation();
+    llvm::SmallVector<Operation*> candidateOps;
+    moduleOp.walk([&](CustomCallOp op) { candidateOps.push_back(op); });
+
+    if (failed(applyOpPatternsAndFold(candidateOps, std::move(patterns),
+                                      config))) {
+      moduleOp.emitError("Failed to converge ChloRecomposeOps in ")
+          << config.maxIterations << " iterations";
       return signalPassFailure();
     }
   }
