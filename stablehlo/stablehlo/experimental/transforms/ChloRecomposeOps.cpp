@@ -120,6 +120,15 @@ struct TanOpRecomposePattern : public OpRewritePattern<CustomCallOp> {
   }
 };
 
+struct ErfOpRecomposePattern : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp op,
+                                PatternRewriter& rewriter) const override {
+    if (op.getCallTargetName() != "mhlo.erf") return failure();
+    return recomposeChloOpFromCustomCall<chlo::ErfOp>(op, rewriter);
+  }
+};
+
 }  // namespace
 
 struct ChloRecomposeOpsPass
@@ -138,6 +147,7 @@ struct ChloRecomposeOpsPass
     RewritePatternSet patterns(&getContext());
     patterns.add<TopKOpRecomposePattern>(&getContext());
     patterns.add<TanOpRecomposePattern>(&getContext());
+    patterns.add<ErfOpRecomposePattern>(&getContext());
 
     // Only apply to CustomCallOps
     auto moduleOp = getOperation();

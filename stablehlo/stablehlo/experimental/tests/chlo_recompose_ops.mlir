@@ -34,3 +34,18 @@ func.func @recompose_tan(%arg0: tensor<16xf32>) -> tensor<?xf32> {
   } : (tensor<16xf32>) -> tensor<?xf32>
   func.return %0 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @recompose_erf
+func.func @recompose_erf(%arg0: tensor<3x20x20xbf16>) -> tensor<?x20x20xbf16> {
+  // CHECK: %0 = chlo.erf %arg0 : tensor<3x20x20xbf16> -> tensor<?x20x20xbf16>
+  %0 = "stablehlo.custom_call"(%arg0) {
+    backend_config = "",
+    call_target_name = "mhlo.erf",
+    mhlo.attributes = {},
+    mhlo.version = 1 : i64
+  } : (tensor<3x20x20xbf16>) -> tensor<?x20x20xbf16>
+  func.return %0 : tensor<?x20x20xbf16>
+}
+
