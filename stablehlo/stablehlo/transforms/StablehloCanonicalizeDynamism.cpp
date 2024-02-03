@@ -111,8 +111,7 @@ struct CanonicalizeDynamicBroadcastInDimOpPattern
     if (!op.getType().hasStaticShape())
       return rewriter.notifyMatchFailure(op, "expected static result type");
     rewriter.replaceOpWithNewOp<BroadcastInDimOp>(
-        op, op.getType(), op.getOperand(),
-        rewriter.getDenseI64ArrayAttr(op.getBroadcastDimensions()));
+        op, op.getType(), op.getOperand(), op.getBroadcastDimensionsAttr());
     return success();
   }
 };
@@ -299,21 +298,31 @@ struct StablehloCanonicalizeDynamismPass
   using StablehloCanonicalizeDynamismPassBase::
       StablehloCanonicalizeDynamismPassBase;
 
-  void runOnOperation() override {
-    GreedyRewriteConfig config;
+  LogicalResult initialize(MLIRContext* context) override {
     config.useTopDownTraversal = true;
     config.enableRegionSimplification = true;
     config.maxIterations = 2;
     config.maxNumRewrites = GreedyRewriteConfig::kNoLimit;
     config.strictMode = GreedyRewriteStrictness::AnyOp;
 
-    RewritePatternSet patterns(&getContext());
-    populateStablehloCanonicalizeDynamismPatterns(&patterns, &getContext());
-    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
-                                            config))) {
-      return signalPassFailure();
+    RewritePatternSet patterns_(context);
+    populateStablehloCanonicalizeDynamismPatterns(&patterns_, context);
+    patterns = std::move(patterns_);
+
+    return success();
+  }
+
+  void runOnOperation() override {
+    auto func = getOperation();
+    if (failed(applyPatternsAndFoldGreedily(func, patterns, config))) {
+      func.emitError("Failed to converge StablehloCanonicalizeDynamism in ")
+          << config.maxIterations << " iterations";
     }
   }
+
+ private:
+  FrozenRewritePatternSet patterns;
+  GreedyRewriteConfig config;
 };
 
 }  // namespace

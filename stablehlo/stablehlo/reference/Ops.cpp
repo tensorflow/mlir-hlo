@@ -19,6 +19,7 @@ limitations under the License.
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -868,11 +869,11 @@ Tensor evalAllGatherOp(const Tensor &operand, int64_t allGatherDim,
         "Failed to find process group with process_id: (%d, %d)",
         process->getId().replicaId, process->getId().partitionId));
 
-  const RendezvousResult resultMap =
-      *(process->rendezvous(*processGroup, channelId, operand));
+  auto rendezvousResult =
+      process->rendezvous(*processGroup, channelId, operand);
   SmallVector<Tensor> groupOperands(llvm::map_range(
       *processGroup,
-      [&](const ProcessId &id) { return resultMap.lookup(id); }));
+      [&](const ProcessId &id) { return rendezvousResult.lookup(id); }));
 
   return evalConcatenateOp(groupOperands, allGatherDim, resultType);
 }
@@ -900,8 +901,8 @@ Tensor evalAllReduceOp(const Tensor &operand,
         "Failed to find process group with process_id: (%d, %d)",
         process->getId().replicaId, process->getId().partitionId));
 
-  auto groupOperands = process->rendezvous(*processGroup, channelId, operand)
-                           ->getSortedTensors();
+  auto groupOperands =
+      process->rendezvous(*processGroup, channelId, operand).getSortedTensors();
 
   Tensor result(resultType);
   for (auto resultIt = result.index_begin(); resultIt != result.index_end();
@@ -941,8 +942,8 @@ Tensor evalAllToAllOp(const Tensor &operand, Axis splitDimension,
         "Failed to find process group with process_id: (%d, %d)",
         process->getId().replicaId, process->getId().partitionId));
 
-  auto groupOperands = process->rendezvous(*processGroup, channelId, operand)
-                           ->getSortedTensors();
+  auto groupOperands =
+      process->rendezvous(*processGroup, channelId, operand).getSortedTensors();
 
   SmallVector<Tensor> scatteredParts;
   for (const auto &groupOperand : groupOperands) {
@@ -1092,7 +1093,7 @@ Tensor evalCollectivePermuteOp(
     if (from != process->getId() && to != process->getId()) continue;
 
     auto rendezvousResult =
-        *process->rendezvous(processGroup, channelId, operand);
+        process->rendezvous(processGroup, channelId, operand);
     if (to != process->getId()) continue;
     result = rendezvousResult.lookup(from);
   }

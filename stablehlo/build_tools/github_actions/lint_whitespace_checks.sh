@@ -1,3 +1,4 @@
+#!/bin/bash
 # Copyright 2022 The StableHLO Authors.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,41 +35,43 @@ if [[ $# -ne 0 ]] ; then
 fi
 
 get_source_files() {
-  git diff $BASE_BRANCH HEAD --name-only --diff-filter=d | grep '.*\.cpp$\|.*\.h$\|.*\.md$\|.*\.mlir$\|.*\.sh$\|.*\.td$\|.*\.txt$\|.*\.yml$\|.*\.yaml$' | xargs
+  git diff "$BASE_BRANCH" HEAD --name-only --diff-filter=d | grep '.*\.cpp$\|.*\.h$\|.*\.md$\|.*\.mlir$\|.*\.sh$\|.*\.td$\|.*\.txt$\|.*\.yml$\|.*\.yaml$'
 }
 echo "Checking whitespace:"
-echo "  $(get_source_files)"
+echo "  $(get_source_files | xargs)"
 
 files_without_eof_newline() {
-  [[ -z $(get_source_files) ]] || get_source_files | xargs -L1 bash -c 'test "$(tail -c 1 "$0")" && echo "$0"'
+  # shellcheck disable=SC2016
+  get_source_files | xargs -L1 bash -c 'test "$(tail -c 1 "$0")" && echo "$0"'
 }
 
 files_with_trailing_whitespace() {
-  get_source_files | xargs grep -lP '[ \t]+$'
+  get_source_files | xargs -L1 grep -lP '[ \t]+$'
 }
 
 fix_files_without_eof_newline() {
-  echo $1 | xargs  --no-run-if-empty sed -i -e '$a\'
+  # shellcheck disable=SC2016,SC1003
+  echo "$@" | xargs --no-run-if-empty sed -i -e '$a\'
 }
 
 fix_files_with_trailing_whitespace() {
-  echo $1 | xargs --no-run-if-empty sed -i 's/[ \t]*$//'
+  echo "$@" | xargs --no-run-if-empty sed -i 's/[ \t]*$//'
 }
 
-EOF_NL=$(files_without_eof_newline)
-TRAIL_WS=$(files_with_trailing_whitespace)
+mapfile -t EOF_NL < <(files_without_eof_newline)
+mapfile -t TRAIL_WS < <(files_with_trailing_whitespace)
 
 if [[ $FORMAT_MODE == 'fix' ]]; then
   echo "Fixing EOF newlines..."
-  fix_files_without_eof_newline "$EOF_NL"
+  fix_files_without_eof_newline "${EOF_NL[@]}"
   echo "Fixing trailing whitespaces..."
-  fix_files_with_trailing_whitespace "$TRAIL_WS"
+  fix_files_with_trailing_whitespace "${TRAIL_WS[@]}"
 else
-  if [ ! -z "$EOF_NL$TRAIL_WS" ]; then
+  if (( ${#EOF_NL[@]} + ${#TRAIL_WS[@]} )); then
     echo "Missing newline at EOF:"
-    echo $EOF_NL
+    echo "${EOF_NL[@]}"
     echo "Has trailing whitespace:"
-    echo $TRAIL_WS
+    echo "${TRAIL_WS[@]}"
     echo
     echo "Auto-fix using:"
     echo "  $ ./build_tools/github_actions/lint_whitespace_checks.sh -f"

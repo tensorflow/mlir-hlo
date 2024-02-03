@@ -991,6 +991,7 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":register",
         ":stablehlo_ops",
         ":stablehlo_serialization",
         ":version",
