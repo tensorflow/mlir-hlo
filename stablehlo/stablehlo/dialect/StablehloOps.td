@@ -42,13 +42,14 @@ def StableHLO_Dialect : Dialect {
 
 class StableHLO_Op<string mnemonic, list<Trait> traits> :
     Op<StableHLO_Dialect, mnemonic, traits> {
-  let extraClassDeclaration = [{
+  string commonClassDeclaration = [{
     // Relax the strict default implementation with one that allows
     // for StableHLO-specific differences.
     static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
       return mlir::hlo::isCompatibleForHloTypeInference(l, r);
     }
   }];
+  let extraClassDeclaration = commonClassDeclaration;
 }
 
 include "stablehlo/dialect/StablehloEnums.td"
@@ -57,13 +58,7 @@ include "stablehlo/dialect/StablehloTypes.td"
 
 class StableHLO_ShapedInterfaceOp<string mnemonic, list<Trait> traits> :
     StableHLO_Op<mnemonic, traits # [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-    ["reifyReturnTypeShapes"]>]> {
-  let extraClassDeclaration = [{
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return mlir::hlo::isCompatibleForHloTypeInference(l, r);
-    }
-  }];
-}
+    ["reifyReturnTypeShapes"]>]> {}
 
 //===----------------------------------------------------------------------===//
 // StableHLO nullary op definitions.
@@ -141,8 +136,8 @@ def StableHLO_DynamicIotaOp: StableHLO_ShapedInterfaceOp<"dynamic_iota", [Pure]>
     ```
   }];
 
-  let arguments = (ins HLO_DimensionTensor:$output_shape, I64Attr:$iota_dimension);
-  let results = (outs HLO_Tensor:$result);
+  let arguments = (ins HLO_StaticDimensionTensor:$output_shape, I64Attr:$iota_dimension);
+  let results = (outs HLO_RankedTensor:$result);
   let hasVerifier = 1;
 
   let assemblyFormat = [{
@@ -181,16 +176,13 @@ class StableHLO_UnaryElementwiseOp<string mnemonic, list<Trait> traits,
     InferShapedTypeOpInterface, SameOperandsAndResultShape]> {
   let arguments = (ins OperandType:$operand);
   let results = (outs ResultType:$result);
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = commonClassDeclaration # [{
     LogicalResult reifyReturnTypeShapes(
         OpBuilder& builder, ValueRange operands,
         SmallVectorImpl<Value>& reifiedReturnShapes) {
       return ::mlir::hlo::deriveShapeFromOperand(&builder, getOperation(),
                                                 operands.front(),
                                                 &reifiedReturnShapes);
-    }
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return mlir::hlo::isCompatibleForHloTypeInference(l, r);
     }
   }];
 
@@ -667,16 +659,13 @@ class StableHLO_BinaryElementwiseOp<string mnemonic, list<Trait> traits,
     OperandType:$rhs
   );
 
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = commonClassDeclaration # [{
     LogicalResult reifyReturnTypeShapes(
         OpBuilder& builder, ValueRange operands,
         SmallVectorImpl<Value>& reifiedReturnShapes) {
       return ::mlir::hlo::deriveShapeFromOperand(&builder, getOperation(),
                                                  operands.front(),
                                                  &reifiedReturnShapes);
-    }
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return mlir::hlo::isCompatibleForHloTypeInference(l, r);
     }
   }];
 
@@ -1275,7 +1264,7 @@ def StableHLO_WhileOp: StableHLO_Op<"while", [
 
   let hasVerifier = 1;
 
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = commonClassDeclaration # [{
     // Method of OpAsmOpInterface used during custom printing to name the block
     // arguments in the nested regions. We name both the condition and the body
     // regions entry arguments the same way, with a `iterArg` prefix. Since the
@@ -1285,10 +1274,6 @@ def StableHLO_WhileOp: StableHLO_Op<"while", [
     void getAsmBlockArgumentNames(Region &region, OpAsmSetValueNameFn setNameFn) {
       for (BlockArgument arg : region.getArguments())
         setNameFn(arg, "iterArg");
-    }
-
-    static bool isCompatibleReturnTypes(TypeRange l, TypeRange r) {
-      return mlir::hlo::isCompatibleForHloTypeInference(l, r);
     }
   }];
   let hasCustomAssemblyFormat = 1;
@@ -1910,13 +1895,13 @@ def StableHLO_DynamicBroadcastInDimOp : StableHLO_ShapedInterfaceOp<
   }];
   let arguments = (ins
     HLO_Tensor:$operand,
-    HLO_DimensionTensor:$output_dimensions,
+    HLO_StaticDimensionTensor:$output_dimensions,
     DenseI64ArrayAttr:$broadcast_dimensions,
     OptionalAttr<DenseI64ArrayAttr>:$known_expanding_dimensions,
     OptionalAttr<DenseI64ArrayAttr>:$known_nonexpanding_dimensions
   );
 
-  let results = (outs HLO_Tensor);
+  let results = (outs HLO_RankedTensor);
 
   let builders = [
       OpBuilder<(ins
@@ -2508,8 +2493,8 @@ def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape", [
     ```
   }];
 
-  let arguments = (ins HLO_Tensor:$operand, HLO_DimensionTensor:$output_shape);
-  let results = (outs HLO_Tensor:$result);
+  let arguments = (ins HLO_Tensor:$operand, HLO_StaticDimensionTensor:$output_shape);
+  let results = (outs HLO_RankedTensor:$result);
 
   let hasVerifier = 1;
 
@@ -3051,11 +3036,11 @@ def StableHLO_RngOp : StableHLO_Op<"rng", [InferTensorTypeWithReify, AllElementT
   let arguments = (ins
     0DTensorOf<[HLO_Pred, HLO_Int, HLO_Float]>:$a,
     0DTensorOf<[HLO_Pred, HLO_Int, HLO_Float]>:$b,
-    HLO_DimensionTensor:$shape,
+    HLO_StaticDimensionTensor:$shape,
     StableHLO_RngDistributionAttr:$rng_distribution
   );
 
-  let results = (outs HLO_PredIntOrFpTensor:$result);
+  let results = (outs HLO_PredIntOrFpRankedTensor:$result);
 
   let assemblyFormat = [{
     $a `,` $b `,` $shape `,` `distribution` `=` $rng_distribution

@@ -68,10 +68,10 @@ namespace hlo {
 //===----------------------------------------------------------------------===//
 
 // Checks if the vector `nums` has duplicates.
-const auto hasDuplicates = [](const ArrayRef<int64_t> nums) {
+bool isUnique(ArrayRef<int64_t> nums) {
   llvm::SmallDenseSet<int64_t> set(nums.begin(), nums.end());
-  return set.size() != nums.size();
-};
+  return set.size() == nums.size();
+}
 
 bool tensorsHaveSameElType(TypeRange types, bool ignoreFpPrecision = true) {
   if (!types.empty()) {
@@ -848,17 +848,17 @@ LogicalResult isSpatialDimensionsValid(
                              "dimension-numbers to be in-range [0, ",
                              numDims, ").");
 
-  if (hasDuplicates(inputDimNums))
+  if (!isUnique(inputDimNums))
     return emitOptionalError(
         location, "expects input dimension-numbers to be unique, got {",
         inputDimNums, "}.");
 
-  if (hasDuplicates(windowDimNums))
+  if (!isUnique(windowDimNums))
     return emitOptionalError(
         location, "expects kernel dimension-numbers to be unique, got {",
         windowDimNums, "}.");
 
-  if (hasDuplicates(OutputDimNums))
+  if (!isUnique(OutputDimNums))
     return emitOptionalError(
         location, "expects output dimension-numbers to be unique, got {",
         OutputDimNums, "}.");
@@ -1021,7 +1021,7 @@ LogicalResult validateScatterDimensionNumbers(
                              updateWindowDims, "].");
 
   // scatter_c7
-  if (hasDuplicates(updateWindowDims))
+  if (!isUnique(updateWindowDims))
     return emitOptionalError(loc,
                              "Expects update_window_dims to not repeat; got: [",
                              updateWindowDims, "].");
@@ -1046,7 +1046,7 @@ LogicalResult validateScatterDimensionNumbers(
         insertedWindowDims, "].");
 
   // scatter_c9
-  if (hasDuplicates(insertedWindowDims))
+  if (!isUnique(insertedWindowDims))
     return emitOptionalError(
         loc, "Expects inserted_window_dims to not repeat; got: [",
         insertedWindowDims, "].)");
@@ -1086,7 +1086,7 @@ LogicalResult validateScatterDimensionNumbers(
   }
 
   // scatter_c12
-  if (hasDuplicates(scatterDimsToOperandDims))
+  if (!isUnique(scatterDimsToOperandDims))
     return emitOptionalError(
         loc, "Expects scatter_dims_to_operand_dims to not repeat; got: [",
         scatterDimsToOperandDims, "].");
@@ -1114,7 +1114,7 @@ static LogicalResult verifyGather(
     ArrayRef<int64_t> offsetDims, ArrayRef<int64_t> collapsedSliceDims,
     ArrayRef<int64_t> startIndexMap, int64_t indexVectorDim) {
   // gather_c9
-  if (hasDuplicates(startIndexMap))
+  if (!isUnique(startIndexMap))
     return emitOptionalError(location,
                              "expects start_index_map to not repeat, got: [",
                              startIndexMap, "]");
@@ -1156,7 +1156,7 @@ static LogicalResult verifyGather(
   if (!llvm::is_sorted(offsetDims))
     return emitOptionalError(
         location, "expects offset_dims to be sorted, got: [", offsetDims, "]");
-  if (hasDuplicates(offsetDims))
+  if (!isUnique(offsetDims))
     return emitOptionalError(
         location, "expects offset_dims to not repeat, got: [", offsetDims, "]");
 
@@ -1165,7 +1165,7 @@ static LogicalResult verifyGather(
     return emitOptionalError(
         location, "expects collapsed_slice_dims to be sorted, got: [",
         collapsedSliceDims, "]");
-  if (hasDuplicates(collapsedSliceDims))
+  if (!isUnique(collapsedSliceDims))
     return emitOptionalError(
         location, "expects collapsed_slice_dims to not repeat, got: [",
         collapsedSliceDims, "]");
@@ -2685,19 +2685,14 @@ LogicalResult inferRngOp(
   auto shapeOperandType = shape.getType().cast<ShapedType>();
   Type elementType = getElementTypeOrSelf(b);
 
-  // Operand `shape` (1D by ODS) may be a constant or not, if `shape` is:
-  // 1, not constant and have dynamic dim (tensor<?x>): infer tensor<*x>.
-  // 2. not constant nor dynamic (e.g. tensor<3xi64>): infer tensor<?x?x?x>.
-  // 3. constant (e.g. dense<[2, 3, 5]>): infer tensor<2x3x5x>.
+  // Operand `shape` (static 1D by ODS) may be a constant or not, if `shape` is:
+  // 1. not constant (e.g. tensor<3xi64>): infer tensor<?x?x?x>.
+  // 2. constant (e.g. dense<[2, 3, 5]>): infer tensor<2x3x5x>.
 
   // Match to check whether the `shape` operand is a constant.
   DenseIntElementsAttr shapeAttr;
   if (!matchPattern(shape, m_Constant(&shapeAttr))) {
     int size = shapeOperandType.getDimSize(0);
-    if (isDynamicDimSize(size)) {
-      inferredReturnShapes.emplace_back(elementType);
-      return success();
-    }
     shapeVector.resize(size, ShapedType::kDynamic);
     inferredReturnShapes.emplace_back(shapeVector, elementType);
     return success();
@@ -2705,8 +2700,8 @@ LogicalResult inferRngOp(
 
   // `shape` operand is a constant.
   shapeVector.reserve(shapeAttr.size());
-  for (const APInt& fp : shapeAttr.getValues<APInt>())
-    shapeVector.push_back(fp.getSExtValue());
+  for (const APInt& dimSize : shapeAttr.getValues<APInt>())
+    shapeVector.push_back(dimSize.getSExtValue());
   inferredReturnShapes.emplace_back(shapeVector, elementType);
   return success();
 }
@@ -3279,16 +3274,15 @@ LogicalResult verifyBroadcastInDimOp(std::optional<Location> location,
                              dimensionsSize, ") does not match operand rank (",
                              operandRank, ")");
 
-  auto dimensions = llvm::to_vector(broadcastDimensions);
   // broadcast_in_dim_c4
-  if (hasDuplicates(dimensions))
+  if (!isUnique(broadcastDimensions))
     return emitOptionalError(location,
                              "broadcast_dimensions should not have duplicates");
 
   auto resultType = result.getType().cast<RankedTensorType>();
   auto resultRank = resultType.getRank();
   for (size_t i = 0; i != dimensionsSize; ++i) {
-    auto dimIndex = dimensions[i];
+    auto dimIndex = broadcastDimensions[i];
     // broadcast_in_dim_c3
     if (dimIndex < 0 || dimIndex >= resultRank)
       return emitOptionalError(location,
@@ -3470,47 +3464,46 @@ LogicalResult verifyDynamicBroadcastInDimOp(
     std::optional<ArrayRef<int64_t>> knownNonexpandingDimensions,
     Value result) {
   auto operandType = operand.getType().dyn_cast<RankedTensorType>();
-  auto resultType = result.getType().dyn_cast<RankedTensorType>();
-
-  // If either the operand or result are unranked, there is very little
-  // to verify statically.
-  if (!operandType || !resultType) return success();
+  auto resultType = result.getType().cast<RankedTensorType>();
 
   auto outputDimensionsType =
       outputDimensions.getType().cast<RankedTensorType>();
   auto outputDimensionsSize = outputDimensionsType.getDimSize(0);
-  auto operandRank = operandType.getRank();
   auto resultRank = resultType.getRank();
 
   // Verify broadcast_dimensions.
   auto bcastDimensions = broadcastDimensions;
   int64_t bcastDimensionsSize = bcastDimensions.size();
-  if (bcastDimensionsSize != operandRank)
-    return emitOptionalError(
-        location, "broadcast_dimensions size (", bcastDimensionsSize,
-        ") does not match operand rank (", operandRank, ")");
+  if (operandType) {
+    auto operandRank = operandType.getRank();
+    if (bcastDimensionsSize != operandRank)
+      return emitOptionalError(
+          location, "broadcast_dimensions size (", bcastDimensionsSize,
+          ") does not match operand rank (", operandRank, ")");
 
-  if (resultRank < operandRank)
-    return emitOptionalError(location, "result rank (", resultRank,
-                             ") is less than operand rank (", operandRank, ")");
+    if (resultRank < operandRank)
+      return emitOptionalError(location, "result rank (", resultRank,
+                               ") is less than operand rank (", operandRank,
+                               ")");
 
-  for (int i = 0; i != bcastDimensionsSize; ++i) {
-    auto dimIndex = bcastDimensions[i];
-    if (dimIndex < 0 || dimIndex >= resultRank)
-      return emitOptionalError(location,
-                               "broadcast_dimensions contains invalid value ",
-                               dimIndex, " for result with rank ", resultRank);
+    for (int i = 0; i != bcastDimensionsSize; ++i) {
+      auto dimIndex = bcastDimensions[i];
+      if (dimIndex < 0 || dimIndex >= resultRank)
+        return emitOptionalError(
+            location, "broadcast_dimensions contains invalid value ", dimIndex,
+            " for result with rank ", resultRank);
 
-    auto dimSize = operandType.getDimSize(i);
-    auto resultDimSize = resultType.getDimSize(dimIndex);
-    // Note: verifyCompatibleShapes doesn't consider size-1 broadcasting, so
-    // we add a manual check for this.
-    if (dimSize != 1 && failed(verifyCompatibleShape(dimSize, resultDimSize)))
-      return emitOptionalError(location, "size of operand dimension ", i, " (",
-                               dimSize,
-                               ") is not compatible "
-                               "with size of result dimension ",
-                               dimIndex, " (", resultDimSize, ")");
+      auto dimSize = operandType.getDimSize(i);
+      auto resultDimSize = resultType.getDimSize(dimIndex);
+      // Note: verifyCompatibleShapes doesn't consider size-1 broadcasting, so
+      // we add a manual check for this.
+      if (dimSize != 1 && failed(verifyCompatibleShape(dimSize, resultDimSize)))
+        return emitOptionalError(location, "size of operand dimension ", i,
+                                 " (", dimSize,
+                                 ") is not compatible "
+                                 "with size of result dimension ",
+                                 dimIndex, " (", resultDimSize, ")");
+    }
   }
 
   if (outputDimensionsSize != resultRank)
@@ -3537,7 +3530,7 @@ LogicalResult verifyDynamicBroadcastInDimOp(
         location,
         "duplicate expansion hint for at least one operand dimension");
   for (int64_t i : knownExpansionBehavior)
-    if (i < 0 || i >= operandRank)
+    if (operandType && (i < 0 || i >= operandType.getRank()))
       return emitOptionalError(location, "hint for expanding dimension ", i,
                                " does not refer to a "
                                "valid operand dimension");
@@ -3555,12 +3548,11 @@ LogicalResult verifyDynamicIotaOp(std::optional<Location> location,
                                   Value outputShape, int64_t iotaDimension,
                                   Value result) {
   auto shape = result.getType().cast<ShapedType>();
+
   if (!isCompatibleForHloTypeInference(outputShape, shape))
     return emitOptionalError(
         location, "output_shape is incompatible with return type of operation ",
         result.getType());
-
-  if (!shape.hasRank()) return success();
 
   if (iotaDimension >= shape.getRank() || iotaDimension < 0)
     return emitOptionalError(
@@ -3616,8 +3608,7 @@ LogicalResult verifyDynamicReshapeOp(std::optional<Location> location,
                                      Value outputShape, Value result) {
   auto resultType = result.getType().cast<ShapedType>();
   auto outputShapeType = outputShape.getType().cast<ShapedType>();
-  if (resultType.hasRank() && outputShapeType.hasStaticShape() &&
-      outputShapeType.getDimSize(0) != resultType.getRank())
+  if (outputShapeType.getDimSize(0) != resultType.getRank())
     return emitOptionalError(location,
                              "output should have a rank equal to the number of "
                              "elements in output_shape");

@@ -1010,21 +1010,19 @@ func.func @dynamic_broadcast_in_dim(%arg0: tensor<?x?xi32>, %shape: tensor<3xi64
   %0 = "stablehlo.dynamic_broadcast_in_dim"(%arg0, %shape) {broadcast_dimensions = array<i64: 1, 2>} : (tensor<?x?xi32>, tensor<3xi64>) -> tensor<?x?x?xi32>
   func.return %0 : tensor<?x?x?xi32>
 }
-
-// -----
-
-// CHECK-LABEL: func @dynamic_broadcast_in_dim_unranked
-func.func @dynamic_broadcast_in_dim_unranked(%arg0: tensor<?x?xi32>, %shape: tensor<3xi64>) -> tensor<*xi32> {
-  %0 = "stablehlo.dynamic_broadcast_in_dim"(%arg0, %shape) {broadcast_dimensions = array<i64: 1, 2>} : (tensor<?x?xi32>, tensor<3xi64>) -> tensor<*xi32>
-  func.return %0 : tensor<*xi32>
-}
-
 // -----
 
 // CHECK-LABEL: func @dynamic_broadcast_in_dim_unknown_dim
 func.func @dynamic_broadcast_in_dim_unknown_dim(%arg0: tensor<32xf32>, %shape: tensor<3xi64>) -> tensor<?x?x?xf32> {
   %0 = "stablehlo.dynamic_broadcast_in_dim"(%arg0, %shape) {broadcast_dimensions = array<i64: 2>} : (tensor<32xf32>, tensor<3xi64>) -> tensor<?x?x?xf32>
   func.return %0 : tensor<?x?x?xf32>
+}
+// -----
+
+// CHECK-LABEL: func @dynamic_broadcast_unranked_operand
+func.func @dynamic_broadcast_unranked_operand(%arg0: tensor<*xf32>, %arg1: tensor<1xindex>) -> tensor<?xf32> {
+  %0 = "stablehlo.dynamic_broadcast_in_dim"(%arg0, %arg1) { broadcast_dimensions = array<i64: 0> } : (tensor<*xf32>, tensor<1xindex>) -> tensor<?xf32>
+  func.return %0 : tensor<?xf32>
 }
 
 // -----
@@ -1075,6 +1073,22 @@ func.func @dynamic_broadcast_in_dim_too_large(%arg0: tensor<1xf32>, %shape: tens
   // expected-error@+1 {{broadcast_dimensions contains invalid value 3 for result with rank 3}}
   %0 = "stablehlo.dynamic_broadcast_in_dim"(%arg0, %shape) {broadcast_dimensions = array<i64: 3>} : (tensor<1xf32>, tensor<3xi64>) -> tensor<7x8x9xf32>
   func.return %0 : tensor<7x8x9xf32>
+}
+
+// -----
+
+func.func @dynamic_broadcast_in_dim_unranked_result(%arg0: tensor<?x?xi32>, %shape: tensor<3xi64>) -> tensor<*xi32> {
+  // expected-error@+1 {{op result #0 must be ranked tensor}}
+  %0 = "stablehlo.dynamic_broadcast_in_dim"(%arg0, %shape) {broadcast_dimensions = array<i64: 1, 2>} : (tensor<?x?xi32>, tensor<3xi64>) -> tensor<*xi32>
+  func.return %0 : tensor<*xi32>
+}
+
+// -----
+
+func.func @dynamic_broadcast_in_dim_dynamic_output_shape(%arg0: tensor<?x?xi32>, %shape: tensor<?xi64>) -> tensor<7x8x9xi32> {
+  // expected-error@+1 {{op operand #1 must be statically shaped}}
+  %0 = "stablehlo.dynamic_broadcast_in_dim"(%arg0, %shape) {broadcast_dimensions = array<i64: 1, 2>} : (tensor<?x?xi32>, tensor<?xi64>) -> tensor<7x8x9xi32>
+  func.return %0 : tensor<7x8x9xi32>
 }
 
 // -----
@@ -2118,6 +2132,22 @@ func.func @rng_bit_generator_dynamic(%arg0: tensor<?xui64>) -> (tensor<?xui64>, 
 
 // -----
 
+func.func @rng_dynamic_dim(%a: tensor<f32>, %b: tensor<f32>, %shape: tensor<?xi64>) -> tensor<*xf32> {
+  // expected-error@+1 {{op operand #2 must be statically shaped}}
+  %0 = "stablehlo.rng"(%a, %b, %shape) {rng_distribution = #stablehlo<rng_distribution NORMAL>}: (tensor<f32>, tensor<f32>, tensor<?xi64>) -> tensor<*xf32>
+  func.return %0 : tensor<*xf32>
+}
+
+// -----
+
+func.func @rng_unranked_output(%a: tensor<f32>, %b: tensor<f32>, %shape: tensor<3xi64>) -> tensor<*xf32> {
+  // expected-error@+1 {{op result #0 must be ranked}}
+  %0 = "stablehlo.rng"(%a, %b, %shape) {rng_distribution = #stablehlo<rng_distribution NORMAL>}: (tensor<f32>, tensor<f32>, tensor<3xi64>) -> tensor<*xf32>
+  func.return %0 : tensor<*xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @rng_normal
 func.func @rng_normal(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<2x3x5xf32> {
   %cst = "stablehlo.constant"() {value = dense<[2, 3, 5]> : tensor<3xi64>} : () -> tensor<3xi64>
@@ -2131,14 +2161,6 @@ func.func @rng_normal(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<2x3x5xf3
 func.func @rng_normal_no_constant(%a: tensor<f32>, %b: tensor<f32>, %shape: tensor<3xi64>) -> tensor<?x?x?xf32> {
   %0 = "stablehlo.rng"(%a, %b, %shape) {rng_distribution = #stablehlo<rng_distribution NORMAL>}: (tensor<f32>, tensor<f32>, tensor<3xi64>) -> tensor<?x?x?xf32>
   func.return %0 : tensor<?x?x?xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @rng_normal_dynamic_dim
-func.func @rng_normal_dynamic_dim(%a: tensor<f32>, %b: tensor<f32>, %shape: tensor<?xi64>) -> tensor<*xf32> {
-  %0 = "stablehlo.rng"(%a, %b, %shape) {rng_distribution = #stablehlo<rng_distribution NORMAL>}: (tensor<f32>, tensor<f32>, tensor<?xi64>) -> tensor<*xf32>
-  func.return %0 : tensor<*xf32>
 }
 
 // -----
@@ -2173,7 +2195,7 @@ func.func @rng_normal_invalid_sigma_rank(%mu: tensor<f32>, %sigma: tensor<1xf32>
 
 func.func @rng_normal_invalid_shape_rank(%mu: tensor<f32>, %sigma: tensor<f32>) -> tensor<2x3x5xf32> {
   %shape = stablehlo.constant dense<[[2, 3, 5]]> : tensor<1x3xi64>
-  // expected-error@+1 {{operand #2 must be 1D tensor of index or 4/8/16/32/64-bit signless integer or 4/8/16/32/64-bit unsigned integer values, but got 'tensor<1x3xi64>'}}
+  // expected-error@+1 {{operand #2 must be statically shaped 1-dimensional tensor of index or 4/8/16/32/64-bit signless integer or 4/8/16/32/64-bit unsigned integer values, but got 'tensor<1x3xi64>'}}
   %0 = "stablehlo.rng"(%mu, %sigma, %shape) {rng_distribution = #stablehlo<rng_distribution NORMAL>}: (tensor<f32>, tensor<f32>, tensor<1x3xi64>) -> tensor<2x3x5xf32>
   func.return %0 : tensor<2x3x5xf32>
 }
@@ -2202,14 +2224,6 @@ func.func @rng_uniform(%a: tensor<f32>, %b: tensor<f32>) -> tensor<2x3x5xf32> {
 func.func @rng_uniform_no_constant(%a: tensor<f32>, %b: tensor<f32>, %shape: tensor<3xi64>) -> tensor<?x?x?xf32> {
   %0 = "stablehlo.rng"(%a, %b, %shape) {rng_distribution = #stablehlo<rng_distribution UNIFORM>}: (tensor<f32>, tensor<f32>, tensor<3xi64>) -> tensor<?x?x?xf32>
   func.return %0 : tensor<?x?x?xf32>
-}
-
-// -----
-
-// CHECK-LABEL: func @rng_uniform_dynamic_dim
-func.func @rng_uniform_dynamic_dim(%a: tensor<f32>, %b: tensor<f32>, %shape: tensor<?xi64>) -> tensor<*xf32> {
-  %0 = "stablehlo.rng"(%a, %b, %shape) {rng_distribution = #stablehlo<rng_distribution UNIFORM>}: (tensor<f32>, tensor<f32>, tensor<?xi64>) -> tensor<*xf32>
-  func.return %0 : tensor<*xf32>
 }
 
 // -----
@@ -2244,7 +2258,7 @@ func.func @rng_uniform_invalid_b_rank(%a: tensor<f32>, %b: tensor<1xf32>) -> ten
 
 func.func @rng_uniform_invalid_shape_rank(%a: tensor<f32>, %b: tensor<f32>) -> tensor<2x3x5xf32> {
   %shape = stablehlo.constant dense<[[2, 3, 5]]> : tensor<1x3xi64>
-  // expected-error@+1 {{operand #2 must be 1D tensor of index or 4/8/16/32/64-bit signless integer or 4/8/16/32/64-bit unsigned integer values, but got 'tensor<1x3xi64>'}}
+  // expected-error@+1 {{operand #2 must be statically shaped 1-dimensional tensor of index or 4/8/16/32/64-bit signless integer or 4/8/16/32/64-bit unsigned integer values, but got 'tensor<1x3xi64>'}}
   %0 = "stablehlo.rng"(%a, %b, %shape) {rng_distribution = #stablehlo<rng_distribution UNIFORM>}: (tensor<f32>, tensor<f32>, tensor<1x3xi64>) -> tensor<2x3x5xf32>
   func.return %0 : tensor<2x3x5xf32>
 }
@@ -3391,13 +3405,6 @@ func.func @dynamic_reshape(%arg0: tensor<?xf32>, %shape: tensor<2xindex>) -> ten
 
 // -----
 
-func.func @dynamic_reshape_unranked(%arg0: tensor<?xf32>, %shape: tensor<2xindex>) -> tensor<*xf32> {
-  %0 = "stablehlo.dynamic_reshape"(%arg0, %shape) : (tensor<?xf32>, tensor<2xindex>) -> tensor<*xf32>
-  func.return %0 : tensor<*xf32>
-}
-
-// -----
-
 func.func @dynamic_reshape_incompatible_shapes(%arg0: tensor<?xf32>, %shape: tensor<2xindex>) -> tensor<?xf32> {
   // expected-error @+1 {{output should have a rank equal to the number of elements in output_shape}}
   %0 = "stablehlo.dynamic_reshape"(%arg0, %shape) : (tensor<?xf32>, tensor<2xindex>) -> tensor<?xf32>
@@ -3407,7 +3414,7 @@ func.func @dynamic_reshape_incompatible_shapes(%arg0: tensor<?xf32>, %shape: ten
 // -----
 
 func.func @dynamic_reshape_output_shape_negative_size(%arg0: tensor<4xf32>) -> tensor<1x4xf32> {
-  // @expected-error@+2 {{output_shape is incompatible with return type of operation 'tensor<1x4xf32>'}}
+  // expected-error@+2 {{output_shape is incompatible with return type of operation 'tensor<1x4xf32>'}}
   %0 = stablehlo.constant dense<[-1, 1]> : tensor<2xi64>
   %1 = stablehlo.dynamic_reshape %arg0, %0 : (tensor<4xf32>, tensor<2xi64>) -> tensor<1x4xf32>
   return %1 : tensor<1x4xf32>
@@ -3416,10 +3423,26 @@ func.func @dynamic_reshape_output_shape_negative_size(%arg0: tensor<4xf32>) -> t
 // -----
 
 func.func @dynamic_reshape_output_shape_mismatching_size(%arg0: tensor<4xf32>) -> tensor<1x4xf32> {
-  // @expected-error@+2 {{output_shape is incompatible with return type of operation 'tensor<1x4xf32>'}}
+  // expected-error@+2 {{output_shape is incompatible with return type of operation 'tensor<1x4xf32>'}}
   %0 = stablehlo.constant dense<[1, 1]> : tensor<2xi64>
   %1 = stablehlo.dynamic_reshape %arg0, %0 : (tensor<4xf32>, tensor<2xi64>) -> tensor<1x4xf32>
   return %1 : tensor<1x4xf32>
+}
+
+// -----
+
+func.func @dynamic_reshape_unranked_result(%arg0: tensor<?xf32>, %shape: tensor<2xindex>) -> tensor<*xf32> {
+  // expected-error@+1 {{op result #0 must be ranked tensor}}
+  %0 = "stablehlo.dynamic_reshape"(%arg0, %shape) : (tensor<?xf32>, tensor<2xindex>) -> tensor<*xf32>
+  func.return %0 : tensor<*xf32>
+}
+
+// -----
+
+func.func @dynamic_reshape_dynamic_output_shape(%arg0: tensor<?xf32>, %shape: tensor<?xindex>) -> tensor<1x4xf32> {
+  // expected-error@+1 {{op operand #1 must be statically shaped}}
+  %0 = "stablehlo.dynamic_reshape"(%arg0, %shape) : (tensor<?xf32>, tensor<?xindex>) -> tensor<1x4xf32>
+  func.return %0 : tensor<1x4xf32>
 }
 
 // -----
@@ -5700,6 +5723,7 @@ func.func @dynamic_iota_dynamic() -> tensor<?xf32> {
 // -----
 
 func.func @dynamic_iota_unranked() -> tensor<*xf32> {
+  // expected-error@+2 {{op result #0 must be ranked tensor}}
   %0 = stablehlo.constant dense<[4]> : tensor<1xi64>
   %1 = stablehlo.dynamic_iota %0, dim = 0 : (tensor<1xi64>) -> tensor<*xf32>
   func.return %1 : tensor<*xf32>
@@ -5707,10 +5731,10 @@ func.func @dynamic_iota_unranked() -> tensor<*xf32> {
 
 // -----
 
-func.func @dynamic_iota_unranked_large() -> tensor<*xf32> {
-  %0 = stablehlo.constant dense<[4]> : tensor<1xi64>
-  %1 = stablehlo.dynamic_iota %0, dim = 3 : (tensor<1xi64>) -> tensor<*xf32>
-  func.return %1 : tensor<*xf32>
+func.func @dynamic_iota_dynamic_output_shape(%arg: tensor<?xi64>) -> tensor<*xf32> {
+  // expected-error@+1 {{op operand #0 must be statically shaped}}
+  %0 = stablehlo.dynamic_iota %arg, dim = 0 : (tensor<?xi64>) -> tensor<?x?xf32>
+  func.return %0 : tensor<?x?xf32>
 }
 
 // -----

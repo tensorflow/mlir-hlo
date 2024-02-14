@@ -320,6 +320,22 @@ cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "chlo_rewriters_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-rewriters"],
+            "stablehlo/transforms/ChloDecompositionPatterns.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "stablehlo/transforms/ChloDecompositionPatterns.td",
+    deps = [
+        ":chlo_ops_td_files",
+        ":stablehlo_ops_td_files",
+    ],
+)
+
 cc_library(
     name = "interpreter_ops",
     srcs = [
@@ -942,7 +958,9 @@ gentbl_cc_library(
 cc_library(
     name = "stablehlo_passes",
     srcs = [
+        "stablehlo/transforms/ChloLegalizeToStablehlo.cpp",
         "stablehlo/transforms/PassPipelines.cpp",
+        "stablehlo/transforms/StablehloAggressiveSimplification.cpp",
         "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
         "stablehlo/transforms/StablehloInstrumentWithProbe.cpp",
         "stablehlo/transforms/StablehloLegalizeToVhlo.cpp",
@@ -958,7 +976,9 @@ cc_library(
     includes = ["."],
     deps = [
         ":base",
+        ":broadcast_utils",
         ":chlo_ops",
+        ":chlo_rewriters_inc_gen",
         ":interpreter_ops",
         ":stablehlo_ops",
         ":stablehlo_ops_inc_gen",
@@ -968,7 +988,10 @@ cc_library(
         ":vhlo_ops",
         ":vhlo_types",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:CommonFolders",
+        "@llvm-project//mlir:ComplexDialect",
         "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:FunctionInterfaces",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
         "@llvm-project//mlir:Pass",
