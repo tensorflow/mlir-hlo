@@ -3,7 +3,7 @@ load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", 
 
 package(
     # copybara:uncomment default_applicable_licenses = ["//third_party/tensorflow:license"],
-    default_visibility = ["//visibility:public"],
+    default_visibility = internal_visibility(["//learning/brain/mlir:mhlo_friends"]),
     licenses = ["notice"],
 )
 
