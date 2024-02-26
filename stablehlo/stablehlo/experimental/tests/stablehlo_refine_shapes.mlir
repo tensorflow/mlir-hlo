@@ -1,7 +1,7 @@
 // RUN: experimental-stablehlo-opt --experimental-stablehlo-refine-shapes --split-input-file --verify-diagnostics %s | FileCheck %s
 
 // CHECK-LABEL: @main
-func.func @main(%arg0: tensor<3x2xf32>, %arg1: tensor<f32>) -> tensor<*xf32> {
+func.func @main(%arg0: tensor<3x2xf32>, %arg1: tensor<f32>) -> tensor<?x?xf32> {
   // CHECK: stablehlo.dynamic_reduce_window{{.*}} -> tensor<2x2xf32>
   %0 = stablehlo.constant dense<[2, 1]> : tensor<2xi64>
   %1 = stablehlo.constant dense<[4, 1]> : tensor<2xi64>
@@ -10,8 +10,8 @@ func.func @main(%arg0: tensor<3x2xf32>, %arg1: tensor<f32>) -> tensor<*xf32> {
   %4 = stablehlo.constant dense<[[2, 1], [0, 0]]> : tensor<2x2xi64>
   %5 = stablehlo.custom_call @stablehlo.dynamic_reduce_window(%arg0, %arg1, %0, %1, %2, %3, %4) {
     called_computations = [@dynamic_reduce_window0]
-  } : (tensor<3x2xf32>, tensor<f32>, tensor<2xi64>, tensor<2xi64>, tensor<2xi64>, tensor<2xi64>, tensor<2x2xi64>) -> tensor<*xf32>
-  func.return %5 : tensor<*xf32>
+  } : (tensor<3x2xf32>, tensor<f32>, tensor<2xi64>, tensor<2xi64>, tensor<2xi64>, tensor<2xi64>, tensor<2x2xi64>) -> tensor<?x?xf32>
+  func.return %5 : tensor<?x?xf32>
 }
 
 func.func private @dynamic_reduce_window0(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<f32> {
@@ -22,13 +22,13 @@ func.func private @dynamic_reduce_window0(%arg0: tensor<f32>, %arg1: tensor<f32>
 // -----
 
 // CHECK-LABEL: @refine_dynamic_rng_bit_generator
-func.func @refine_dynamic_rng_bit_generator(%arg0: tensor<2xui64>) -> (tensor<?xui64>, tensor<*xf32>) {
+func.func @refine_dynamic_rng_bit_generator(%arg0: tensor<2xui64>) -> (tensor<?xui64>, tensor<?x?xf32>) {
   // CHECK: stablehlo.dynamic_rng_bit_generator{{.*}} -> (tensor<2xui64>, tensor<1x4xf32>)
   %0 = stablehlo.constant dense<[1, 4]> : tensor<2xi64>
   %1:2 = stablehlo.custom_call @stablehlo.dynamic_rng_bit_generator(%arg0, %0) {
     rng_algorithm = #stablehlo<rng_algorithm DEFAULT>
-  } : (tensor<2xui64>, tensor<2xi64>) -> (tensor<?xui64>, tensor<*xf32>)
-  func.return %1#0, %1#1 : tensor<?xui64>, tensor<*xf32>
+  } : (tensor<2xui64>, tensor<2xi64>) -> (tensor<?xui64>, tensor<?x?xf32>)
+  func.return %1#0, %1#1 : tensor<?xui64>, tensor<?x?xf32>
 }
 
 // -----
