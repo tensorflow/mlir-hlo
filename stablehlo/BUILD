@@ -960,6 +960,7 @@ cc_library(
     srcs = [
         "stablehlo/transforms/ChloLegalizeToStablehlo.cpp",
         "stablehlo/transforms/PassPipelines.cpp",
+        "stablehlo/transforms/ShapeLegalizeToStablehlo.cpp",
         "stablehlo/transforms/StablehloAggressiveSimplification.cpp",
         "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
         "stablehlo/transforms/StablehloInstrumentWithProbe.cpp",
@@ -988,6 +989,7 @@ cc_library(
         ":vhlo_ops",
         ":vhlo_types",
         "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:CommonFolders",
         "@llvm-project//mlir:ComplexDialect",
         "@llvm-project//mlir:FuncDialect",
