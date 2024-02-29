@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
 print_usage() {
   echo "Usage: $0 [-b]"
   echo "    -b <branch>  Base branch name, defaults to main."
@@ -45,10 +49,8 @@ $(printf "%s\n" "${CHANGED_FILES[@]}")"
 echo
 
 SKIPPED_SUFFIXES=(
-  .bazelversion
   .clang-format
   .gitignore
-  .markdownlint.yaml
   .md
   .mlir
   .mlir.bc
@@ -56,7 +58,6 @@ SKIPPED_SUFFIXES=(
   .svg
   LICENSE
   MODULE.bazel.lock
-  WORKSPACE.bazel
   llvm_version.txt
 )
 
@@ -72,14 +73,29 @@ for file in "${CHANGED_FILES[@]}"; do
     echo "Skipping file: $file"
     continue;
   fi
-  if ! head -20 "$file" | grep "Copyright" &>/dev/null; then
+  if ! head -20 "$file" | grep -Pzo '(?s)Copyright 20[1-9][0-9].*?Apache License, Version 2\.0' &>/dev/null; then
     UNLICENSED_FILES+=("$file")
   fi
 done
 
-if (( ${#UNLICENSED_FILES} )); then
+if (( ${#UNLICENSED_FILES[@]} )); then
   echo "Found unlicensed files:
-$(printf "%s\n" "${UNLICENSED_FILES[@]}")"
+$(printf "%s\n" "${UNLICENSED_FILES[@]}")
+
+Please include the following at the top of the file(s):
+Copyright $(date +%Y) The StableHLO Authors. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the \"License\");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     https://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an \"AS IS\" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License."
   exit 1
 fi
 
