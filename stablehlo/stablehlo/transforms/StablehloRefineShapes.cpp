@@ -146,12 +146,12 @@ LogicalResult refineReturnTypes(PatternRewriter& rewriter, Operation* op,
   if (failed(refineValues(rewriter, op, op->getResults(), types)))
     return failure();
 
-  // This `replaceOpWithIf` call doesn't actually change the IR, but
+  // This `replaceUsesWithIf` call doesn't actually change the IR, but
   // it does ask the rewriter to visit all the users of this op. There is no
   // upstream API to achieve this directly, but if it's introduced in the
   // future, we could use it here.
-  rewriter.replaceOpWithIf(op, op->getResults(),
-                           [](OpOperand& use) { return false; });
+  rewriter.replaceUsesWithIf(op, op->getResults(),
+                             [](OpOperand& use) { return false; });
   return success();
 }
 
