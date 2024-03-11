@@ -430,6 +430,21 @@ func.func @default_compare(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<i1>
   func.return %0 : tensor<i1>
 }
 
+// CHECK-LABEL: "default_composite"
+func.func @default_composite(%arg0: tensor<f32>) -> tensor<f32> {
+  //               CHECK: "vhlo.composite_v1"(%arg0) <{
+  //          CHECK-SAME:   composite_attributes = #vhlo.dict_v1<{}>
+  //          CHECK-SAME:   decomposition = #vhlo.string_v1<"composite_target">
+  //          CHECK-SAME:   name = #vhlo.string_v1<"stablehlo.composite_target">
+  //          CHECK-SAME:   version = #vhlo.integer_v1<0 : i64>
+  //          CHECK-SAME: }> : (!vhlo.tensor_v1<!vhlo.f32_v1>) -> !vhlo.tensor_v1<!vhlo.f32_v1>
+  %0 = "stablehlo.composite"(%arg0) {
+    name = "stablehlo.composite_target",
+    decomposition = @composite_target
+  } : (tensor<f32>) -> tensor<f32>
+  func.return %0 : tensor<f32>
+}
+
 // CHECK-LABEL: "default_convolution"
 func.func @default_convolution(%arg0: tensor<1x8x8x207xf32>, %arg1: tensor<3x3x207x16xf32>) -> tensor<1x6x6x16xf32> {
   //      CHECK: "vhlo.convolution_v1"(%arg0, %arg1) <{
@@ -1035,6 +1050,26 @@ func.func @op_complex(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<complex<
   // CHECK: "vhlo.complex_v1"(%arg0, %arg1) : (!vhlo.tensor_v1<!vhlo.f32_v1>, !vhlo.tensor_v1<!vhlo.f32_v1>) -> !vhlo.tensor_v1<!vhlo.complex_v1<!vhlo.f32_v1>>
   %0 = "stablehlo.complex"(%arg0, %arg1) : (tensor<f32>, tensor<f32>) -> tensor<complex<f32>>
   func.return %0 : tensor<complex<f32>>
+}
+
+// CHECK-LABEL: "op_composite"
+func.func @op_composite(%arg0: tensor<f32>) -> tensor<f32> {
+  //               CHECK: "vhlo.composite_v1"(%arg0) <{
+  //          CHECK-SAME:   composite_attributes = #vhlo.dict_v1<{#vhlo.string_v1<"my_int"> = #vhlo.integer_v1<1 : i64>, #vhlo.string_v1<"my_string"> = #vhlo.string_v1<"foo">}>
+  //          CHECK-SAME:   decomposition = #vhlo.string_v1<"composite_target">
+  //          CHECK-SAME:   name = #vhlo.string_v1<"stablehlo.composite_target">
+  //          CHECK-SAME:   version = #vhlo.integer_v1<1 : i32>
+  //          CHECK-SAME: }> : (!vhlo.tensor_v1<!vhlo.f32_v1>) -> !vhlo.tensor_v1<!vhlo.f32_v1>
+  %0 = "stablehlo.composite"(%arg0) {
+    name = "stablehlo.composite_target",
+    decomposition = @composite_target,
+    version = 1 : i32,
+    composite_attributes = {
+      my_string = "foo",
+      my_int = 1 : i64
+    }
+  } : (tensor<f32>) -> tensor<f32>
+  func.return %0 : tensor<f32>
 }
 
 // CHECK-LABEL: "op_compute_reshape_shape"
@@ -2381,10 +2416,10 @@ func.func @type_dynamism_ranked(%arg0: tensor<?xf32>) -> tensor<?xf32> {
 }
 
 // CHECK-LABEL: "type_per_tensor_quantization"
-func.func @type_per_tensor_quantization(%arg0: tensor<!quant.uniform<i8:f32, 34.0:16>>, %arg1: tensor<f32>) -> tensor<f32> {
-  // CHECK: "vhlo.add_v1"(%arg0, %arg1) : (!vhlo.tensor_v1<!vhlo.quant_v1<!vhlo.i8_v1:!vhlo.f32_v1, 3.400000e+01:16, -128:127, 1>>, !vhlo.tensor_v1<!vhlo.f32_v1>) -> !vhlo.tensor_v1<!vhlo.f32_v1>
-  %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<!quant.uniform<i8:f32, 34.0:16>>, tensor<f32>) -> tensor<f32>
-  func.return %0 : tensor<f32>
+func.func @type_per_tensor_quantization(%arg0: tensor<!quant.uniform<i8:f32, 34.0:16>>, %arg1: tensor<!quant.uniform<i8:f32, 34.0:16>>) -> tensor<!quant.uniform<i8:f32, 34.0:16>> {
+  // CHECK: "vhlo.add_v1"(%arg0, %arg1) : (!vhlo.tensor_v1<!vhlo.quant_v1<!vhlo.i8_v1:!vhlo.f32_v1, 3.400000e+01:16, -128:127, 1>>, !vhlo.tensor_v1<!vhlo.quant_v1<!vhlo.i8_v1:!vhlo.f32_v1, 3.400000e+01:16, -128:127, 1>>) -> !vhlo.tensor_v1<!vhlo.quant_v1<!vhlo.i8_v1:!vhlo.f32_v1, 3.400000e+01:16, -128:127, 1>>
+  %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<!quant.uniform<i8:f32, 34.0:16>>, tensor<!quant.uniform<i8:f32, 34.0:16>>) -> tensor<!quant.uniform<i8:f32, 34.0:16>>
+  func.return %0 : tensor<!quant.uniform<i8:f32, 34.0:16>>
 }
 
 // CHECK-LABEL: "type_per_axis_quantization"
@@ -2417,4 +2452,10 @@ func.func @type_tuple(%arg0: tuple<tensor<f32>>) -> tuple<!stablehlo.token> {
   // CHECK: (!vhlo.tuple_v1<!vhlo.tensor_v1<!vhlo.f32_v1>>) -> !vhlo.tuple_v1<!vhlo.token_v1>
   } : (tuple<tensor<f32>>) -> tuple<!stablehlo.token>
   return %0 : tuple<!stablehlo.token>
+}
+
+// ============ DEPENDENCIES  ============
+
+func.func @composite_target(%arg0: tensor<f32>) -> tensor<f32> {
+  return %arg0: tensor<f32>
 }

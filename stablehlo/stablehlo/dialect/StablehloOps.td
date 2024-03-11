@@ -19,6 +19,7 @@ limitations under the License.
 
 include "mlir/Dialect/Shape/IR/ShapeBase.td"
 include "mlir/IR/OpBase.td"
+include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
@@ -1532,7 +1533,7 @@ def StableHLO_TupleOp : StableHLO_Op<"tuple", [Pure,
 }
 
 def StableHLO_CompareOp: StableHLO_Op<"compare", [Pure, Elementwise,
-    SameOperandsElementType /*compare_c1*/,
+    HLO_CompatibleOperandsElementType /*compare_c1*/,
     SameOperandsAndResultShape /*compare_c2*/,
     InferTensorTypeWithReify /*compare_c1, compare_c2*/]> {
   let summary = "Compare operation";
@@ -1685,8 +1686,7 @@ def StableHLO_DynamicUpdateSliceOp: StableHLO_Op<"dynamic_update_slice",
 //===----------------------------------------------------------------------===//
 
 def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [Pure,
-    AllElementTypesMatch<["operand", "scale", "mean", "variance", "grad_output",
-    "grad_operand", "grad_scale", "grad_offset"] /*batch_norm_grad_c2*/>,
+    HLO_CompatibleOperandsAndResultElementType /*batch_norm_grad_c2*/,
     InferTensorType /*batch_norm_grad_c3, batch_norm_grad_c4*/]> {
   let summary = "BatchNormGrad operation";
   let description = [{
@@ -1725,8 +1725,7 @@ def StableHLO_BatchNormGradOp : StableHLO_Op<"batch_norm_grad", [Pure,
 }
 
 def StableHLO_BatchNormInferenceOp : StableHLO_Op<"batch_norm_inference",
-    [Pure, AllElementTypesMatch<["operand", "scale", "offset", "mean",
-     "variance", "result"]> /*batch_norm_inference_c2*/,
+    [Pure, HLO_CompatibleOperandsAndResultElementType /*batch_norm_inference_c2*/,
      InferTensorType /*batch_norm_inference_c7*/]> {
   let summary = "BatchNormInference operation";
   let description = [{
@@ -1759,8 +1758,7 @@ def StableHLO_BatchNormInferenceOp : StableHLO_Op<"batch_norm_inference",
 }
 
 def StableHLO_BatchNormTrainingOp : StableHLO_Op<"batch_norm_training",
-    [Pure, AllElementTypesMatch<["operand", "scale", "offset", "output",
-     "batch_mean", "batch_var"]> /*batch_norm_training_c2*/,
+    [Pure, HLO_CompatibleOperandsAndResultElementType /*batch_norm_training_c2*/,
      InferTensorType /*batch_norm_training_c5, batch_norm_training_c6, batch_norm_training_c7*/]> {
   let summary = "BatchNormTraining operation";
   let description = [{
@@ -1927,7 +1925,7 @@ def StableHLO_DynamicBroadcastInDimOp : StableHLO_ShapedInterfaceOp<
 // directly.
 
 def StableHLO_CholeskyOp : StableHLO_Op<"cholesky",
-      [Pure, SameOperandsAndResultElementType /*cholesky_c1*/,
+      [Pure, HLO_CompatibleOperandsAndResultElementType /*cholesky_c1*/,
        InferTensorType /*cholesky_c1*/]> {
   let summary = "Cholesky operation";
   let description = [{
@@ -1954,7 +1952,7 @@ def StableHLO_CholeskyOp : StableHLO_Op<"cholesky",
 }
 
 def StableHLO_ClampOp : StableHLO_ShapedInterfaceOp<"clamp", [Pure,
-  SameOperandsAndResultElementType /* clamp_c3 */, HLO_BroadcastingElementwise,
+  HLO_CompatibleOperandsAndResultElementType  /* clamp_c3 */, HLO_BroadcastingElementwise,
   InferTensorType]> {
   let summary = "Clamp operation";
   let description = [{
@@ -2082,6 +2080,44 @@ def StableHLO_CollectivePermuteOp: StableHLO_Op<"collective_permute",
     OpBuilder<(ins
       "::mlir::Type":$result_type, "::mlir::Value":$operand,
       "::mlir::DenseIntElementsAttr":$source_target_pairs)>];
+}
+
+def StableHLO_CompositeOp : StableHLO_Op<"composite", [DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Composite operation";
+  let description = [{
+    Encapsulates an operation made up (composed) of other StableHLO operations,
+    taking `inputs` and `composite_attributes` and producing `results`. The
+    semantics of the op are implemented by the `decomposition` attribute. The
+    `composite` op can be replaced with its decomposition without changing program
+    semantics. In cases where inlining the decomposition does not provide the same
+    op semantics, prefer using `custom_call`.
+
+    The `version` field (defaults to `0`) is used to denote when a composite's
+    semantics change.
+
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#composite
+
+    Example:
+    ```mlir
+    %results = stablehlo.composite "my.op" %arg0, %arg1 {
+      decomposition = @my_op,
+      composite_attributes = { my_attribute = "my_value" },
+      version = 1 : i32
+    } : (tensor<f32>, tensor<f32>) -> tensor<f32>
+    ```
+  }];
+
+  let arguments = (ins
+    Variadic<HLO_TensorOrPerAxisQuantizedTensorOrTokenOrTuple>:$inputs, /*composite_i1*/
+    StrAttr:$name, /*composite_i2*/
+    DefaultValuedOptionalAttr<DictionaryAttr, "{}">:$composite_attributes, /*composite_i3*/
+    FlatSymbolRefAttr:$decomposition, /*composite_i4*/
+    DefaultValuedOptionalAttr<I32Attr, "0">:$version /*composite_i5*/
+  );
+  let results = (outs Variadic<HLO_TensorOrPerAxisQuantizedTensorOrTokenOrTuple>);
+
+  let assemblyFormat = "$name $inputs attr-dict `:` functional-type(operands, results)";
 }
 
 def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure]> {
@@ -2814,7 +2850,7 @@ def StableHLO_TransposeOp: StableHLO_ShapedInterfaceOp<"transpose",
 }
 
 def StableHLO_TriangularSolveOp: StableHLO_Op<"triangular_solve",
-    [Pure, SameOperandsAndResultElementType, InferTensorType]> {
+    [Pure, HLO_CompatibleOperandsAndResultElementType, InferTensorType]> {
   let summary = "TriangularSolve operation";
   let description = [{
     Solves batches of systems of linear equations with lower or upper triangular

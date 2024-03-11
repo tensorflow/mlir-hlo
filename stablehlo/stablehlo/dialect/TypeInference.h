@@ -23,6 +23,7 @@ limitations under the License.
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Support/LogicalResult.h"
@@ -194,8 +195,8 @@ LogicalResult inferCreateTokenOp(HloDialectInterface* dialect,
                                  SmallVectorImpl<Type>& inferredReturnTypes);
 
 LogicalResult inferDotOp(
-    std::optional<Location> location, Value lhs, Value rhs,
-    std::optional<ArrayAttr> precisionConfig,
+    std::optional<Location> location, RankedTensorType lhsType,
+    RankedTensorType rhsType, std::optional<ArrayAttr> precisionConfig,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes);
 
 LogicalResult inferDotGeneralOp(
@@ -398,6 +399,10 @@ LogicalResult verifyCollectiveBroadcastOp(std::optional<Location> location,
 LogicalResult verifyCollectivePermuteOp(std::optional<Location> location,
                                         DenseIntElementsAttr sourceTargetPairs);
 
+LogicalResult verifyCompositeOp(std::optional<Location> location, Operation* op,
+                                StringRef name, StringRef decomposition,
+                                SymbolTableCollection& symbolTable);
+
 LogicalResult verifyConvolutionOp(
     std::optional<Location> location, Type lhsType, Type rhsType,
     std::optional<ArrayRef<int64_t>> windowStrides,
@@ -412,8 +417,9 @@ LogicalResult verifyConvolutionOp(
     int64_t featureGroupCount, int64_t batchGroupCount,
     std::optional<ArrayAttr> precisionConfig, Type resultType);
 
-LogicalResult verifyDotOp(std::optional<Location> location, Value lhs,
-                          Value rhs, std::optional<ArrayAttr> precisionConfig,
+LogicalResult verifyDotOp(std::optional<Location> location,
+                          RankedTensorType lhsType, RankedTensorType rhsType,
+                          std::optional<ArrayAttr> precisionConfig,
                           Value result);
 
 LogicalResult verifyDotGeneralOp(std::optional<Location> location, Value lhs,
