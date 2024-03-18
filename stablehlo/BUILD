@@ -336,6 +336,19 @@ gentbl_cc_library(
     ],
 )
 
+cc_test(
+    name = "examples-add",
+    srcs = [
+        "examples/c++/stablehlo_add.cpp",
+    ],
+    deps = [
+        ":stablehlo_ops",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:QuantOps",
+    ],
+)
+
 cc_library(
     name = "interpreter_ops",
     srcs = [
