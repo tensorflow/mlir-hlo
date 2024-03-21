@@ -20,12 +20,14 @@ limitations under the License.
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "stablehlo/dialect/ChloOps.h"
 #include "stablehlo/dialect/StablehloOps.h"
 #include "stablehlo/experimental/dialect/StablehloOps.h"
 #include "stablehlo/experimental/transforms/Passes.h"
+#include "stablehlo/transforms/Passes.h"
 
 namespace mlir {
 namespace stablehlo {
@@ -162,6 +164,14 @@ struct ChloRecomposeOpsPass
     }
   }
 };
+
+void createChloLegalizeToStablehloPipeline(OpPassManager& pm) {
+  pm.addPass(mlir::stablehlo::experimental::createChloRecomposeOpsPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::stablehlo::createChloLegalizeToStablehloPass());
+  pm.addNestedPass<mlir::func::FuncOp>(
+      mlir::stablehlo::createShapeLegalizeToStablehloPass());
+}
 
 }  // namespace experimental
 }  // namespace stablehlo

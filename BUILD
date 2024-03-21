@@ -554,7 +554,7 @@ cc_library(
     ],
     strip_include_prefix = ".",
     deps = [
-        ":chlo_legalize_to_hlo",
+        ":chlo_legalize_to_hlo_inc_gen",
         ":hlo_legalize_to_stablehlo",
         ":legalize_to_linalg_utils",
         ":legalize_to_standard_inc_gen",
@@ -574,6 +574,7 @@ cc_library(
         "//stablehlo:base",
         "//stablehlo:chlo_ops",
         "//stablehlo:stablehlo_ops",
+        "//stablehlo:stablehlo_passes",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:AffineDialect",
         "@llvm-project//mlir:ArithDialect",
@@ -860,28 +861,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "chlo_legalize_to_hlo",
-    srcs = ["mhlo/transforms/chlo_legalize_to_hlo/chlo_legalize_to_hlo.cc"],
-    hdrs = ["mhlo/transforms/rewriters.h"],
-    strip_include_prefix = ".",
-    deps = [
-        ":chlo_legalize_to_hlo_inc_gen",
-        ":map_chlo_to_hlo_op",
-        ":mlir_hlo",
-        "//stablehlo:broadcast_utils",
-        "//stablehlo:chlo_ops",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:ComplexDialect",
-        "@llvm-project//mlir:FuncDialect",
-        "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:SCFDialect",
-        "@llvm-project//mlir:ShapeDialect",
-        "@llvm-project//mlir:TensorDialect",
-        "@llvm-project//mlir:Transforms",
-    ],
-)
-
 gentbl_cc_library(
     name = "chlo_legalize_to_hlo_inc_gen",
     strip_include_prefix = "mhlo/transforms",
@@ -950,7 +929,6 @@ cc_library(
     ],
     strip_include_prefix = ".",
     deps = [
-        ":chlo_legalize_to_hlo",
         ":deallocation_passes",
         ":deallocation_passes_inc_gen",
         ":lhlo",

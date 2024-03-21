@@ -29,6 +29,8 @@ namespace experimental {
 #define GEN_PASS_REGISTRATION
 #include "stablehlo/experimental/transforms/Passes.h.inc"
 
+void createChloLegalizeToStablehloPipeline(OpPassManager &pm);
+
 }  // namespace experimental
 }  // namespace stablehlo
 }  // namespace mlir
