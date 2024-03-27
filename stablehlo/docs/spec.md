@@ -39,7 +39,7 @@ func.func @main(
   %0 = "stablehlo.reshape"(%image) : (tensor<28x28xf32>) -> tensor<1x784xf32>
   %1 = "stablehlo.dot"(%0, %weights) : (tensor<1x784xf32>, tensor<784x10xf32>) -> tensor<1x10xf32>
   %2 = "stablehlo.add"(%1, %bias) : (tensor<1x10xf32>, tensor<1x10xf32>) -> tensor<1x10xf32>
-  %3 = "stablehlo.constant"() { value = dense<0.0> : tensor<1x10xf32> } : () -> tensor<1x10xf32>
+  %3 = "stablehlo.constant"() {value = dense<0.0> : tensor<1x10xf32>} : () -> tensor<1x10xf32>
   %4 = "stablehlo.maximum"(%2, %3) : (tensor<1x10xf32>, tensor<1x10xf32>) -> tensor<1x10xf32>
   "func.return"(%4): (tensor<1x10xf32>) -> ()
 }
@@ -1965,8 +1965,10 @@ semantics change.
 ```mlir
 %results = "stablehlo.composite"(%input0, %input1) {
   name = "my_namespace.my_op",
+  composite_attributes = {
+    my_attribute = "my_value"
+  },
   decomposition = @my_op,
-  composite_attributes = { my_attribute = "my_value" },
   version = 1 : i32
 } : (tensor<f32>, tensor<f32>) -> tensor<f32>
 ```
@@ -3871,7 +3873,7 @@ Semantics of `outfeed_config` is implementation-defined.
 #### Examples
 
 ```mlir
-%result = "stablehlo.outfeed"(%inputs0, %token) {
+%result = "stablehlo.outfeed"(%input0, %token) {
   outfeed_config = ""
 } : (tensor<2x2x2xi64>, !stablehlo.token) -> !stablehlo.token
 ```
@@ -6235,6 +6237,19 @@ For example, for `flattened_id_groups = [[0, 1, 2, 3], [4, 5, 6, 7]]`,
 At the moment, StableHLO does not provide guarantees about numerical accuracy,
 but this may change in the future
 ([#1156](https://github.com/openxla/stablehlo/issues/1156)).
+
+### Execution semantics of quantized operation
+
+The interpretation of quantized StableHLO operations may vary depending on the
+hardware requirements and capabilities. For instance, some hardware may opt to
+interpret quantized operations using a "dequantize, perform floating-point
+operation, and finally quantize" strategy. Others may perform the entire
+computation with integer arithmetic. Consequently, the interpretation of
+quantized StableHLO operations is exclusively determined by the specific
+implementation. The interpretation of hybrid quantization
+([#1575](https://github.com/openxla/stablehlo/issues/1575)) should be based on
+the it's semantics as prescribed in the specification (via
+[1792](https://github.com/openxla/stablehlo/pull/1792)).
 
 ### Errors
 

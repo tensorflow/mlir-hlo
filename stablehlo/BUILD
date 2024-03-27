@@ -338,11 +338,12 @@ gentbl_cc_library(
 )
 
 cc_test(
-    name = "examples-add",
+    name = "example_add",
     srcs = [
-        "examples/c++/stablehlo_add.cpp",
+        "examples/c++/ExampleAdd.cpp",
     ],
     deps = [
+        ":reference_api",
         ":stablehlo_ops",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",

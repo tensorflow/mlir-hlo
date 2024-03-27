@@ -148,6 +148,13 @@ bool isCompatibleForHloTypeInference(Value shape1, Type tp2) {
   return isCompatibleForHloTypeInference(tp1, tp2);
 }
 
+LogicalResult matchInt(Value value, int64_t& result) {
+  APInt constValue;
+  if (!matchPattern(value, m_ConstantInt(&constValue))) return failure();
+  result = constValue.getSExtValue();
+  return success();
+}
+
 LogicalResult matchInts(Value value, SmallVector<int64_t>& result) {
   DenseIntElementsAttr attr;
   if (!matchPattern(value, m_Constant(&attr))) return failure();
@@ -594,11 +601,9 @@ LogicalResult unflattenTupleTypes(TypeRange prototype, TypeRange types,
 
 ShapedType createShapedType(ShapedTypeComponents components) {
   if (!components.getElementType()) return ShapedType();
-  if (components.hasRank())
-    return RankedTensorType::get(components.getDims(),
-                                 components.getElementType(),
-                                 components.getAttribute());
-  return UnrankedTensorType::get(components.getElementType());
+  return RankedTensorType::get(components.getDims(),
+                               components.getElementType(),
+                               components.getAttribute());
 }
 
 bool isSplatArray(ArrayRef<int64_t> arr, int64_t val) {

@@ -275,6 +275,7 @@ cc_library(
         "@llvm-project//mlir:Dialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
+        "@llvm-project//mlir:InliningUtils",
         "@llvm-project//mlir:QuantOps",
         "@llvm-project//mlir:TransformUtils",
     ],
@@ -422,6 +423,7 @@ cc_library(
     hdrs = [
         "stablehlo/reference/Api.h",
     ],
+    strip_include_prefix = ".",
     deps = [
         ":interpreter_ops",
         ":reference_configuration",
@@ -1070,6 +1072,7 @@ cc_library(
         "@llvm-project//mlir:FunctionInterfaces",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
+        "@llvm-project//mlir:InliningUtils",
         "@llvm-project//mlir:QuantOps",
         "@llvm-project//mlir:ShapeDialect",
         "@llvm-project//mlir:SparseTensorDialect",
