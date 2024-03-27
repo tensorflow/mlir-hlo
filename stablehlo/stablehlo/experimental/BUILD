@@ -69,6 +69,7 @@ cc_library(
         "transforms/ChloRecomposeOps.cpp",
         "transforms/StablehloCanonicalizeDynamism.cpp",
         "transforms/StablehloRefineShapes.cpp",
+        "transforms/StablehloTrivialDce.cpp",
     ],
     hdrs = [
         "transforms/Passes.h",
