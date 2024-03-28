@@ -290,6 +290,7 @@ cc_library(
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:SCFDialect",
         "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -432,6 +433,7 @@ cc_library(
         "@llvm-project//mlir:FunctionInterfaces",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
+        "@llvm-project//mlir:InliningUtils",
         "@llvm-project//mlir:LLVMDialect",
         "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:Pass",
@@ -604,6 +606,7 @@ cc_library(
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:TensorUtils",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -620,6 +623,7 @@ cc_library(
         "@llvm-project//mlir:FuncTransforms",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -773,6 +777,7 @@ cc_library(
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:TensorUtils",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -857,6 +862,7 @@ cc_library(
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:ShapeDialect",
         "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -889,6 +895,7 @@ cc_library(
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -908,6 +915,7 @@ cc_library(
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
 )
@@ -1093,6 +1101,7 @@ cc_library(
         "@llvm-project//mlir:SCFTransforms",
         "@llvm-project//mlir:ShapeToStandard",
         "@llvm-project//mlir:TensorInferTypeOpInterfaceImpl",
+        "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
         "@llvm-project//mlir:VectorDialect",
         "@llvm-project//mlir:VectorToLLVM",
