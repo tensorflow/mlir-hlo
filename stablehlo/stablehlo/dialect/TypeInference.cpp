@@ -65,6 +65,148 @@ limitations under the License.
 
 namespace mlir {
 namespace hlo {
+namespace {
+//===----------------------------------------------------------------------===//
+// Utils for quantization specific verifications
+//===----------------------------------------------------------------------===//
+template <typename T>
+bool allQuantized(ArrayRef<Type> typeRange) {
+  return llvm::all_of(
+      typeRange, [&](Type val) { return getElementTypeOrSelf(val).isa<T>(); });
+}
+
+template <typename T>
+bool allQuantized(Type tp1, Type tp2) {
+  llvm::SmallVector<Type, 2> typeEntries{tp1, tp2};
+  return allQuantized<T>(typeEntries);
+}
+
+template <typename T>
+bool noneQuantized(ArrayRef<Type> typeRange) {
+  return llvm::all_of(
+      typeRange, [&](Type val) { return !getElementTypeOrSelf(val).isa<T>(); });
+}
+
+template <typename T>
+bool anyQuantized(ArrayRef<Type> typeRange) {
+  return llvm::any_of(
+      typeRange, [&](Type val) { return getElementTypeOrSelf(val).isa<T>(); });
+}
+
+template <typename T>
+bool anyQuantized(Type tp1, Type tp2) {
+  llvm::SmallVector<Type, 2> typeRange{tp1, tp2};
+  return llvm::any_of(
+      typeRange, [&](Type val) { return getElementTypeOrSelf(val).isa<T>(); });
+}
+
+LogicalResult verifyBinaryOpQuantizationConstraints(
+    std::optional<Location> location, Type lhsType, Type rhsType,
+    Type resultType) {
+  lhsType = getElementTypeOrSelf(lhsType);
+  rhsType = getElementTypeOrSelf(rhsType);
+  resultType = getElementTypeOrSelf(resultType);
+  llvm::SmallVector<Type, 3> typeEntries{lhsType, rhsType, resultType};
+
+  // add_c2
+  if (!allQuantized<quant::QuantizedType>(typeEntries)) {
+    return emitOptionalError(location,
+                             "expects  all operands and results to be either "
+                             "quantized or non-quantized");
+  }
+  auto lhsQType = lhsType.dyn_cast<quant::QuantizedType>();
+  auto rhsQType = rhsType.dyn_cast<quant::QuantizedType>();
+  auto resultQType = resultType.dyn_cast<quant::QuantizedType>();
+  // add_c3
+  auto storageType = lhsQType.getStorageType();
+  if (storageType != rhsQType.getStorageType() ||
+      storageType != resultQType.getStorageType())
+    return emitOptionalError(
+        location, "mismatched operands and result quantization storage types");
+  // add_c4
+  auto expressedType = lhsQType.getExpressedType();
+  if (expressedType != rhsQType.getExpressedType() ||
+      expressedType != resultQType.getExpressedType())
+    return emitOptionalError(
+        location,
+        "mismatched operands and result quantization expressed types");
+
+  auto lhsQPAType = lhsType.dyn_cast<quant::UniformQuantizedPerAxisType>();
+  auto rhsQPAType = rhsType.dyn_cast<quant::UniformQuantizedPerAxisType>();
+  auto resultQPAType =
+      resultType.dyn_cast<quant::UniformQuantizedPerAxisType>();
+  if (lhsQPAType || rhsQPAType) {
+    // add_c5
+    if (!resultQPAType)
+      return emitOptionalError(
+          location, "result is not per_axis quantized but lhs or rhs are");
+    // add_c6
+    if (lhsQPAType) {
+      if (resultQPAType.getQuantizedDimension() !=
+          lhsQPAType.getQuantizedDimension())
+        return emitOptionalError(
+            location, "quantization_dimension of lhs and result are not same ",
+            lhsType, " vs ", resultType);
+    }
+    // add_c7
+    if (rhsQPAType) {
+      if (resultQPAType.getQuantizedDimension() !=
+          rhsQPAType.getQuantizedDimension())
+        return emitOptionalError(
+            location, "quantization_dimension of rhs and result are not same ",
+            rhsType, " vs ", resultType);
+    }
+    return success();
+  }
+
+  if (resultQPAType)
+    return emitOptionalError(location,
+                             "result per_axis quantized but none from rhs "
+                             "and lhs are per_axis quantized");
+  return success();
+}
+
+bool isSameQuantPerAxisScaleZeroPoint(Type ty1, Type ty2) {
+  auto qty1 =
+      getElementTypeOrSelf(ty1).dyn_cast<quant::UniformQuantizedPerAxisType>();
+  auto qty2 =
+      getElementTypeOrSelf(ty2).dyn_cast<quant::UniformQuantizedPerAxisType>();
+  if (!qty1 || !qty2) return false;
+
+  if (qty1.getScales().size() != qty1.getScales().size()) return false;
+
+  for (auto [lhs, rhs] : llvm::zip(qty1.getScales(), qty2.getScales()))
+    if (lhs != rhs) return false;
+
+  for (auto [lhs, rhs] : llvm::zip(qty1.getZeroPoints(), qty2.getZeroPoints()))
+    if (lhs != rhs) return false;
+
+  return true;
+}
+
+LogicalResult verifyQPerTensorScaleAndZeroPointConstraints(
+    std::optional<Location> location, Type ty1, Type ty2) {
+  if (allQuantized<quant::UniformQuantizedType>(ty1, ty2)) {
+    if (getElementTypeOrSelf(ty1) != getElementTypeOrSelf(ty2))
+      return emitOptionalError(
+          location, "expect same quantization scale and zero_point but got ",
+          ty1, " vs ", ty2);
+  }
+  return success();
+}
+
+LogicalResult verifyQPerAxisScaleAndZeroPointConstraints(
+    std::optional<Location> location, Type ty1, Type ty2) {
+  if (allQuantized<quant::UniformQuantizedPerAxisType>(ty1, ty2)) {
+    if (!isSameQuantPerAxisScaleZeroPoint(ty1, ty2))
+      return emitOptionalError(
+          location, "expect same quantization scales and zero_points but got ",
+          ty1, " vs ", ty2);
+  }
+  return success();
+}
+
+}  // namespace
 
 //===----------------------------------------------------------------------===//
 // Utils for shape functions.
@@ -261,6 +403,49 @@ LogicalResult verifyPairwiseCompatibleShapes(TypeRange values) {
   for (auto type1 : values)
     for (auto type2 : values)
       if (failed(verifyCompatibleShape(type1, type2))) return failure();
+  return success();
+}
+
+LogicalResult verifyAddOp(std::optional<Location> location, Operation* op,
+                          Type lhsType, Type rhsType, Type resultType) {
+  llvm::SmallVector<Type, 3> typeEntries{lhsType, rhsType, resultType};
+  if (anyQuantized<quant::QuantizedType>(typeEntries))
+    return verifyBinaryOpQuantizationConstraints(location, lhsType, rhsType,
+                                                 resultType);
+
+  if (getElementTypeOrSelf(lhsType) != getElementTypeOrSelf(rhsType) ||
+      getElementTypeOrSelf(lhsType) != getElementTypeOrSelf(resultType))
+    return emitOptionalError(
+        location,
+        "op requires the same element type for all operands and results");
+
+  return success();
+}
+
+LogicalResult verifyTransposeOp(std::optional<Location> location,
+                                Type operandType, ArrayRef<int64_t> permutation,
+                                Type resultType) {
+  // transpose_c1
+  if (failed(verifyQPerTensorScaleAndZeroPointConstraints(location, operandType,
+                                                          resultType)))
+    return failure();
+
+  if (failed(verifyQPerAxisScaleAndZeroPointConstraints(location, operandType,
+                                                        resultType)))
+    return failure();
+
+  // transpose_c4
+  if (auto resultQType = getElementTypeOrSelf(resultType)
+                             .dyn_cast<quant::UniformQuantizedPerAxisType>()) {
+    auto resultQDim = resultQType.getQuantizedDimension();
+    auto operandQDim = getElementTypeOrSelf(operandType)
+                           .cast<quant::UniformQuantizedPerAxisType>()
+                           .getQuantizedDimension();
+    if (operandQDim != permutation[resultQDim])
+      return emitOptionalError(location, "operand quantization_dimension ",
+                               operandQDim, " is not same as permutation[",
+                               resultQDim, "] ", permutation[resultQDim]);
+  }
   return success();
 }
 
@@ -1517,16 +1702,8 @@ LogicalResult inferCaseOp(std::optional<Location> location, Value index,
 LogicalResult inferCholeskyOp(
     std::optional<Location> location, Value a,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
-  Type aType = a.getType();
-  RankedTensorType aRankedType = aType.dyn_cast<RankedTensorType>();
-  if (!aRankedType) {
-    // cholesky_c1
-    inferredReturnShapes.emplace_back(
-        aType.cast<ShapedType>().getElementType());
-    return success();
-  }
-
-  ArrayRef<int64_t> aShape = aRankedType.getShape();
+  auto aType = a.getType().cast<RankedTensorType>();
+  ArrayRef<int64_t> aShape = aType.getShape();
   // cholesky_c2
   if (aShape.size() < 2)
     return emitOptionalError(
@@ -1540,9 +1717,8 @@ LogicalResult inferCholeskyOp(
         aShape, ".");
 
   // cholesky_c1
-  inferredReturnShapes.emplace_back(aRankedType.getShape(),
-                                    aRankedType.getElementType(),
-                                    aRankedType.getEncoding());
+  inferredReturnShapes.emplace_back(aType.getShape(), aType.getElementType(),
+                                    aType.getEncoding());
   return success();
 }
 
@@ -2891,13 +3067,7 @@ LogicalResult inferTriangularSolveOp(
     bool isTransposeAInvalid,
     SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
   // ODS enforces that a and b are of same element type: float or complex.
-  auto elementType = a.getType().cast<ShapedType>().getElementType();
-  auto aType = a.getType().dyn_cast<RankedTensorType>();
-  if (!aType) {
-    inferredReturnShapes.emplace_back(elementType);
-    return success();
-  }
-
+  auto aType = a.getType().cast<RankedTensorType>();
   auto aRank = aType.getRank();
   if (aRank < 2)
     return emitOptionalError(
@@ -2909,12 +3079,7 @@ LogicalResult inferTriangularSolveOp(
                              "two minor dimensions of operand 'a' must ",
                              "be compatible, but got ", aType);
 
-  auto bType = b.getType().dyn_cast<RankedTensorType>();
-  if (!bType) {
-    inferredReturnShapes.emplace_back(elementType);
-    return success();
-  }
-
+  auto bType = b.getType().cast<RankedTensorType>();
   auto bRank = bType.getRank();
   if (aRank != bRank)
     return emitOptionalError(location,
@@ -3166,6 +3331,11 @@ LogicalResult verifyBroadcastInDimOp(std::optional<Location> location,
     return success();
   }
 
+  // broadcast_in_dim_c1
+  if (failed(verifyQPerTensorScaleAndZeroPointConstraints(location, operandType,
+                                                          result.getType())))
+    return failure();
+
   // broadcast_in_dim_c2
   auto dimensionsSize = broadcastDimensions.size();
   auto operandRank = operandType.getRank();
@@ -3198,6 +3368,34 @@ LogicalResult verifyBroadcastInDimOp(std::optional<Location> location,
             location, "size of operand dimension ", i, " (", dimSize,
             ") is not equal to 1 or size of result dimension ", dimIndex, " (",
             resultDimSize, ")");
+    }
+  }
+
+  // broadcast_in_dim_c6
+  if (auto resultQType = getElementTypeOrSelf(result.getType())
+                             .dyn_cast<quant::UniformQuantizedPerAxisType>()) {
+    auto operandQType = getElementTypeOrSelf(operand.getType())
+                            .cast<quant::UniformQuantizedPerAxisType>();
+    auto operandQDim = operandQType.getQuantizedDimension();
+    auto resultQDim = resultQType.getQuantizedDimension();
+    if (resultQDim != broadcastDimensions[operandQDim])
+      return emitOptionalError(location, "result quantization_dimension ",
+                               resultQDim, " not same as broadcast_dimensions ",
+                               operandQDim, " (",
+                               broadcastDimensions[operandQDim], ")");
+    if (operandType.getDimSize(operandQDim) == 1) {
+      for (int64_t j = 0; j != resultType.getDimSize(resultQDim); ++j) {
+        if (resultQType.getScales()[j] != operandQType.getScales()[0])
+          return emitOptionalError(location, "mismatch result scale ", j, " (",
+                                   resultQType.getScales()[j],
+                                   ") and operand scale 0 (",
+                                   operandQType.getScales()[0], ")");
+        if (resultQType.getZeroPoints()[j] != operandQType.getZeroPoints()[0])
+          return emitOptionalError(location, "mismatch result zero_point ", j,
+                                   " (", resultQType.getZeroPoints()[j],
+                                   ") and operand zero_point 0 (",
+                                   operandQType.getZeroPoints()[0], ")");
+      }
     }
   }
 
@@ -3869,6 +4067,53 @@ LogicalResult verifyReduceWindowOp(
   return success();
 }
 
+LogicalResult verifyReshapeOpQuantizationConstraints(
+    std::optional<Location> location, Type operandTy, Type resultTy) {
+  // reshape_c1
+  if (failed(verifyQPerTensorScaleAndZeroPointConstraints(location, operandTy,
+                                                          resultTy)))
+    return failure();
+
+  // reshape_c1
+  if (failed(verifyQPerAxisScaleAndZeroPointConstraints(location, operandTy,
+                                                        resultTy)))
+    return failure();
+
+  // reshape_c3
+  if (allQuantized<quant::UniformQuantizedPerAxisType>(operandTy, resultTy)) {
+    auto operandQDim = getElementTypeOrSelf(operandTy)
+                           .cast<quant::UniformQuantizedPerAxisType>()
+                           .getQuantizedDimension();
+    auto resultQDim = getElementTypeOrSelf(resultTy)
+                          .cast<quant::UniformQuantizedPerAxisType>()
+                          .getQuantizedDimension();
+    auto operandShape = operandTy.cast<ShapedType>().getShape();
+    auto resultShape = resultTy.cast<ShapedType>().getShape();
+
+    if (operandTy.cast<ShapedType>().getDimSize(operandQDim) !=
+        resultTy.cast<ShapedType>().getDimSize(resultQDim))
+      return emitOptionalError(
+          location,
+          "expect same quantization dimension size for operand and result ",
+          operandTy, " and ", resultTy);
+
+    uint64_t operandProd = 1;
+    std::for_each(operandShape.begin(), operandShape.begin() + operandQDim,
+                  [&operandProd](int32_t dimSize) { operandProd *= dimSize; });
+    uint64_t resultProd = 1;
+    std::for_each(resultShape.begin(), resultShape.begin() + resultQDim,
+                  [&resultProd](int32_t dimSize) { resultProd *= dimSize; });
+    if (operandProd != resultProd)
+      return emitOptionalError(
+          location,
+          "product of dimensions before quantization dimension must match "
+          "between operand and result for ",
+          operandProd, " and ", resultProd);
+  }
+
+  return success();
+}
+
 LogicalResult verifyReshapeOp(std::optional<Location> location, Value operand,
                               Value result) {
   // If the operand type is dynamically shaped there is nothing to verify.
@@ -3878,8 +4123,6 @@ LogicalResult verifyReshapeOp(std::optional<Location> location, Value operand,
   // If the operand type is statically shaped (not required) the number of
   // elements must match that of the result type.
   auto resultTy = result.getType().cast<RankedTensorType>();
-  assert(resultTy && resultTy.hasStaticShape() &&
-         "result type must be statically shaped");
   int64_t numResultElements = resultTy.getNumElements();
   int64_t numOperandElements = operandTy.getNumElements();
   if (numResultElements != numOperandElements)
@@ -3887,6 +4130,10 @@ LogicalResult verifyReshapeOp(std::optional<Location> location, Value operand,
                              numResultElements,
                              ") doesn't match expected number of elements (",
                              numOperandElements, ")");
+
+  if (anyQuantized<quant::QuantizedType>(operand.getType(), result.getType()))
+    return verifyReshapeOpQuantizationConstraints(location, operand.getType(),
+                                                  result.getType());
 
   return success();
 }

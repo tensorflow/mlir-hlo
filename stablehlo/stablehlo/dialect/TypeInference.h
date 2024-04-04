@@ -374,6 +374,9 @@ LogicalResult inferWhileOp(std::optional<Location> location, ValueRange operand,
 // Verifiers for ops.
 //===----------------------------------------------------------------------===//
 
+LogicalResult verifyAddOp(std::optional<Location> location, Operation* op,
+                          Type lhsType, Type rhsType, Type resultType);
+
 LogicalResult verifyAllGatherOp(std::optional<Location> location, Value operand,
                                 int64_t allGatherDim,
                                 DenseIntElementsAttr replicaGroups,
@@ -520,6 +523,10 @@ LogicalResult verifySelectAndScatterOp(
 
 LogicalResult verifySortOp(std::optional<Location> location, ValueRange inputs,
                            int64_t dimension, Region& comparator);
+
+LogicalResult verifyTransposeOp(std::optional<Location> location,
+                                Type operandType, ArrayRef<int64_t> permutation,
+                                Type resultType);
 
 LogicalResult verifyWhileOp(std::optional<Location> location,
                             ValueRange operand, Region& cond, Region& body);

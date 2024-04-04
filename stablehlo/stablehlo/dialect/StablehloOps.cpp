@@ -68,6 +68,7 @@ limitations under the License.
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/InliningUtils.h"
@@ -146,7 +147,6 @@ LogicalResult ReduceScatterOp::verify() {
         inferredReturnShapes);                                        \
   }
 
-INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(AddOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(AndOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(Atan2Op)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(CbrtOp)
@@ -185,6 +185,32 @@ INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(SqrtOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(SubtractOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(TanhOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(XorOp)
+
+//===----------------------------------------------------------------------===//
+// AddOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AddOp::inferReturnTypeComponents(
+    MLIRContext* context, std::optional<Location> location,
+    ValueShapeRange operands, DictionaryAttr attributes,
+    OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  SmallVector<Type> inferredReturnTypes;
+  if (failed(inferReturnTypes(context, location, operands.getValues(),
+                              attributes, properties, regions,
+                              inferredReturnTypes)))
+    return failure();
+  if (inferredReturnTypes.size() != 1) return failure();
+  auto inferredReturnType = inferredReturnTypes[0].dyn_cast<ShapedType>();
+  if (!inferredReturnType) return failure();
+  inferredReturnShapes.push_back(inferredReturnType);
+  return success();
+}
+
+LogicalResult AddOp::verify() {
+  return hlo::verifyAddOp(getLoc(), getOperation(), getLhs().getType(),
+                          getRhs().getType(), getResult().getType());
+}
 
 //===----------------------------------------------------------------------===//
 // AfterAllOp
@@ -769,6 +795,27 @@ LogicalResult DynamicIotaOp::reifyReturnTypeShapes(
 LogicalResult DynamicIotaOp::verify() {
   return hlo::verifyDynamicIotaOp(getLoc(), getOutputShape(),
                                   getIotaDimension(), getResult());
+}
+
+mlir::Speculation::Speculatability DynamicIotaOp::getSpeculatability() {
+  // If the output shape operand is constant, each of its dimensions is static.
+  // For each dimension in the result type's shape:
+  // 1. If it is static, the verifier has already checked that it matches the
+  //    corresponding dimension in the output shape operand.
+  // 2. Otherwise, it is dynamic, so there cannot be a mismatch.
+  // (In fact, the result type's shape can be inferred from the operand.)
+  if (matchPattern(getOperand(), m_Constant()))
+    return mlir::Speculation::Speculatable;
+
+  // The result type's shape is fully dynamic, so there cannot be a mismatch
+  // with the output shape operand at runtime (the type has no expectations).
+  if (llvm::all_of(llvm::seq(getType().getRank()),
+                   [this](int64_t i) { return getType().isDynamicDim(i); }))
+    return mlir::Speculation::Speculatable;
+
+  // The output shape operand's value is unknown and at least one of the result
+  // type's dimensions is static, so the dimensions could disagree at runtime.
+  return mlir::Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1675,6 +1722,15 @@ LogicalResult SetDimensionSizeOp::inferReturnTypeComponents(
   return hlo::inferSetDimensionSizeOp(
       getStablehloDialect(context), location, adaptor.getOperand().getType(),
       adaptor.getSize(), adaptor.getDimension(), inferredReturnShapes);
+}
+
+//===----------------------------------------------------------------------===//
+// TransposeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TransposeOp::verify() {
+  return hlo::verifyTransposeOp(getLoc(), getOperand().getType(),
+                                getPermutation(), getResult().getType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -2990,6 +3046,15 @@ Operation* StablehloDialect::materializeConstant(OpBuilder& builder,
   if (type != elementsAttr.getType()) return nullptr;
 
   return builder.create<ConstantOp>(loc, type, elementsAttr);
+}
+
+std::optional<StablehloDialectVersion> StablehloDialect::getVersion() const {
+  return version;
+}
+
+void StablehloDialect::setVersion(
+    std::optional<StablehloDialectVersion> version) {
+  this->version = version;
 }
 
 }  // namespace stablehlo
