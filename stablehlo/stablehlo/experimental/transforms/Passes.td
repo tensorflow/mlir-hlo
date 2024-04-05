@@ -37,19 +37,3 @@ def ChloRecomposeOpsPass : Pass<"experimental-chlo-recompose-ops", "ModuleOp"> {
   }];
   let dependentDialects = ["chlo::ChloDialect"];
 }
-
-def StablehloTrivialDcePass : Pass<"experimental-stablehlo-trivial-dce", "ModuleOp"> {
-  let summary = "(Experimental) Performs a single bottom up pass to remove values that are trivially dead.";
-  let description = [{
-    An experimental pass to remove dead values prior to running other passes
-    that may fail to converge otherwise. For example, running shape refinement
-    on a program that has a lot of dead values can fail because shape refinement
-    is top down and removing values causes a new iteration to be triggered, and
-    removing all the dead values with a top down traversal can take a lot of
-    iterations (10+), which is slow.
-
-    Performing a single pass should be fast, and doing it bottom up means that
-    values that are transitively dead can be removed since leaf values will be
-    processed first.
-  }];
-}

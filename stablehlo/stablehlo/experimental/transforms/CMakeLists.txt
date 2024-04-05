@@ -21,7 +21,6 @@ add_mlir_dialect_library(ExperimentalStablehloPasses
   ChloRecomposeOps.cpp
   StablehloCanonicalizeDynamism.cpp
   StablehloRefineShapes.cpp
-  StablehloTrivialDce.cpp
 
   DEPENDS
   ExperimentalPassesIncGen
