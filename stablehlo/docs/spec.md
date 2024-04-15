@@ -329,7 +329,8 @@ in StableHLO programs. In the meanwhile, here is the list of these operations:
   the StableHLO opset but have been later deemed to not fit it well:
   `broadcast`, `create_token`, `cross-replica-sum`, `dot`, `einsum`,
   `torch_index_select`, `unary_einsum`
-  ([#3](https://github.com/openxla/stablehlo/issues/3)).
+  ([#3](https://github.com/openxla/stablehlo/issues/3)), and
+  `trace` ([#604](https://github.com/openxla/stablehlo/issues/604)).
 * "Dynamism" category of StableHLO operations - they were bootstrapped from
    MHLO, but we haven't specced them yet: `compute_reshape_shape`,
   `cstr_reshapable`, `dynamic_broadcast_in_dim`, `dynamic_conv`,
@@ -2319,15 +2320,17 @@ For quantized types, performs `dequantize_op_quantize(
   // "i" is input feature dimension, "o" is output feature dimension,
   // "0/1/etc" are spatial dimensions.
   dimension_numbers = #stablehlo.conv<[b, 0, 1, f]x[0, 1, i, o]->[b, 0, 1, f]>,
-  feature_group_count = 1 : i64,
   batch_group_count = 1 : i64,
+  feature_group_count = 1 : i64,
   precision_config = [#stablehlo<precision DEFAULT>, #stablehlo<precision DEFAULT>]
-} : (tensor<1x4x4x1xi32>, tensor<3x3x1x1xi32>) -> tensor<1x2x2x1xi32>
+} : (tensor<1x4x4x1xi64>, tensor<3x3x1x1xi64>) -> tensor<1x2x2x1xi64>
 // %result: [[
 //            [[10], [26]],
 //            [[46], [62]]
 //          ]]
 ```
+
+&nbsp;[More Examples](../stablehlo/tests/interpret/convolution.mlir)
 
 ### cosine
 
@@ -5061,7 +5064,7 @@ The following diagram shows how elements in `result` are computed from
 More formally:
 
 * `selected_values = reduce_window_without_init(...)` with the following inputs:
-  * `inputs = [operand].
+  * `inputs = [operand].`
   * `window_dimensions`, `window_strides`, and `padding` which are used as is.
   * `base_dilations = windows_dilations = 1`.
   * `body` is defined as:

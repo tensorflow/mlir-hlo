@@ -302,7 +302,7 @@ LogicalResult DynamicRngBitGeneratorOpAdaptor::verify() {
 
   // Unpack operands and attributes of the underlying custom call into
   // operation-specific inputs.
-  auto rngAlgorithmAttr = op_->getAttr("rng_algorithm");
+  auto rngAlgorithmAttr = op_->getDiscardableAttr("rng_algorithm");
   auto initialState = op_.getInputs()[0];
   auto outputShape = op_.getInputs()[1];
   auto outputState = op_.getResults()[0];
@@ -363,7 +363,9 @@ LogicalResult DynamicRngBitGeneratorOpAdaptor::verify() {
 }
 
 RngAlgorithm DynamicRngBitGeneratorOpAdaptor::getRngAlgorithm() {
-  return op_->getAttr("rng_algorithm").cast<RngAlgorithmAttr>().getValue();
+  return op_->getDiscardableAttr("rng_algorithm")
+      .cast<RngAlgorithmAttr>()
+      .getValue();
 }
 
 TypedValue<ShapedType> DynamicRngBitGeneratorOpAdaptor::getInitialState() {

@@ -689,7 +689,7 @@ static Value materializePolynomialApproximation(
 static Value materializeErfcApproximationF64ForMagnituteGeOne(
     ConversionPatternRewriter &rewriter, Location loc, ValueRange args) {
   Value x = args.front();
-  assert(x.getType().cast<ShapedType>().getElementType().isF64() &&
+  assert(cast<ShapedType>(x.getType()).getElementType().isF64() &&
          "expect f64 element type");
   const double kMaxlog = 7.09782712893383996843E2;
   const double kErfcPCoefficients[] = {
@@ -827,7 +827,7 @@ static Value materializeErfApproximationF64(ConversionPatternRewriter &rewriter,
 static Value materializeErfcApproximationF64(
     ConversionPatternRewriter &rewriter, Location loc, ValueRange args) {
   Value x = args.front();
-  assert(x.getType().cast<ShapedType>().getElementType().isF64() &&
+  assert(cast<ShapedType>(x.getType()).getElementType().isF64() &&
          "expect f64 element type");
 
   // Rely on erfc approximation for |x| >= 1
@@ -859,7 +859,7 @@ static Value materializeErfcApproximationF64(
 static Value materializeErfcApproximationF32ForMagnitudeGeOne(
     ConversionPatternRewriter &rewriter, Location loc, ValueRange args) {
   Value x = args.front();
-  assert(x.getType().cast<ShapedType>().getElementType().isF32() &&
+  assert(cast<ShapedType>(x.getType()).getElementType().isF32() &&
          "expect f32 element type");
   const double kMaxlog = 88.72283905206835;
   const float kErfcPCoefficients[] = {
@@ -925,7 +925,7 @@ static Value materializeErfcApproximationF32ForMagnitudeGeOne(
 static Value materializeErfApproximationF32ForMagnitudeLeOne(
     ConversionPatternRewriter &rewriter, Location loc, ValueRange args) {
   Value x = args.front();
-  assert(x.getType().cast<ShapedType>().getElementType().isF32() &&
+  assert(cast<ShapedType>(x.getType()).getElementType().isF32() &&
          "expect f32 element type");
   const float kErfTCoefficients[] = {
       +7.853861353153693E-5f, -8.010193625184903E-4f, +5.188327685732524E-3f,
@@ -945,7 +945,7 @@ static Value materializeErfApproximationF32ForMagnitudeLeOne(
 static Value materializeErfApproximationF32(ConversionPatternRewriter &rewriter,
                                             Location loc, ValueRange args) {
   Value x = args.front();
-  assert(x.getType().cast<ShapedType>().getElementType().isF32() &&
+  assert(cast<ShapedType>(x.getType()).getElementType().isF32() &&
          "expect f32 element type");
   const float kAlpha[] = {
       -2.72614225801306e-10f, 2.77068142495902e-08f,  -2.10102402082508e-06f,
@@ -982,7 +982,7 @@ static Value materializeErfApproximationF32(ConversionPatternRewriter &rewriter,
 static Value materializeErfcApproximationF32(
     ConversionPatternRewriter &rewriter, Location loc, ValueRange args) {
   Value x = args.front();
-  assert(x.getType().cast<ShapedType>().getElementType().isF32() &&
+  assert(cast<ShapedType>(x.getType()).getElementType().isF32() &&
          "expect f32 element type");
 
   // Rely on erfc approximation for |x| >= 1
@@ -1568,7 +1568,7 @@ static Value materializeDigamma(ConversionPatternRewriter &rewriter,
 
 static Value getConstantLikeSmallestFiniteValue(OpBuilder &b, Location loc,
                                                 Value val) {
-  auto ty = getElementTypeOrSelf(val.getType()).cast<FloatType>();
+  auto ty = cast<FloatType>(getElementTypeOrSelf(val.getType()));
   return getConstantLike(
       b, loc, llvm::APFloat::getSmallest(ty.getFloatSemantics()), val);
 }
@@ -1615,19 +1615,18 @@ static Value materializeZeta(ConversionPatternRewriter &rewriter, Location loc,
   for (int i = 0; i < kIters; ++i) {
     acc = rewriter.create<AddOp>(loc, acc, one);
     qNegPower = rewriter.create<PowOp>(loc, acc, negX);
-    powerSum =
-        rewriter.create<AddOp>(loc, powerSum, qNegPower);
+    powerSum = rewriter.create<AddOp>(loc, powerSum, qNegPower);
   }
   acc = rewriter.create<AddOp>(loc, acc, one);
   qNegPower = rewriter.create<PowOp>(loc, acc, negX);
   Value oneLikeX = getConstantLike(rewriter, loc, 1.0, x);
-  Value correctionEulerMaclaurin = rewriter.create<DivOp>(
-      loc, rewriter.create<MulOp>(loc, qNegPower, acc),
-      rewriter.create<SubtractOp>(loc, x, oneLikeX));
+  Value correctionEulerMaclaurin =
+      rewriter.create<DivOp>(loc, rewriter.create<MulOp>(loc, qNegPower, acc),
+                             rewriter.create<SubtractOp>(loc, x, oneLikeX));
 
   // Manual reciprocal of the square root as RsqrtOp produces different results
-  Value rsqrtAcc = rewriter.create<DivOp>(
-      loc, one, rewriter.create<MulOp>(loc, acc, acc));
+  Value rsqrtAcc =
+      rewriter.create<DivOp>(loc, one, rewriter.create<MulOp>(loc, acc, acc));
 
   // Use Horner's rule for this.
   // Note this differs from Cephes which does a 'naive' polynomial evaluation.
@@ -1643,8 +1642,7 @@ static Value materializeZeta(ConversionPatternRewriter &rewriter, Location loc,
     Value factorRhs = rewriter.create<AddOp>(
         loc, x,
         getConstantLike(rewriter, loc, kTwoTermsMinusOne - 2 - 2 * i, x));
-    hornerProduct =
-        rewriter.create<MulOp>(loc, factorLhs, factorRhs);
+    hornerProduct = rewriter.create<MulOp>(loc, factorLhs, factorRhs);
     hornerSum = rewriter.create<MulOp>(
         loc, hornerProduct,
         rewriter.create<MulOp>(
@@ -1668,9 +1666,7 @@ static Value materializeZeta(ConversionPatternRewriter &rewriter, Location loc,
                                   acc),
                   hornerSum))));
   Value accurateResult = rewriter.create<AddOp>(
-      loc,
-      rewriter.create<AddOp>(loc, powerSum,
-                                              correctionEulerMaclaurin),
+      loc, rewriter.create<AddOp>(loc, powerSum, correctionEulerMaclaurin),
       bernoulliTailTerm);
 
   // Use the initial zeta sum without the correction term coming
@@ -1692,48 +1688,37 @@ static Value materializeZeta(ConversionPatternRewriter &rewriter, Location loc,
                               std::numeric_limits<double>::quiet_NaN(), x);
   output = rewriter.create<SelectOp>(
       loc,
-      rewriter.create<CompareOp>(
-          loc, x, oneLikeX, ComparisonDirection::LT),
+      rewriter.create<CompareOp>(loc, x, oneLikeX, ComparisonDirection::LT),
       nan, output);
 
   // For q <= 0, x must be an integer.
-  Value qLeZero = rewriter.create<CompareOp>(
-      loc, q, zero, ComparisonDirection::LE);
+  Value qLeZero =
+      rewriter.create<CompareOp>(loc, q, zero, ComparisonDirection::LE);
   Value xNotInt = rewriter.create<CompareOp>(
-      loc, x, rewriter.create<FloorOp>(loc, x),
-      ComparisonDirection::NE);
-  Value xDomainError =
-      rewriter.create<AndOp>(loc, qLeZero, xNotInt);
-  output = rewriter.create<SelectOp>(loc, xDomainError, nan,
-                                                      output);
+      loc, x, rewriter.create<FloorOp>(loc, x), ComparisonDirection::NE);
+  Value xDomainError = rewriter.create<AndOp>(loc, qLeZero, xNotInt);
+  output = rewriter.create<SelectOp>(loc, xDomainError, nan, output);
 
   // For all integer q <= 0, zeta has a pole. The limit is only defined as
   // +inf if x is and even integer.
   Value inf = getConstantLike(rewriter, loc,
                               std::numeric_limits<double>::infinity(), x);
   Value qIsInt = rewriter.create<CompareOp>(
-      loc, q, rewriter.create<FloorOp>(loc, q),
-      ComparisonDirection::EQ);
+      loc, q, rewriter.create<FloorOp>(loc, q), ComparisonDirection::EQ);
   Value atPole = rewriter.create<AndOp>(loc, qLeZero, qIsInt);
   Value two = getConstantLike(rewriter, loc, 2.0, x);
   Value xIsInt = rewriter.create<CompareOp>(
-      loc, x, rewriter.create<FloorOp>(loc, x),
-      ComparisonDirection::EQ);
+      loc, x, rewriter.create<FloorOp>(loc, x), ComparisonDirection::EQ);
   Value xIsEven = rewriter.create<CompareOp>(
-      loc, rewriter.create<RemOp>(loc, x, two), zero,
-      ComparisonDirection::EQ);
-  Value xIsEvenInt =
-      rewriter.create<AndOp>(loc, xIsInt, xIsEven);
+      loc, rewriter.create<RemOp>(loc, x, two), zero, ComparisonDirection::EQ);
+  Value xIsEvenInt = rewriter.create<AndOp>(loc, xIsInt, xIsEven);
   output = rewriter.create<SelectOp>(
-      loc, atPole,
-      rewriter.create<SelectOp>(loc, xIsEvenInt, inf, nan),
+      loc, atPole, rewriter.create<SelectOp>(loc, xIsEvenInt, inf, nan),
       output);
 
   // For x = 1, this is the harmonic series and diverges.
   output = rewriter.create<SelectOp>(
-      loc,
-      rewriter.create<CompareOp>(
-          loc, x, one, ComparisonDirection::EQ),
+      loc, rewriter.create<CompareOp>(loc, x, one, ComparisonDirection::EQ),
       inf, output);
 
   return output;
@@ -1994,7 +1979,7 @@ struct ConvertSinhOp final : OpConversionPattern<mlir::chlo::SinhOp> {
       mlir::chlo::SinhOp op, OpAdaptor adaptor,
       ConversionPatternRewriter &rewriter) const override {
     Value x = adaptor.getOperand();
-    if (cast<ShapedType>(x.getType()).getElementType().isa<ComplexType>()) {
+    if (isa<ComplexType>(cast<ShapedType>(x.getType()).getElementType())) {
       rewriter.replaceOp(op, materializeSinhApproximationForLargeX(
                                  rewriter, op.getLoc(), adaptor.getOperands()));
       return success();

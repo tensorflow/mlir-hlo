@@ -16,6 +16,7 @@ limitations under the License.
 #include <functional>
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Casting.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -40,7 +41,8 @@ namespace {
 
 FailureOr<DictionaryAttr> getCustomCallOpAttributes(CustomCallOp op,
                                                     PatternRewriter& rewriter) {
-  auto attrs = op->getAttrOfType<DictionaryAttr>("mhlo.attributes");
+  auto attrs = llvm::dyn_cast_or_null<DictionaryAttr>(
+      op->getDiscardableAttr("mhlo.attributes"));
   if (!attrs)
     return rewriter.notifyMatchFailure(
         op, "Expected mhlo.attributes dictionary attribute.");

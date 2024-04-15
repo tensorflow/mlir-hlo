@@ -390,7 +390,7 @@ class CompatibleOperandsAndResultType
                                 inferredReturnTypes)))
       return failure();
     if (inferredReturnTypes.size() != 1) return failure();
-    auto inferredReturnType = inferredReturnTypes[0].dyn_cast<ShapedType>();
+    auto inferredReturnType = dyn_cast<ShapedType>(inferredReturnTypes[0]);
     if (!inferredReturnType) return failure();
     inferredReturnShapes.push_back(inferredReturnType);
     return success();
@@ -398,9 +398,10 @@ class CompatibleOperandsAndResultType
 };
 
 template <typename ConcreteType>
-struct UnaryElementwiseSpeculatableImplTrait
-    : public mlir::OpTrait::TraitBase<ConcreteType,
-                                      UnaryElementwiseSpeculatableImplTrait> {
+struct SpeculatableIfStaticDimInOutputIsStaticInInputImplTrait
+    : public mlir::OpTrait::TraitBase<
+          ConcreteType,
+          SpeculatableIfStaticDimInOutputIsStaticInInputImplTrait> {
   // A unary elementwise op is not speculatable if a dimension of the result
   // type is static while the corresponding dimension in the input type is
   // dynamic. Indeed, the input dimension could differ at runtime.
@@ -421,23 +422,16 @@ struct UnaryElementwiseSpeculatableImplTrait
 };
 
 template <typename ConcreteType>
-struct BinaryElementwiseSpeculatableImplTrait
+struct SpeculatableIfAllInputsStaticImplTrait
     : public mlir::OpTrait::TraitBase<ConcreteType,
-                                      BinaryElementwiseSpeculatableImplTrait> {
-  // A binary elementwise op is only speculatable if both operands have static
-  // shapes. If any dimension of either input is dynamic, it could disagree with
-  // the corresponding dimension in the other input at runtime.
-  // If the operands' shapes are both static, the verifier will make sure they
-  // are equal, and that the result is equal as well.
+                                      SpeculatableIfAllInputsStaticImplTrait> {
   mlir::Speculation::Speculatability getSpeculatability() {
-    auto op = this->getOperation();
-    auto lhsType = cast<RankedTensorType>(op->getOperand(0).getType());
-    auto rhsType = cast<RankedTensorType>(op->getOperand(1).getType());
-    for (size_t i : llvm::seq(lhsType.getRank())) {
-      if (lhsType.isDynamicDim(i) || rhsType.isDynamicDim(i))
-        return mlir::Speculation::NotSpeculatable;
-    }
-    return mlir::Speculation::Speculatable;
+    return llvm::all_of(this->getOperation()->getOperandTypes(),
+                        [](Type t) {
+                          return cast<RankedTensorType>(t).hasStaticShape();
+                        })
+               ? mlir::Speculation::Speculatable
+               : mlir::Speculation::NotSpeculatable;
   }
 };
 
