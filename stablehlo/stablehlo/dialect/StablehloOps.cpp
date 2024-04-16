@@ -170,8 +170,6 @@ INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(Atan2Op)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(CbrtOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(CeilOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(ClzOp)
-INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(CollectiveBroadcastOp)
-INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(CollectivePermuteOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(CosineOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(CrossReplicaSumOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(DivOp)
@@ -654,9 +652,7 @@ void getSliceSizeValues(DynamicGatherOp* /*dGather*/, OpBuilder& builder,
 template <typename Op>
 LogicalResult reifyGatherShape(Op* op, OpBuilder& builder, ValueRange operands,
                                SmallVectorImpl<Value>& reifiedReturnShapes) {
-  // No support for unranked gather output shape a.t.m.
-  auto resultTy = dyn_cast<RankedTensorType>(op->getResult().getType());
-  if (!resultTy) return failure();
+  auto resultTy = cast<RankedTensorType>(op->getResult().getType());
 
   typename Op::Adaptor adaptor(operands);
   Value startIndices = adaptor.getStartIndices();
@@ -716,6 +712,20 @@ LogicalResult GatherOp::inferReturnTypeComponents(
       adaptor.getDimensionNumbers().getStartIndexMap(),
       adaptor.getDimensionNumbers().getIndexVectorDim(),
       adaptor.getSliceSizes(), inferredReturnShapes);
+}
+
+mlir::Speculation::Speculatability GatherOp::getSpeculatability() {
+  // When indices_are_sorted is true, if the start_indices are not sorted, the
+  // behavior is undefined.
+  // A possible improvement would be to check if the start_indices are constant
+  // and if they are sorted, do not return NotSpeculatable. However, such a
+  // check could be somewhat costly and has unclear ROI.
+  if (getIndicesAreSorted()) return mlir::Speculation::NotSpeculatable;
+  return llvm::all_of(
+             this->getOperation()->getOperandTypes(),
+             [](Type t) { return cast<RankedTensorType>(t).hasStaticShape(); })
+             ? mlir::Speculation::Speculatable
+             : mlir::Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -851,6 +861,34 @@ void CollectiveBroadcastOp::build(OpBuilder& odsBuilder,
                                replica_groups, /*channel_handle=*/nullptr);
 }
 
+LogicalResult CollectiveBroadcastOp::inferReturnTypes(
+    MLIRContext* /*context*/, std::optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    RegionRange regions, SmallVectorImpl<Type>& inferredReturnTypes) {
+  CollectiveBroadcastOp::Adaptor adaptor(operands, attributes, properties,
+                                         regions);
+  return hlo::inferCollectiveBroadcastOp(location, adaptor.getOperands(),
+                                         inferredReturnTypes);
+}
+
+LogicalResult CollectiveBroadcastOp::inferReturnTypeComponents(
+    MLIRContext* context, std::optional<Location> location,
+    ValueShapeRange operands, DictionaryAttr attributes,
+    OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  SmallVector<Type> inferredReturnTypes;
+  CollectiveBroadcastOp::Adaptor adaptor(operands, attributes, properties,
+                                         regions);
+  if (failed(hlo::inferCollectiveBroadcastOp(location, adaptor.getOperands(),
+                                             inferredReturnTypes)))
+    return failure();
+  if (inferredReturnTypes.size() != 1) return failure();
+  auto inferredReturnType = dyn_cast<ShapedType>(inferredReturnTypes[0]);
+  if (!inferredReturnType) return failure();
+  inferredReturnShapes.push_back(inferredReturnType);
+  return success();
+}
+
 LogicalResult CollectiveBroadcastOp::verify() {
   return hlo::verifyCollectiveBroadcastOp(getLoc(), getReplicaGroups());
 }
@@ -864,6 +902,34 @@ void CollectivePermuteOp::build(OpBuilder& odsBuilder, OperationState& odsState,
                                 DenseIntElementsAttr sourceTargetPairs) {
   CollectivePermuteOp::build(odsBuilder, odsState, resultType, operand,
                              sourceTargetPairs, /*channel_handle=*/nullptr);
+}
+
+LogicalResult CollectivePermuteOp::inferReturnTypes(
+    MLIRContext* /*context*/, std::optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    RegionRange regions, SmallVectorImpl<Type>& inferredReturnTypes) {
+  CollectivePermuteOp::Adaptor adaptor(operands, attributes, properties,
+                                       regions);
+  return hlo::inferCollectivePermuteOp(location, adaptor.getOperands(),
+                                       inferredReturnTypes);
+}
+
+LogicalResult CollectivePermuteOp::inferReturnTypeComponents(
+    MLIRContext* context, std::optional<Location> location,
+    ValueShapeRange operands, DictionaryAttr attributes,
+    OpaqueProperties properties, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+  SmallVector<Type> inferredReturnTypes;
+  CollectivePermuteOp::Adaptor adaptor(operands, attributes, properties,
+                                       regions);
+  if (failed(hlo::inferCollectivePermuteOp(location, adaptor.getOperands(),
+                                           inferredReturnTypes)))
+    return failure();
+  if (inferredReturnTypes.size() != 1) return failure();
+  auto inferredReturnType = dyn_cast<ShapedType>(inferredReturnTypes[0]);
+  if (!inferredReturnType) return failure();
+  inferredReturnShapes.push_back(inferredReturnType);
+  return success();
 }
 
 LogicalResult CollectivePermuteOp::verify() {
@@ -1057,11 +1123,8 @@ LogicalResult BatchNormInferenceOp::inferReturnTypeComponents(
 LogicalResult BitcastConvertOp::reifyReturnTypeShapes(
     OpBuilder& builder, ValueRange operands,
     SmallVectorImpl<Value>& reifiedReturnShapes) {
-  auto operandType = dyn_cast<RankedTensorType>(operands[0].getType());
-  auto resultType = dyn_cast<RankedTensorType>(getType());
-
-  // Only ranked tensors are supported.
-  if (!operandType || !resultType) return failure();
+  auto operandType = cast<RankedTensorType>(operands[0].getType());
+  auto resultType = getType();
 
   // Shape-changing bitcast convert is not implemented.
   // TODO(kramerb): This could be done by adjusting the last dimension.
@@ -1078,6 +1141,22 @@ LogicalResult BitcastConvertOp::reifyReturnTypeShapes(
 
 LogicalResult BitcastConvertOp::verify() {
   return hlo::verifyBitcastConvertOp(getLoc(), getOperand(), getResult());
+}
+
+mlir::Speculation::Speculatability BitcastConvertOp::getSpeculatability() {
+  // The logic is the same as for the
+  // SpeculatableIfStaticdimInOutputIsStaticInInput trait, except we don't need
+  // to check any "extra" dimension that may result from the difference in bit
+  // width of the input and result. Indeed, the extra dimension can be deduced
+  // from the bit widths.
+  auto inputType = getOperand().getType();
+  auto resultType = getType();
+  auto rank = std::min(inputType.getRank(), resultType.getRank());
+  for (size_t i : llvm::seq(rank)) {
+    if (!resultType.isDynamicDim(i) && inputType.isDynamicDim(i))
+      return mlir::Speculation::NotSpeculatable;
+  }
+  return mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1100,9 +1179,7 @@ LogicalResult BroadcastOp::reifyReturnTypeShapes(
   BroadcastOp::Adaptor adaptor(operands);
   Value operand = adaptor.getOperand();
 
-  auto operandType = dyn_cast<RankedTensorType>(operand.getType());
-  // Unranked tensors are not supported.
-  if (!operandType) return failure();
+  auto operandType = cast<RankedTensorType>(operand.getType());
 
   Location loc = getLoc();
   SmallVector<Value, 4> shapeValues;
@@ -1243,10 +1320,6 @@ LogicalResult ConcatenateOp::reifyReturnTypeShapes(
   ConcatenateOp::Adaptor adaptor(operands);
   auto inputs = adaptor.getInputs();
 
-  auto operandType = dyn_cast<RankedTensorType>(inputs[0].getType());
-  // Not support unranked type a.t.m.
-  if (!operandType) return failure();
-
   Location loc = this->getLoc();
   Type shapeScalarType = builder.getIndexType();
   auto toShapeScalarType = [&](Value v) {
@@ -1256,8 +1329,7 @@ LogicalResult ConcatenateOp::reifyReturnTypeShapes(
   SmallVector<SmallVector<Value, 4>, 4> allShapeValues;
   for (size_t inputId = 0; inputId < inputs.size(); ++inputId) {
     Value operand = inputs[inputId];
-    auto operandType = dyn_cast<RankedTensorType>(operand.getType());
-    if (!operandType) return failure();
+    auto operandType = cast<RankedTensorType>(operand.getType());
 
     SmallVector<Value, 4> shapeVals;
     for (const auto& element : llvm::enumerate(operandType.getShape())) {
@@ -1289,6 +1361,22 @@ LogicalResult ConcatenateOp::reifyReturnTypeShapes(
   reifiedReturnShapes.push_back(outputShape);
 
   return success();
+}
+
+mlir::Speculation::Speculatability ConcatenateOp::getSpeculatability() {
+  // All operand dimensions must be static, except maybe the concat dim.
+  // If concat dim is dynamic, the corresponding dim in operands can be dynamic,
+  // otherwise it has to be static.
+  auto concatDim = getDimension();
+  bool concatDimDynamic = getType().isDynamicDim(concatDim);
+  for (auto t : getOperandTypes()) {
+    auto rankedT = cast<RankedTensorType>(t);
+    for (uint64_t i : llvm::seq(rankedT.getRank())) {
+      if (i == concatDim && concatDimDynamic) continue;
+      if (rankedT.isDynamicDim(i)) return mlir::Speculation::NotSpeculatable;
+    }
+  }
+  return mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1341,9 +1429,7 @@ LogicalResult RealDynamicSliceOp::reifyReturnTypeShapes(
   Value limitIndices = adaptor.getLimitIndices();
   Value strides = adaptor.getStrides();
 
-  auto operandType = dyn_cast<RankedTensorType>(operand.getType());
-  // Not support unranked type a.t.m.
-  if (!operandType) return failure();
+  auto operandType = cast<RankedTensorType>(operand.getType());
 
   Location loc = this->getLoc();
   SmallVector<Value, 4> shapeValues;
@@ -1406,6 +1492,18 @@ LogicalResult MapOp::reifyReturnTypeShapes(
     SmallVectorImpl<Value>& reifiedReturnShapes) {
   return hlo::deriveShapeFromOperand(&builder, getOperation(), operands.front(),
                                      &reifiedReturnShapes);
+}
+
+mlir::Speculation::Speculatability MapOp::getSpeculatability() {
+  // If any dimension of any operand is dynamic, it could disagree with the
+  // others at runtime, so the op is not speculatable. If all the operands are
+  // statically shaped, whether the op is speculatable or not depends on what
+  // ops are in the op's body.
+  return llvm::all_of(
+             this->getOperation()->getOperandTypes(),
+             [](Type t) { return cast<RankedTensorType>(t).hasStaticShape(); })
+             ? mlir::Speculation::RecursivelySpeculatable
+             : mlir::Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1614,9 +1712,7 @@ LogicalResult ReduceOp::reifyReturnTypeShapes(
   ReduceOp::Adaptor adaptor(operands);
   auto inputs = adaptor.getInputs();
 
-  auto operandType = dyn_cast<RankedTensorType>(inputs[0].getType());
-  // Not support unranked type a.t.m.
-  if (!operandType) return failure();
+  auto operandType = cast<RankedTensorType>(inputs[0].getType());
 
   Location loc = this->getLoc();
   SmallVector<Value, 4> shapeValues;
@@ -1666,14 +1762,13 @@ LogicalResult ReverseOp::verify() {
   return hlo::verifyReverseOp(getLoc(), getOperand(), getDimensions());
 }
 
-LogicalResult ReverseOp::inferReturnTypeComponents(
-    MLIRContext* context, std::optional<Location> location,
-    ValueShapeRange operands, DictionaryAttr attributes,
-    OpaqueProperties properties, RegionRange regions,
-    SmallVectorImpl<ShapedTypeComponents>& inferredReturnShapes) {
+LogicalResult ReverseOp::inferReturnTypes(
+    MLIRContext* /*context*/, std::optional<Location> location,
+    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    RegionRange regions, SmallVectorImpl<Type>& inferredReturnTypes) {
   ReverseOp::Adaptor adaptor(operands, attributes, properties, regions);
   return hlo::inferReverseOp(location, adaptor.getOperand().getType(),
-                             inferredReturnShapes);
+                             inferredReturnTypes);
 }
 
 LogicalResult ReverseOp::reifyReturnTypeShapes(
@@ -1846,9 +1941,7 @@ LogicalResult DynamicPadOp::reifyReturnTypeShapes(
   Value edgePaddingHigh = adaptor.getEdgePaddingHigh();
   Value interiorPadding = adaptor.getInteriorPadding();
 
-  auto operandType = dyn_cast<RankedTensorType>(operand.getType());
-  // Not support unranked pad a.t.m.
-  if (!operandType) return failure();
+  auto operandType = cast<RankedTensorType>(operand.getType());
 
   auto loc = this->getLoc();
   SmallVector<Value, 4> shapeValues;
@@ -1909,7 +2002,7 @@ LogicalResult ReshapeOp::verify() {
 }
 
 mlir::Speculation::Speculatability ReshapeOp::getSpeculatability() {
-  if (cast<RankedTensorType>(getOperand().getType()).hasStaticShape())
+  if (getOperand().getType().hasStaticShape())
     return mlir::Speculation::Speculatable;
   return mlir::Speculation::NotSpeculatable;
 }
@@ -2014,9 +2107,7 @@ LogicalResult TransposeOp::reifyReturnTypeShapes(
   TransposeOp::Adaptor adaptor(operands);
   Value operand = adaptor.getOperand();
 
-  auto operandType = dyn_cast<RankedTensorType>(operand.getType());
-  // Not support unranked type a.t.m.
-  if (!operandType) return failure();
+  auto operandType = cast<RankedTensorType>(operand.getType());
 
   Location loc = this->getLoc();
   SmallVector<int64_t, 4> permutation(this->getPermutation());
@@ -2052,6 +2143,19 @@ LogicalResult TransposeOp::inferReturnTypes(
   TransposeOp::Adaptor adaptor(operands, attributes, properties, regions);
   return hlo::inferTransposeOp(loc, adaptor.getOperand(),
                                adaptor.getPermutation(), inferredReturnTypes);
+}
+
+mlir::Speculation::Speculatability TransposeOp::getSpeculatability() {
+  // This is the same logic as SpeculatableIfStaticDimInOutputIsStaticInInput,
+  // except it accounts for the permutation.
+  auto inputType = getOperand().getType();
+  auto resultType = getType();
+  auto perm = getPermutation();
+  for (size_t i : llvm::seq(resultType.getRank())) {
+    if (!resultType.isDynamicDim(i) && inputType.isDynamicDim(perm[i]))
+      return mlir::Speculation::NotSpeculatable;
+  }
+  return mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2185,6 +2289,22 @@ LogicalResult ScatterOp::verify() {
       getScatterDimensionNumbers().getInsertedWindowDims(),
       getScatterDimensionNumbers().getScatterDimsToOperandDims(),
       getScatterDimensionNumbers().getIndexVectorDim(), getUpdateComputation());
+}
+
+mlir::Speculation::Speculatability ScatterOp::getSpeculatability() {
+  // When unique_indices is true, if the scatter_indices are not unique, the
+  // behavior is undefined.
+  // A possible improvement would be to check if the scatter_indices are
+  // constant and if so, check if they are unique/sorted, and if so do not
+  // return NotSpeculatable. However, such a check could be somewhat costly and
+  // has unclear ROI.
+  if (getUniqueIndices() || getIndicesAreSorted())
+    return mlir::Speculation::NotSpeculatable;
+  return llvm::all_of(
+             this->getOperation()->getOperandTypes(),
+             [](Type t) { return cast<RankedTensorType>(t).hasStaticShape(); })
+             ? mlir::Speculation::RecursivelySpeculatable
+             : mlir::Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//

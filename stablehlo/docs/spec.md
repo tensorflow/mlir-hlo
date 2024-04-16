@@ -97,24 +97,24 @@ are not value types).
 ```ebnf
 TensorType ::= 'tensor' '<' Shape TensorElementType '>'
 Shape ::= {DimensionSize 'x'}
-DimensionSize ::= digit {digit}
+DimensionSize ::= digit {digit} | '?'
 ```
 
 **Tensor types** represent tensors, i.e. multidimensional arrays. They have a
-**shape** and an **element type**, where a shape represents non-negative
-**dimension sizes** in the ascending order of the corresponding **dimensions**
-(which are also called **axes**) numbered from `0` to `R-1`. The number of
-dimensions `R` is called **rank**. For example, `tensor<2x3xf32>` is a tensor
-type with shape `2x3` and element type `f32`. It has two dimensions (or,
-in other words, two axes) - 0th dimension and 1st dimension - whose sizes are
-2 and 3. Its rank is 2.
+**shape** and an **element type**, where a shape represents non-negative or
+unknown **dimension sizes** in the ascending order of the corresponding
+**dimensions** (which are also called **axes**) numbered from `0` to `R-1`. The
+number of dimensions `R` is called **rank**. For example, `tensor<2x3xf32>` is
+a tensor type with shape `2x3` and element type `f32`. It has two dimensions
+(or, in other words, two axes) - 0th dimension and 1st dimension - whose sizes
+are 2 and 3. Its rank is 2.
 
-This defines support for **static shapes** where dimension sizes are statically
-known. In the future, we are planning to also introduce support for
-**dynamic shapes** where dimension sizes are either partially or fully unknown
-([#8](https://github.com/openxla/stablehlo/issues/8)). Furthermore, we are
-planning to explore extending tensor types beyond dimension sizes and element
-types, for example, to include layouts
+Shapes can be partially or completely unknown (dynamic), e.g. `tensor<?x2xf64>`
+is partially unknown and `tensor<?x?xf64>` is completely unknown. Dynamic
+dimension sizes are represented using a `?`. Shapes cannot be unranked.
+
+In the future, we are planning to explore extending tensor types beyond
+dimension sizes and element types, for example, to include layouts
 ([#629](https://github.com/openxla/stablehlo/issues/629)) and sparsity
 ([#1078](https://github.com/openxla/stablehlo/issues/1078)).
 
@@ -2191,6 +2191,14 @@ For quantized types, performs `dequantize_op_quantize(
         feature_group_count, batch_group_count, precision_config), lhs, rhs,
     type(result))`.
 
+For hybrid quantized types, performs `hybrid_dequantize_then_op(
+  lambda lhs, rhs: convolution(lhs, rhs, window_strides, padding, lhs_dilation, rhs_dilation,
+window_reversal, input_batch_dimension, input_feature_dimension,
+input_spatial_dimensions, kernel_input_feature_dimension,
+kernel_output_feature_dimension, kernel_spatial_dimensions,
+output_batch_dimension, output_feature_dimension, output_spatial_dimensions,
+feature_group_count, batch_group_count, precision_config), lhs, rhs)`.
+
 #### Inputs
 
 | Label | Name                              | Type                                                         | Constraints                             |
@@ -2273,16 +2281,18 @@ For quantized types, performs `dequantize_op_quantize(
 * If the operation uses non-quantized tensors:
   * (C27) `element_type(lhs) = element_type(rhs) = element_type(result)`.
 * If the operation uses quantized tensors:
-  * (C28) `is_quantized_tensor(lhs) and is_quantized_tensor(rhs) and
-    is_quantized_tensor(result)`.
-  * (C29) `storage_type(lhs) =  storage_type(rhs)`.
-  * (C30) `expressed_type(lhs) = expressed_type(rhs) = expressed_type(result)`.
-  * (C31) If `is_per_tensor_quantized(rhs)`, then
-    `is_per_tensor_quantized(result)`.
-  * (C32) If `is_per_axis_quantized(rhs)`, then
-    `quantization_dimension(rhs) = kernel_output_feature_dimension`.
-  * (C33) If `is_per_axis_quantized(result)`, then
+  * (C28) `is_quantized(lhs) = is_quantized(result) and is_quantized(rhs)`.
+  * (C29) If `is_per_axis_quantized(rhs)`,
+    then `quantization_dimension(rhs) = kernel_output_feature_dimension`.
+  * (C30) If `is_per_axis_quantized(result)`, then
     `quantization_dimension(result) = output_feature_dimension`.
+  * If `is_quantized(lhs)`:
+    * (C31) `storage_type(lhs) = storage_type(rhs)`.
+    * (C32) `expressed_type(lhs) = expressed_type(rhs) = expressed_type(result)`.
+    * (C33) If `is_per_tensor_quantized(rhs)`, then
+      `is_per_tensor_quantized(result)`.
+  * If `!is_quantized(lhs)`:
+    * (C34) `element_type(lhs) = expressed_type(rhs) = element_type(result)`.
 <!-- markdownlint-enable line-length -->
 
 #### Examples
@@ -6725,6 +6735,18 @@ def dequantize_select_quantize(pred, on_true, on_false, output_type):
   return quantize(float_result, output_type)
 ```
 
+* `hybrid_dequantize_then_op` is used to specify weight-only quantization for
+hybrid op which accepts lhs in floating-point and rhs in quantized types. It
+dequantizes quantized inputs into their expressed types and performs computation
+in float. Element type of float lhs tensor and expressed type of quantized rhs
+tensor should be identical.
+
+```python
+def hybrid_dequantize_then_op(op, lhs, rhs):
+  assert(is_float(lhs) and is_quantized(rhs) and element_type(lhs) == expressed_type(rhs))
+  return op(lhs, dequantize(rhs))
+```
+
 #### Grid computations
 
 * `cross_partition(replica_groups: Value) -> Value`. See the "cross_replica"
@@ -6738,3 +6760,73 @@ section above.
 
 * `flattened_ids(replica_groups: Value) -> Value`. See the "flattened_ids"
 section above.
+
+## Dynamism
+
+StableHLO values can have dynamic dimension sizes, e.g. `tensor<?xi64>`.
+However, StableHLO values cannot have a dynamic number of dimensions (unranked
+dynamism, e.g. `tensor<*xi64>`). Operands and results are allowed to use dynamic
+dimension sizes, even if there are constraints on the sizes. Constraints will be
+verified statically if possible, otherwise they are deferred to runtime and
+mismatches will result in undefined behavior. See below for examples.
+
+### Shape mismatches for unary elementwise operations
+
+Consider the following toy program:
+
+```mlir
+func.func @foo(%arg0: tensor<?xf64>) {
+  %0 = stablehlo.abs %arg0 : (tensor<?xf64>) -> tensor<2xf64>
+  return
+}
+```
+
+Such a program is unusual, because it is not common to know the shape of the
+result but not the shape of the input. Nonetheless, this is a valid StableHLO
+program. It is not possible to statically validate the `abs` operation in this
+program, because the exact shape of the operand is unknown. However, the shapes
+are certainly compatible, and this can be checked statically: `?` could turn out
+to be `2` at runtime, and there would be no issue. However, `?` could
+also turn out to be some other integer, in which case the behavior is undefined.
+
+Note that if a dimension size is dynamic in the result, there cannot be
+undefined behavior. Indeed, there is no "expected" size, so there cannot be a
+mismatch.
+
+### Shape mismatches for binary elementwise operations
+
+Consider the following toy program:
+
+```mlir
+func.func @foo(%arg0: tensor<?xf64>, %arg1: tensor<?xf64>) {
+  %0 = stablehlo.add %arg0, %arg0 : (tensor<?xf64>, tensor<?xf64>) -> tensor<?xf64>
+  return
+}
+```
+
+When it comes to binary elementwise operations, the shapes of the inputs and the
+result must agree at runtime. At compile time, static dimensions must be equal,
+otherwise they merely need to be compatible.
+If *any* dimension is dynamic in the inputs, then there could be undefined
+behavior at runtime, because the dynamic size may not match the corresponding
+size in the other operand (be it static or dynamic). If all the inputs are
+static, then whether the result is dynamic or not does not matter: statically
+known dimensions will be checked statically, and dynamic dimensions do not
+impose any constraints.
+
+### Shape mismatches for ops that take their output shape as an operand
+
+Consider the following toy program:
+
+```mlir
+func.func @foo(%arg0: tensor<2xi32>) {
+  %0 = stablehlo.dynamic_iota %arg0, dim = 0 : (tensor<2xi32>) -> tensor<3x4xi64>
+  return
+}
+```
+
+The values in the shape operand at runtime must match the shape of the result,
+otherwise the behavior is undefined. That is, at runtime `%arg0` must have a
+value of `dense<[3, 4]> : tensor<2xi32>`. If the shape operand is constant, this
+can be verified statically. If the result shape is fully dynamic, then there
+cannot be a mismatch.
