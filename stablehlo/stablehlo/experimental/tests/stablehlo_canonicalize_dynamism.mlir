@@ -3,17 +3,17 @@
 // CHECK-LABEL: func @dynamic_reduce_window_success_static_result_type
 func.func @dynamic_reduce_window_success_static_result_type(%arg0: tensor<3x2xf32>, %arg1: tensor<f32>) -> tensor<2x2xf32> {
   //           CHECK-NOT: stablehlo.dynamic_reduce_window
-  //               CHECK: "stablehlo.reduce_window"(%arg0, %arg1) ({
-  //          CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG2:arg.*]]: tensor<f32>, %[[ARG3:arg.*]]: tensor<f32>):
-  //          CHECK-NEXT:     %[[VAL1:.*]] = stablehlo.add %arg2, %arg3 : tensor<f32>
-  //          CHECK-NEXT:     stablehlo.return %[[VAL1]] : tensor<f32>
-  //          CHECK-NEXT: }) {
+  //               CHECK: "stablehlo.reduce_window"(%arg0, %arg1) <{
   //          CHECK-SAME:   base_dilations = array<i64: 2, 1>,
   // CHECK-SAME{LITERAL}:   padding = dense<[[2, 1], [0, 0]]> : tensor<2x2xi64>,
   //          CHECK-SAME:   window_dilations = array<i64: 3, 1>,
   //          CHECK-SAME:   window_dimensions = array<i64: 2, 1>,
   //          CHECK-SAME:   window_strides = array<i64: 4, 1>
-  //          CHECK-SAME: } : (tensor<3x2xf32>, tensor<f32>) -> tensor<2x2xf32>
+  //          CHECK-SAME: }> ({
+  //          CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG2:arg.*]]: tensor<f32>, %[[ARG3:arg.*]]: tensor<f32>):
+  //          CHECK-NEXT:     %[[VAL1:.*]] = stablehlo.add %arg2, %arg3 : tensor<f32>
+  //          CHECK-NEXT:     stablehlo.return %[[VAL1]] : tensor<f32>
+  //          CHECK-NEXT: }) : (tensor<3x2xf32>, tensor<f32>) -> tensor<2x2xf32>
   %0 = stablehlo.constant dense<[2, 1]> : tensor<2xi64>
   %1 = stablehlo.constant dense<[4, 1]> : tensor<2xi64>
   %2 = stablehlo.constant dense<[2, 1]> : tensor<2xi64>
@@ -35,17 +35,17 @@ func.func private @dynamic_reduce_window0(%arg0: tensor<f32>, %arg1: tensor<f32>
 // CHECK-LABEL: func @dynamic_reduce_window_success_dynamic_result_type
 func.func @dynamic_reduce_window_success_dynamic_result_type(%arg0: tensor<?x2xf32>, %arg1: tensor<f32>) -> tensor<?x2xf32> {
   //           CHECK-NOT: stablehlo.dynamic_reduce_window
-  //               CHECK: "stablehlo.reduce_window"(%arg0, %arg1) ({
-  //          CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG2:arg.*]]: tensor<f32>, %[[ARG3:arg.*]]: tensor<f32>):
-  //          CHECK-NEXT:     %[[VAL1:.*]] = stablehlo.add %arg2, %arg3 : tensor<f32>
-  //          CHECK-NEXT:     stablehlo.return %[[VAL1]] : tensor<f32>
-  //          CHECK-NEXT: }) {
+  //               CHECK: "stablehlo.reduce_window"(%arg0, %arg1) <{
   //          CHECK-SAME:   base_dilations = array<i64: 2, 1>,
   // CHECK-SAME{LITERAL}:   padding = dense<[[2, 1], [0, 0]]> : tensor<2x2xi64>,
   //          CHECK-SAME:   window_dilations = array<i64: 3, 1>,
   //          CHECK-SAME:   window_dimensions = array<i64: 2, 1>,
   //          CHECK-SAME:   window_strides = array<i64: 4, 1>
-  //          CHECK-SAME: } : (tensor<?x2xf32>, tensor<f32>) -> tensor<?x2xf32>
+  //          CHECK-SAME: }> ({
+  //          CHECK-NEXT:   ^[[BB:bb.*]](%[[ARG2:arg.*]]: tensor<f32>, %[[ARG3:arg.*]]: tensor<f32>):
+  //          CHECK-NEXT:     %[[VAL1:.*]] = stablehlo.add %arg2, %arg3 : tensor<f32>
+  //          CHECK-NEXT:     stablehlo.return %[[VAL1]] : tensor<f32>
+  //          CHECK-NEXT: }) : (tensor<?x2xf32>, tensor<f32>) -> tensor<?x2xf32>
   %0 = stablehlo.constant dense<[2, 1]> : tensor<2xi64>
   %1 = stablehlo.constant dense<[4, 1]> : tensor<2xi64>
   %2 = stablehlo.constant dense<[2, 1]> : tensor<2xi64>
