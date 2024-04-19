@@ -593,6 +593,48 @@ LogicalResult DotGeneralOp::reifyReturnTypeShapes(
   return success();
 }
 
+mlir::Speculation::Speculatability DotGeneralOp::getSpeculatability() {
+  // Batching and contracting dims must be static, otherwise they could disagree
+  // at runtime.
+  // Other dims follow SpeculatableIfStaticDimInOutputIsStaticInInput.
+
+  auto lhsType = getLhs().getType();
+  auto rhsType = getRhs().getType();
+
+  auto dimensionsAttr = getDotDimensionNumbersAttr();
+  auto lhsBatchingDimensions = dimensionsAttr.getLhsBatchingDimensions();
+  auto lhsContractingDimensions = dimensionsAttr.getLhsContractingDimensions();
+  auto rhsBatchingDimensions = dimensionsAttr.getRhsBatchingDimensions();
+  auto rhsContractingDimensions = dimensionsAttr.getRhsContractingDimensions();
+
+  auto lhsSpecialDimensions = llvm::concat<const int64_t>(
+      lhsBatchingDimensions, lhsContractingDimensions);
+  auto rhsSpecialDimensions = llvm::concat<const int64_t>(
+      rhsBatchingDimensions, rhsContractingDimensions);
+
+  for (auto i : lhsSpecialDimensions)
+    if (lhsType.isDynamicDim(i)) return mlir::Speculation::NotSpeculatable;
+  for (auto i : rhsSpecialDimensions)
+    if (rhsType.isDynamicDim(i)) return mlir::Speculation::NotSpeculatable;
+
+  auto resultType = getType();
+  int64_t resultIndex = lhsBatchingDimensions.size();
+  for (int64_t i = 0; i < lhsType.getRank(); i++) {
+    if (llvm::is_contained(lhsSpecialDimensions, i)) continue;
+    if (!resultType.isDynamicDim(resultIndex) && lhsType.isDynamicDim(i))
+      return mlir::Speculation::NotSpeculatable;
+    resultIndex++;
+  }
+  for (int64_t i = 0; i < rhsType.getRank(); i++) {
+    if (llvm::is_contained(rhsSpecialDimensions, i)) continue;
+    if (!resultType.isDynamicDim(resultIndex) && rhsType.isDynamicDim(i))
+      return mlir::Speculation::NotSpeculatable;
+    resultIndex++;
+  }
+
+  return mlir::Speculation::Speculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // FftOp
 //===----------------------------------------------------------------------===//
@@ -606,6 +648,24 @@ LogicalResult FftOp::inferReturnTypeComponents(
                          adaptor.getFftType() == FftType::RFFT,
                          adaptor.getFftType() == FftType::IRFFT,
                          adaptor.getFftLength(), inferredReturnShapes);
+}
+
+mlir::Speculation::Speculatability FftOp::getSpeculatability() {
+  // This is the same logic as SpeculatableIfStaticDimInOutputIsStaticInInput,
+  // except that for RFFT and IRFFT the last `fft_length.size()` dimensions in
+  // the operand need to be static.
+  auto inputType = getOperand().getType();
+  auto resultType = getType();
+  size_t minStaticDim = inputType.getRank();
+  if (getFftType() == FftType::RFFT || getFftType() == FftType::IRFFT)
+    minStaticDim = minStaticDim - getFftLength().size();
+  for (size_t i : llvm::seq(inputType.getRank())) {
+    if (i >= minStaticDim && inputType.isDynamicDim(i))
+      return mlir::Speculation::NotSpeculatable;
+    if (!resultType.isDynamicDim(i) && inputType.isDynamicDim(i))
+      return mlir::Speculation::NotSpeculatable;
+  }
+  return mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -955,6 +1015,58 @@ LogicalResult ConvolutionOp::verify() {
       getDimensionNumbers().getOutputSpatialDimensions(),
       getFeatureGroupCount(), getBatchGroupCount(), getPrecisionConfig(),
       getResult().getType());
+}
+
+mlir::Speculation::Speculatability ConvolutionOp::getSpeculatability() {
+  auto inputType = getLhs().getType();
+  auto kernelType = getRhs().getType();
+  auto resultType = getType();
+
+  auto dimNumbers = getDimensionNumbers();
+  auto inputBatchDim = dimNumbers.getInputBatchDimension();
+  auto inputFeatureDim = dimNumbers.getInputFeatureDimension();
+  auto inputSpatialDims = dimNumbers.getInputSpatialDimensions();
+  auto kernelInputFeatureDim = dimNumbers.getKernelInputFeatureDimension();
+  auto kernelOutputFeatureDim = dimNumbers.getKernelOutputFeatureDimension();
+  auto kernelSpatialDims = dimNumbers.getKernelSpatialDimensions();
+  auto outputBatchDim = dimNumbers.getOutputBatchDimension();
+  auto outputFeatureDim = dimNumbers.getOutputFeatureDimension();
+  auto outputSpatialDims = dimNumbers.getOutputSpatialDimensions();
+
+  auto batchGroupCount = getBatchGroupCount();
+  auto featureGroupCount = getFeatureGroupCount();
+
+  // input_feature_dimension and kernel_input_feature_dimension must be static
+  // (C14).
+  if (inputType.isDynamicDim(inputFeatureDim) ||
+      kernelType.isDynamicDim(kernelInputFeatureDim))
+    return mlir::Speculation::NotSpeculatable;
+
+  // input_batch_dimension must be static if batch_group_count > 1 (C10) or if
+  // output_batch_dimension is static (C25).
+  if (inputType.isDynamicDim(inputBatchDim) &&
+      (batchGroupCount > 1 || !resultType.isDynamicDim(outputBatchDim)))
+    return mlir::Speculation::NotSpeculatable;
+
+  // kernel_output_feature_dimension must be static if batch_group_count > 1
+  // (C15) or feature_group_count > 1 (C16) or if output_feature_dimension is
+  // static (C25).
+  if (kernelType.isDynamicDim(kernelOutputFeatureDim) &&
+      (batchGroupCount > 1 || featureGroupCount > 1 ||
+       !resultType.isDynamicDim(outputFeatureDim)))
+    return mlir::Speculation::NotSpeculatable;
+
+  // If a spatial dimension is static in the output, it must be static in the
+  // inputs (C25).
+  for (auto [inputDim, kernelDim, resultDim] :
+       llvm::zip(inputSpatialDims, kernelSpatialDims, outputSpatialDims)) {
+    if (!resultType.isDynamicDim(resultDim) &&
+        (inputType.isDynamicDim(inputDim) ||
+         kernelType.isDynamicDim(kernelDim)))
+      return mlir::Speculation::NotSpeculatable;
+  }
+
+  return mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1384,7 +1496,8 @@ mlir::Speculation::Speculatability ConcatenateOp::getSpeculatability() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult DynamicReshapeOp::verify() {
-  return hlo::verifyDynamicReshapeOp(getLoc(), getOutputShape(), getResult());
+  return hlo::verifyDynamicReshapeOp(getLoc(), getOperand(), getOutputShape(),
+                                     getResult());
 }
 
 LogicalResult DynamicReshapeOp::reifyReturnTypeShapes(
@@ -1394,6 +1507,26 @@ LogicalResult DynamicReshapeOp::reifyReturnTypeShapes(
   reifiedReturnShapes.push_back(
       castToIndexTensor(builder, getLoc(), adaptor.getOutputShape()));
   return success();
+}
+
+mlir::Speculation::Speculatability DynamicReshapeOp::getSpeculatability() {
+  // If the output type's shape is fully dynamic, there is no expectation
+  // for the shape so the op is speculatable.
+  if (llvm::all_of(llvm::seq(getType().getRank()),
+                   [this](int64_t i) { return getType().isDynamicDim(i); }))
+    return mlir::Speculation::Speculatable;
+
+  // If the input is static and the shape operand is constant, the output
+  // shape can be inferred and any mismatch will be caught statically.
+  // If any dimension in the input is dynamic, the number of elements may
+  // disagree with either the output.
+  // If the shape operand is not constant, it could disagree with the output,
+  // which has at least 1 static dimension at this point in the function.
+  if (getOperand().getType().hasStaticShape() &&
+      matchPattern(getOutputShape(), m_Constant()))
+    return mlir::Speculation::Speculatable;
+
+  return mlir::Speculation::NotSpeculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1848,6 +1981,25 @@ LogicalResult SetDimensionSizeOp::inferReturnTypeComponents(
   return hlo::inferSetDimensionSizeOp(
       getStablehloDialect(context), location, adaptor.getOperand().getType(),
       adaptor.getSize(), adaptor.getDimension(), inferredReturnShapes);
+}
+
+mlir::Speculation::Speculatability SetDimensionSizeOp::getSpeculatability() {
+  // If the dimension being set is not constant, it is only speculatable if it
+  // is dynamic in the output.
+  auto resultType = getType();
+  if (!matchPattern(getSize(), m_Constant()) &&
+      !resultType.isDynamicDim(getDimension()))
+    return mlir::Speculation::NotSpeculatable;
+
+  // For all other dimensions, if the dimension is static in the output, it must
+  // be static in the input.
+  auto inputType = getOperand().getType();
+  for (size_t i : llvm::seq(resultType.getRank())) {
+    if (i == getDimension()) continue;
+    if (!resultType.isDynamicDim(i) && inputType.isDynamicDim(i))
+      return mlir::Speculation::NotSpeculatable;
+  }
+  return mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3066,8 +3218,7 @@ void printWindowAttributes(OpAsmPrinter& p, Operation* /*op*/,
   });
 }
 
-ParseResult parseWindowAttributes(OpAsmParser& parser,
-                                  Attribute& windowStrides,
+ParseResult parseWindowAttributes(OpAsmParser& parser, Attribute& windowStrides,
                                   DenseIntElementsAttr& padding,
                                   Attribute& lhsDilation,
                                   Attribute& rhsDilation,

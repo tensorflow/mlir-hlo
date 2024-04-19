@@ -16,7 +16,6 @@ limitations under the License.
 
 // Implements logic for lowering StableHLO convolution ops to Linalg dialect.
 
-#include <cstdint>
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -593,7 +592,7 @@ struct DepthwiseConvolutionOpConversion final
     // Make sure that this is depthwise convolution.
     int64_t inputFeatureDim = dimensionNumbers.getInputFeatureDimension();
     int64_t inputFeatureCount =
-        op.getLhs().getType().getDimSize(inputFeatureDim);
+        cast<ShapedType>(op.getLhs().getType()).getDimSize(inputFeatureDim);
     if (static_cast<int64_t>(op.getFeatureGroupCount()) != inputFeatureCount) {
       return rewriter.notifyMatchFailure(op, "not depth-wise convolution");
     }
@@ -648,7 +647,8 @@ struct DepthwiseConvolutionOpConversion final
                                     op.getLhsDilation(), spatialDimMapping,
                                     rewriter);
 
-    auto filterDims = llvm::to_vector(op.getRhs().getType().getShape());
+    auto filterDims =
+        llvm::to_vector(cast<ShapedType>(op.getRhs().getType()).getShape());
 
     auto getReassociationIndicesToCollapseLastTwoDims = [](Value v) {
       SmallVector<ReassociationIndices> reassociations;
@@ -681,7 +681,8 @@ struct DepthwiseConvolutionOpConversion final
         reshapedFilterDims[kernelOutputFeatureDimension] /=
             op.getFeatureGroupCount();
         auto reshapedFilterType = RankedTensorType::get(
-            reshapedFilterDims, op.getRhs().getType().getElementType());
+            reshapedFilterDims,
+            cast<ShapedType>(op.getRhs().getType()).getElementType());
 
         reshapedFilter = rewriter.create<mlir::stablehlo::ReshapeOp>(
             loc, reshapedFilterType, filter);

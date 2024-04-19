@@ -1633,7 +1633,8 @@ def StableHLO_CompareOp: StableHLO_Op<"compare",
 
 def StableHLO_SliceOp: StableHLO_Op<
       "slice",
-      [Pure, SameOperandsAndResultElementType /*slice_c1*/,
+      [HLO_SpeculatableIfStaticDimInOutputIsStaticInInput, NoMemoryEffect,
+      SameOperandsAndResultElementType /*slice_c1*/,
       AllMatchSameOperatorTrait<["start_indices", "limit_indices",
       "strides"], "$_self.size()", "size"> /*slice_c2*/,
        DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
@@ -2203,7 +2204,8 @@ def StableHLO_CompositeOp : StableHLO_Op<"composite", [DeclareOpInterfaceMethods
   let assemblyFormat = "$name $inputs attr-dict `:` functional-type(operands, results)";
 }
 
-def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure]> {
+def StableHLO_ConvolutionOp : StableHLO_Op<"convolution",
+    [ConditionallySpeculatable, NoMemoryEffect]> {
   let summary = "Convolution operation";
   let description = [{
     Computes dot products between windows of `lhs` and slices of `rhs` and
@@ -2250,6 +2252,11 @@ def StableHLO_ConvolutionOp : StableHLO_Op<"convolution", [Pure]> {
                                                  $lhs_dilation, $rhs_dilation,
                                                  $window_reversal) `}`
        attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = commonClassDeclaration # [{
+    /// Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -2359,7 +2366,8 @@ def StableHLO_DotOp: StableHLO_Op<"dot", [Pure]> {
   }];
 }
 
-def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general", [Pure]> {
+def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general",
+    [ConditionallySpeculatable, NoMemoryEffect]> {
   let summary = "DotGeneral operation";
   let description = [{
     Computes dot products between slices of `lhs` and slices of `rhs` and
@@ -2392,6 +2400,11 @@ def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general", [Pure]> {
     $lhs `,` $rhs `,` custom<DotDimensionNumbers>($dot_dimension_numbers) ``
     custom<PrecisionConfig>($precision_config) attr-dict
       `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = commonClassDeclaration # [{
+    /// Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -2454,7 +2467,9 @@ def StableHLO_UnaryEinsumOp: StableHLO_Op<"unary_einsum", [Pure]> {
   }];
 }
 
-def StableHLO_FftOp: StableHLO_Op<"fft", [InferTensorType, Pure]> {
+def StableHLO_FftOp: StableHLO_Op<"fft",
+    [ConditionallySpeculatable, NoMemoryEffect,
+    InferTensorType]> {
   let summary = "Fft operation";
   let description = [{
     Performs the forward and inverse Fourier transforms for real and complex
@@ -2479,6 +2494,11 @@ def StableHLO_FftOp: StableHLO_Op<"fft", [InferTensorType, Pure]> {
   let assemblyFormat = [{
     $operand `,` `type` `=` $fft_type `,` `length` `=` custom<DenseI64Array>($fft_length)
       attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = commonClassDeclaration # [{
+    /// Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -2617,7 +2637,8 @@ def StableHLO_ReshapeOp: StableHLO_Op<"reshape",
   }];
 }
 
-def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape", [Pure]> {
+def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape",
+      [ConditionallySpeculatable, NoMemoryEffect]> {
   let summary = "DynamicReshape operation";
   let description = [{
     This operation is a work in progress, so it is not yet included in
@@ -2639,6 +2660,11 @@ def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape", [
   let hasVerifier = 1;
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+
+  let extraClassDeclaration = commonClassDeclaration # [{
+    /// Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
+  }];
 }
 
 def StableHLO_ScatterOp: StableHLO_Op<"scatter",
@@ -2772,7 +2798,8 @@ def StableHLO_SelectAndScatterOp: StableHLO_Op<"select_and_scatter",
   let hasVerifier = 1;
 }
 
-def StableHLO_SetDimensionSizeOp: StableHLO_Op<"set_dimension_size", [Pure,
+def StableHLO_SetDimensionSizeOp: StableHLO_Op<"set_dimension_size",
+      [ConditionallySpeculatable, NoMemoryEffect,
       InferTensorType]> {
   let summary = "SetDimensionSize operation";
   let description = [{
@@ -2797,6 +2824,11 @@ def StableHLO_SetDimensionSizeOp: StableHLO_Op<"set_dimension_size", [Pure,
   let assemblyFormat = [{
     $operand `,` $size  `,` `dim` `=` $dimension attr-dict
       `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = commonClassDeclaration # [{
+    /// Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -2874,7 +2906,8 @@ def StableHLO_ReverseOp: StableHLO_ShapedInterfaceOp<"reverse",
 }
 
 def StableHLO_PadOp: StableHLO_ShapedInterfaceOp<"pad",
-      [Pure, SameOperandsAndResultElementType /*pad_c1*/,
+      [HLO_SpeculatableIfStaticDimInOutputIsStaticInInput, NoMemoryEffect,
+      SameOperandsAndResultElementType /*pad_c1*/,
       /*pad_c2, pad_i3, pad_i4, pad_i5*/
       AllMatchSameOperatorTrait<["edge_padding_low", "edge_padding_high",
       "interior_padding"], "$_self.size()", "size">,
@@ -3440,10 +3473,10 @@ def StableHLO_DynamicConvOp : StableHLO_Op<"dynamic_conv", [Pure]> {
     Example:
     ```mlir
     %result = "stablehlo.dynamic_conv"(%lhs, %rhs, %d_padding) {
-      window_strides = dense<4> : tensor<2xi64>,
-      lhs_dilation = dense<2> : tensor<2xi64>,
-      rhs_dilation = dense<1> : tensor<2xi64>,
-      window_reversal = dense<false> : tensor<2xi1>,
+      window_strides = array<i64: 4, 4>,
+      lhs_dilation = array<i64: 2, 2>,
+      rhs_dilation = array<i64: 1, 1>,
+      window_reversal = array<i1: false, false>,
       dimension_numbers = #stablehlo.conv<[b, 0, 1, f]x[0, 1, i, o]->[b, 0, 1, f]>,
       feature_group_count = 1 : i64,
       batch_group_count = 1 : i64,
