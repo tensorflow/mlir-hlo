@@ -247,6 +247,7 @@ cc_library(
     deps = [
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
     ],
 )
 
@@ -385,6 +386,7 @@ cc_library(
     deps = [
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
     ],
 )
 
@@ -474,6 +476,7 @@ cc_library(
         "@llvm-project//mlir:LoopLikeInterface",
         "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:SideEffectInterfaces",
+        "@llvm-project//mlir:Support",
         "@llvm-project//mlir:ViewLikeInterface",
     ],
 )
@@ -623,6 +626,7 @@ cc_library(
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:FuncTransforms",
         "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
@@ -651,6 +655,7 @@ cc_library(
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:MathDialect",
         "@llvm-project//mlir:SCFDialect",
+        "@llvm-project//mlir:Support",
     ],
 )
 
@@ -745,6 +750,7 @@ cc_library(
         "@llvm-project//mlir:LLVMDialect",
         "@llvm-project//mlir:MemRefDialect",
         "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Support",
     ],
 )
 
@@ -810,6 +816,7 @@ cc_library(
     deps = [
         ":mlir_hlo",
         "@llvm-project//mlir:DialectUtils",
+        "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
     ],
 )
@@ -862,6 +869,7 @@ cc_library(
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:ShapeDialect",
+        "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
@@ -1185,6 +1193,7 @@ cc_library(
         ":all_passes",
         ":mlir_hlo",
         "@llvm-project//mlir:CAPIIR",
+        "@llvm-project//mlir:Support",
     ],
 )
 
@@ -1206,6 +1215,7 @@ cc_library(
         ":all_passes",
         ":mlir_hlo",
         "@llvm-project//mlir:CAPIIRObjects",
+        "@llvm-project//mlir:Support",
     ],
     alwayslink = True,
 )
