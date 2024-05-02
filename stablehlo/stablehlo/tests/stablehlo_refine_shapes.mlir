@@ -360,6 +360,18 @@ func.func @eval_convert_i1() -> tensor<2xi64> {
 
 // -----
 
+// CHECK-LABEL: func @eval_convert_dynamic_shape
+func.func @eval_convert_dynamic_shape() -> tensor<?xi32> {
+  // CHECK-NOT: stablehlo.convert
+  // CHECK: [[RESULT:%.*]] = stablehlo.constant dense<[3, 4]> : tensor<2xi32>
+  // CHECK: return [[RESULT]]
+  %0 = stablehlo.constant dense<[3, 4]> : tensor<2xi32>
+  %1 = stablehlo.convert %0 : (tensor<2xi32>) -> tensor<?xi32>
+  return %1 : tensor<?xi32>
+}
+
+// -----
+
 // CHECK-LABEL: func @eval_divide
 func.func @eval_divide() -> tensor<i64> {
   // CHECK-NOT: stablehlo.divide

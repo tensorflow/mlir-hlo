@@ -482,9 +482,10 @@ struct EvalConvertOpPattern : public OpRewritePattern<ConvertOp> {
   LogicalResult matchAndRewrite(ConvertOp op,
                                 PatternRewriter& rewriter) const override {
     auto resultType = op.getType();
-    if (!isa<IntegerType>(resultType.getElementType()))
-      return rewriter.notifyMatchFailure(op,
-                                         "expected integer result tensor type");
+    if (!isa<IntegerType>(resultType.getElementType()) ||
+        !resultType.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "expected integer result tensor type with static shapes");
     auto resultBitWidth = resultType.getElementType().getIntOrFloatBitWidth();
     return evalElementwise(rewriter, op, [&](APSInt operand) {
       return operand.extOrTrunc(resultBitWidth);
