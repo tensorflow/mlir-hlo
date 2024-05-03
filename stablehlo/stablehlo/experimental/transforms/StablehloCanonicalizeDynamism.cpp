@@ -98,7 +98,7 @@ struct CanonicalizeDynamicRngBitGeneratorOpPattern
     // the verifier to make sure that its value is consistent with result type.
     if (!succeeded(hlo::matchInts(op.getOutputShape())))
       return rewriter.notifyMatchFailure(op, "expected static output_shape");
-    if (!op.getOutput().getType().cast<ShapedType>().hasStaticShape())
+    if (!cast<ShapedType>(op.getOutput().getType()).hasStaticShape())
       return rewriter.notifyMatchFailure(op, "expected static output type");
     rewriter.replaceOpWithNewOp<RngBitGeneratorOp>(
         op, op->getResultTypes(), op.getRngAlgorithm(), op.getInitialState());
@@ -120,7 +120,7 @@ struct CanonicalizeDynamicTopKOpPattern
       return rewriter.notifyMatchFailure(impl, "expected constant k");
 
     // We rely on many of the properties checked by verification.
-    auto valuesType = op.getValues().getType().cast<ShapedType>();
+    auto valuesType = cast<ShapedType>(op.getValues().getType());
     auto valuesLastDimSize = valuesType.getShape()[valuesType.getRank() - 1];
     if (hlo::isDynamicDimSize(valuesLastDimSize) ||
         valuesLastDimSize != k[0])

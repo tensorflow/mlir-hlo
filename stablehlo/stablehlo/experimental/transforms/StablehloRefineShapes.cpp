@@ -97,7 +97,7 @@ struct RefineDynamicRngBitGeneratorOpPattern
     // At the moment, we only support refining return types using fully static
     // shape values which serves the current use cases well.
     // Support for partially static shape values is left for future work.
-    auto initialStateType = op.getInitialState().getType().cast<ShapedType>();
+    auto initialStateType = cast<ShapedType>(op.getInitialState().getType());
     SmallVector<int64_t> outputShape;
     if (failed(hlo::matchInts(op.getOutputShape(), outputShape)))
       return rewriter.notifyMatchFailure(op, "expected constant output_shape");
@@ -117,7 +117,7 @@ struct RefineDynamicTopKOpPattern : public OpRewritePattern<CustomCallOp> {
     if (!maybeOp || failed(maybeOp->verify())) return failure();
     DynamicTopKOpAdaptor op = *maybeOp;
 
-    auto operandType = op.getOperand().getType().cast<ShapedType>();
+    auto operandType = cast<ShapedType>(op.getOperand().getType());
     SmallVector<int64_t> outputShape(operandType.getShape());
     SmallVector<int64_t> k;
     if (failed(hlo::matchInts(op.getK(), k)))
