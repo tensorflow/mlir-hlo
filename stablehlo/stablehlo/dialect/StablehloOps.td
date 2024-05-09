@@ -124,20 +124,27 @@ def StableHLO_IotaOp : StableHLO_Op<"iota", [Pure]> {
 def StableHLO_DynamicIotaOp: StableHLO_ShapedInterfaceOp<"dynamic_iota", [ConditionallySpeculatable, NoMemoryEffect]> {
   let summary = "DynamicIota operation";
   let description = [{
-    This operation is a work in progress, so it is not yet included in
-    the StableHLO specification: https://github.com/openxla/stablehlo/issues/8.
+    Fills a `result` tensor with values in increasing order starting from zero
+    along the `iota_dimension` dimension.
 
     Informally, this operation does the same thing as IotaOp except that the
     result shape is specified dynamically via `output_shape`:
     https://github.com/openxla/stablehlo/blob/main/docs/spec.md#iota
 
+    See:
+    https://github.com/openxla/stablehlo/blob/main/docs/spec.md#dynamic_iota
+
     Example:
     ```mlir
-    %0 = stablehlo.dynamic_iota %arg0, dim = 0 : (tensor<1xindex>) -> tensor<4xi32>
+    %output_shape = stablehlo.constant dense<[4, 5]> : tensor<2xi64>
+    %0 = stablehlo.dynamic_iota %output_shape, dim = 0 : (tensor<2xi64>) -> tensor<4x5xi64>
     ```
   }];
 
-  let arguments = (ins HLO_StaticDimensionTensor:$output_shape, I64Attr:$iota_dimension);
+  let arguments = (ins
+    HLO_StaticDimensionTensor:$output_shape /*dynamic_iota_i1*/,
+    I64Attr:$iota_dimension /*dynamic_iota_i2*/
+  );
   let results = (outs HLO_Tensor:$result);
   let hasVerifier = 1;
 
@@ -145,7 +152,7 @@ def StableHLO_DynamicIotaOp: StableHLO_ShapedInterfaceOp<"dynamic_iota", [Condit
     $output_shape `,` `dim` `=` $iota_dimension attr-dict `:` functional-type(operands, results)
   }];
 
-  let extraClassDeclaration = [{
+  let extraClassDeclaration = commonClassDeclaration # [{
     /// Interface method for ConditionallySpeculatable.
     mlir::Speculation::Speculatability getSpeculatability();
   }];
@@ -1912,7 +1919,8 @@ def StableHLO_BroadcastOp : StableHLO_ShapedInterfaceOp<"broadcast",
 }
 
 def StableHLO_BroadcastInDimOp : StableHLO_Op<"broadcast_in_dim",
-      [Pure, HLO_CompatibleOperandsAndResultElementType /*broadcast_in_dim_c1*/]> {
+      [HLO_SpeculatableIfAllInputsStatic, NoMemoryEffect,
+      HLO_CompatibleOperandsAndResultElementType /*broadcast_in_dim_c1*/]> {
   let summary = "BroadcastInDim operation";
   let description = [{
     Expands the dimensions and/or rank of an input tensor by duplicating the
@@ -1942,7 +1950,8 @@ def StableHLO_BroadcastInDimOp : StableHLO_Op<"broadcast_in_dim",
 }
 
 def StableHLO_DynamicBroadcastInDimOp : StableHLO_ShapedInterfaceOp<
-    "dynamic_broadcast_in_dim", [Pure]> {
+    "dynamic_broadcast_in_dim",
+    [ConditionallySpeculatable, NoMemoryEffect]> {
   let summary = "DynamicBroadcastInDim operation";
   let description = [{
     This operation is a work in progress, so it is not yet included in
@@ -1983,6 +1992,11 @@ def StableHLO_DynamicBroadcastInDimOp : StableHLO_ShapedInterfaceOp<
   let assemblyFormat = [{
     $operand `,` $output_dimensions `,` `dims` `=` custom<DenseI64Array>($broadcast_dimensions)
       attr-dict `:` functional-type(operands, results)
+  }];
+
+  let extraClassDeclaration = commonClassDeclaration # [{
+    /// Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -2646,7 +2660,7 @@ def StableHLO_ReshapeOp: StableHLO_Op<"reshape",
 }
 
 def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape",
-      [ConditionallySpeculatable, NoMemoryEffect]> {
+      [HLO_SpeculatableIfAllInputsStaticAndShapeConstant, NoMemoryEffect]> {
   let summary = "DynamicReshape operation";
   let description = [{
     This operation is a work in progress, so it is not yet included in
@@ -2668,11 +2682,6 @@ def StableHLO_DynamicReshapeOp: StableHLO_ShapedInterfaceOp<"dynamic_reshape",
   let hasVerifier = 1;
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
-
-  let extraClassDeclaration = commonClassDeclaration # [{
-    /// Interface method for ConditionallySpeculatable.
-    mlir::Speculation::Speculatability getSpeculatability();
-  }];
 }
 
 def StableHLO_ScatterOp: StableHLO_Op<"scatter",
@@ -3368,7 +3377,8 @@ def StableHLO_ReducePrecisionOp : StableHLO_Op<"reduce_precision",
 
 def StableHLO_RealDynamicSliceOp: StableHLO_ShapedInterfaceOp<
       "real_dynamic_slice",
-      [Pure, AllElementTypesMatch<["operand", "result"]>,
+      [ConditionallySpeculatable, NoMemoryEffect,
+       AllElementTypesMatch<["operand", "result"]>,
        AllTypesMatch<["start_indices", "limit_indices", "strides"]>]> {
   let summary = "RealDynamicSlice operation";
   let description = [{
@@ -3396,10 +3406,16 @@ def StableHLO_RealDynamicSliceOp: StableHLO_ShapedInterfaceOp<
   let hasVerifier = 1;
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+
+  let extraClassDeclaration = commonClassDeclaration # [{
+    /// Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
+  }];
 }
 
 def StableHLO_DynamicPadOp: StableHLO_ShapedInterfaceOp<"dynamic_pad",
-      [Pure, AllElementTypesMatch<["operand", "padding_value", "result"]>,
+      [ConditionallySpeculatable, NoMemoryEffect,
+      AllElementTypesMatch<["operand", "padding_value", "result"]>,
       AllTypesMatch<["edge_padding_low", "edge_padding_high", "interior_padding"]>]> {
   let summary = "DynamicPad operation";
   let description = [{
@@ -3433,10 +3449,16 @@ def StableHLO_DynamicPadOp: StableHLO_ShapedInterfaceOp<"dynamic_pad",
   let hasVerifier = 1;
 
   let assemblyFormat = "operands attr-dict `:` functional-type(operands, results)";
+
+  let extraClassDeclaration = commonClassDeclaration # [{
+    /// Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
+  }];
 }
 
 def StableHLO_DynamicGatherOp: StableHLO_Op<"dynamic_gather",
-                                [InferTensorTypeWithReify, Pure]> {
+      [HLO_SpeculatableIfAllInputsStaticAndShapeConstant, NoMemoryEffect,
+      InferTensorTypeWithReify]> {
   let summary = "DynamicGather operation";
   let description = [{
     This operation is a work in progress, so it is not yet included in
@@ -3469,7 +3491,8 @@ def StableHLO_DynamicGatherOp: StableHLO_Op<"dynamic_gather",
   let results = (outs HLO_Tensor);
 }
 
-def StableHLO_DynamicConvOp : StableHLO_Op<"dynamic_conv", [Pure]> {
+def StableHLO_DynamicConvOp : StableHLO_Op<"dynamic_conv",
+      [HLO_SpeculatableIfAllInputsStaticAndShapeConstant, NoMemoryEffect]> {
   let summary = "DynamicConv operation";
   let description = [{
     This operation is a work in progress, so it is not yet included in

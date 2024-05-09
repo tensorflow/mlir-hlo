@@ -2167,9 +2167,7 @@ static void populateChloBroadcastingPatterns(MLIRContext *context,
       context, patterns, 10);
   populateForBroadcastingBinaryOp<ConvertRankedDynamicBroadcastBinaryOp>(
       context, patterns, 5);
-  patterns
-      ->add<ConvertConstantLikeOp, ConvertSelectOp>(
-          context);
+  patterns->add<ConvertConstantLikeOp, ConvertSelectOp>(context);
 }
 
 static void populateChloDecompositionPatterns(MLIRContext *context,

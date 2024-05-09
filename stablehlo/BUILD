@@ -362,6 +362,7 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":base",
         ":interpreter_ops_inc_gen",
         ":reference_numpy",
         ":reference_ops",
@@ -490,10 +491,12 @@ cc_library(
         ":reference_tensor",
         ":reference_value",
         ":register",
+        ":stablehlo_passes",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Parser",
+        "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:Support",
     ],
 )

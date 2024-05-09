@@ -1343,6 +1343,29 @@ LogicalResult DynamicBroadcastInDimOp::reifyReturnTypeShapes(
   return success();
 }
 
+mlir::Speculation::Speculatability
+DynamicBroadcastInDimOp::getSpeculatability() {
+  auto operandType = getOperand().getType();
+
+  // If input is dynamic, the broadcasting rules might be violated at runtime,
+  // so not speculatable.
+  if (!operandType.hasStaticShape()) return mlir::Speculation::NotSpeculatable;
+
+  // If input is broadcastable (all 1's) and result is fully dynamic,
+  // speculatable.
+  auto resultDynamic =
+      llvm::all_of(llvm::seq(getType().getRank()),
+                   [this](int64_t i) { return getType().isDynamicDim(i); });
+  if (operandType.getNumElements() == 1 && resultDynamic)
+    return mlir::Speculation::Speculatable;
+
+  // If shape is known, speculatable.
+  if (matchPattern(getOutputDimensions(), m_Constant()))
+    return mlir::Speculation::Speculatable;
+
+  return mlir::Speculation::NotSpeculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // ClampOp
 //===----------------------------------------------------------------------===//
@@ -1509,26 +1532,6 @@ LogicalResult DynamicReshapeOp::reifyReturnTypeShapes(
   return success();
 }
 
-mlir::Speculation::Speculatability DynamicReshapeOp::getSpeculatability() {
-  // If the output type's shape is fully dynamic, there is no expectation
-  // for the shape so the op is speculatable.
-  if (llvm::all_of(llvm::seq(getType().getRank()),
-                   [this](int64_t i) { return getType().isDynamicDim(i); }))
-    return mlir::Speculation::Speculatable;
-
-  // If the input is static and the shape operand is constant, the output
-  // shape can be inferred and any mismatch will be caught statically.
-  // If any dimension in the input is dynamic, the number of elements may
-  // disagree with either the output.
-  // If the shape operand is not constant, it could disagree with the output,
-  // which has at least 1 static dimension at this point in the function.
-  if (getOperand().getType().hasStaticShape() &&
-      matchPattern(getOutputShape(), m_Constant()))
-    return mlir::Speculation::Speculatable;
-
-  return mlir::Speculation::NotSpeculatable;
-}
-
 //===----------------------------------------------------------------------===//
 // DynamicSliceOp
 //===----------------------------------------------------------------------===//
@@ -1596,6 +1599,10 @@ LogicalResult RealDynamicSliceOp::reifyReturnTypeShapes(
                             shapeScalarType),
       shapeValues));
   return success();
+}
+
+mlir::Speculation::Speculatability RealDynamicSliceOp::getSpeculatability() {
+  return hlo::getShapedSpeculatability(getOperation(), /*shapeCount=*/3);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1813,12 +1820,12 @@ void ReduceOp::build(OpBuilder&, OperationState& odsState, ValueRange inputs,
       odsState.attributes.getDictionary(odsState.getContext()), {},
       odsState.regions);
 
-  SmallVector<ShapedType> inputArgTensorTypes{
-      llvm::map_range(adaptor.getInputs().getTypes(),
-                      [](Type t) { return cast<ShapedType>(t); })};
-  SmallVector<ShapedType> initValueTensorTypes{
-      llvm::map_range(adaptor.getInitValues().getTypes(),
-                      [](Type t) { return cast<ShapedType>(t); })};
+  auto inputArgTensorTypes =
+      llvm::map_to_vector(adaptor.getInputs().getTypes(),
+                          [](Type t) { return cast<ShapedType>(t); });
+  auto initValueTensorTypes =
+      llvm::map_to_vector(adaptor.getInitValues().getTypes(),
+                          [](Type t) { return cast<ShapedType>(t); });
 
   if (failed(hlo::verifyReduceOpInputsAndInferShape(
           odsState.location, inputArgTensorTypes, dimensions, newDimensions,
@@ -2143,6 +2150,10 @@ LogicalResult DynamicPadOp::reifyReturnTypeShapes(
       shapeValues));
 
   return success();
+}
+
+mlir::Speculation::Speculatability DynamicPadOp::getSpeculatability() {
+  return hlo::getShapedSpeculatability(getOperation(), /*shapeCount=*/3);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3277,8 +3288,8 @@ ParseResult parseWindowAttributes(OpAsmParser& parser, Attribute& windowStrides,
                                          int64Parser))
         return failure();
       if (attributeName == "reverse") {
-        auto boolVector = llvm::to_vector<4>(
-            llvm::map_range(values, [](int64_t v) { return v != 0; }));
+        auto boolVector =
+            llvm::map_to_vector<4>(values, [](int64_t v) { return v != 0; });
         windowReversal =
             DenseBoolArrayAttr::get(parser.getContext(), boolVector);
       } else {
