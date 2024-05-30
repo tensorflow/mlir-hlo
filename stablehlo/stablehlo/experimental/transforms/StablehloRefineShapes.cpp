@@ -151,6 +151,7 @@ struct StablehloRefineShapesPass
 
     RewritePatternSet patterns(&getContext());
     populateStablehloRefineShapesPatterns(&patterns, &getContext());
+    populateStablehloShapeFolderPatterns(&patterns, &getContext());
     patterns.add<RefineDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<RefineDynamicRngBitGeneratorOpPattern>(&getContext());
     patterns.add<RefineDynamicTopKOpPattern>(&getContext());

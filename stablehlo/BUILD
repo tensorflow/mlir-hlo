@@ -1012,6 +1012,7 @@ cc_library(
         "stablehlo/transforms/ChloLegalizeToStablehlo.cpp",
         "stablehlo/transforms/PassPipelines.cpp",
         "stablehlo/transforms/ShapeLegalizeToStablehlo.cpp",
+        "stablehlo/transforms/StablehloAggressiveFolder.cpp",
         "stablehlo/transforms/StablehloAggressiveSimplification.cpp",
         "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
         "stablehlo/transforms/StablehloInstrumentWithProbe.cpp",
