@@ -223,6 +223,81 @@ class DynamicTopKOpAdaptor {
 // "stablehlo.dynamic_top_k".
 std::optional<DynamicTopKOpAdaptor> getDynamicTopKOp(CustomCallOp op);
 
+// The DynamicApproxTopKOp experiment provides a dynamic version of
+// ApproxTopKOp.
+//
+// Within this experiment, DynamicApproxTopKOp is represented via the
+// `stablehlo.custom_call @stablehlo.dynamic_approx_top_k` custom call.
+// This custom call has the regular operands of ApproxTopKOp plus an
+// additional `k` operand that determines the shape of the output.
+//
+// Semantics of DynamicApproTopKOp are inherited from semantics of ApproxTopKOp.
+//
+// #### Inputs
+//
+// | Label | Name            | Type                                         |
+// |-------|-----------------|----------------------------------------------|
+// | (I1)  | `inputs`        | N tensors of integer or floating-point type   |
+// | (I2)  | `initial_values`| N 0-dimensional tensors of same element type |
+// |       |                 | as the corresponding input element type      |
+// | (I3)  | `k`             | 0-dimensional tensor of integer or index type|
+//
+// #### Attributes
+//
+// * api_version: always 2 if present
+// * has_side_effect: always False if present
+// * called_computations: the comparator for scoring entries
+// * mhlo.backend_config: does not include `top_k` and includes:
+//   * `reduction_dim`
+//
+// #### Outputs
+//
+// | Name           | Type                                                |
+// |----------------|-----------------------------------------------------|
+// | `outputs`      | N tensor of same type as the corresponding input    |
+//
+// #### Constraints
+//
+// * (C1) the `mhlo.backend_config` attribute does not contain `top_k`
+// * (C2) the `mhlo.backend_config` attribute contains `reduction_dim`
+// * (C3) len(inputs) == len(initial_values) == len(outputs)
+// * (C4) inputs have ranked type and have the same shape
+// * (C5) initial_values have ranked type and have rank 0
+// * (C6) initial_values have the same element type as the corresponding input
+// * (C7) outputs have same shape
+// * (C8) outputs have the same element type as the corresponding input
+// * (C9) 0 <= reduction_dim < rank(inputs[0])
+// * (C10) shape(inputs[0])[i] == shape(outputs[0])[i] except for i == reduction_dim
+
+class DynamicApproxTopKOpAdaptor {
+ public:
+  DynamicApproxTopKOpAdaptor(CustomCallOp op) : op_(op) {}
+  operator Operation*() { return op_; }
+  Operation* operator->() { return op_; }
+
+  // These accessors assume that the operation is well-formed (i.e. that it
+  // can pass verification).
+  size_t getNumInputs();
+  TypedValue<ShapedType> getInput(size_t idx);
+  TypedValue<ShapedType> getInitialValue(size_t idx);
+  TypedValue<ShapedType> getK();
+
+  TypedValue<ShapedType> getOutput(size_t idx);
+
+  // Verifies the constraints documented above.
+  // Emits errors if errors are detected.
+  LogicalResult verify();
+
+ private:
+  CustomCallOp op_;
+};
+
+// Wraps a custom call in a DynamicApproxTopKOpAdaptor.
+// Fails if the call_target_name of the custom call doesn't match
+// "stablehlo.dynamic_approx_top_k".
+std::optional<DynamicApproxTopKOpAdaptor> getDynamicApproxTopKOp(
+    CustomCallOp op);
+
 }  // namespace experimental
 }  // namespace stablehlo
 }  // namespace mlir

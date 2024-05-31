@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "stablehlo/experimental/dialect/StablehloOps.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 
@@ -498,6 +499,133 @@ TypedValue<ShapedType> DynamicTopKOpAdaptor::getIndices() {
 std::optional<DynamicTopKOpAdaptor> getDynamicTopKOp(CustomCallOp op) {
   if (op.getCallTargetName() != "stablehlo.dynamic_top_k") return {};
   return DynamicTopKOpAdaptor(op);
+}
+
+LogicalResult DynamicApproxTopKOpAdaptor::verify() {
+  auto isSupportedAttrName = [](NamedAttribute attr) {
+    auto name = attr.getName();
+    return name == "call_target_name" || name == "mhlo.backend_config" ||
+           name == "backend_config" || name == "api_version" ||
+           name == "called_computations" || name == "has_side_effect";
+  };
+  for (const auto& attr : op_->getAttrs()) {
+    if (!isSupportedAttrName(attr))
+      return op_.emitOpError()
+             << attr.getName().getValue()
+             << " is not a supported attribute for DynamicApproxTopK";
+  }
+
+  if (op_.getCallTargetName() != "stablehlo.dynamic_approx_top_k")
+    return op_.emitError() << "expects @stablehlo.dynamic_approx_top_k";
+
+  auto called_computations = op_.getCalledComputations();
+  if (called_computations.size() != 1) {
+    return op_.emitOpError()
+           << "DynamicApproxTopK must take 1 called_computations";
+  }
+
+  auto backend_config = mlir::dyn_cast_or_null<mlir::DictionaryAttr>(
+      op_->getAttr("mhlo.backend_config"));
+  if (!backend_config)
+    return op_.emitOpError() << "Missing mhlo.backend_config attribute";
+
+  // C1
+  if (backend_config.contains("top_k"))
+    return op_.emitOpError("mhlo.backend_config attribute contains top_k");
+
+  // C2
+  if (!backend_config.contains("reduction_dim"))
+    return op_.emitOpError(
+        "mhlo.backend_config attribute does not contain "
+        "reduction_dim");
+  auto reduction_dim_attr = backend_config.getAs<IntegerAttr>("reduction_dim");
+  if (!reduction_dim_attr || !reduction_dim_attr.getType().isInteger(64))
+    return op_.emitOpError()
+           << "mhlo.backend_config attribute reduction_dim must be i64";
+  int64_t reduction_dim = reduction_dim_attr.getInt();
+
+  // C3
+  int num_operands = op_->getNumOperands();
+  if (num_operands < 3 || num_operands % 2 != 1)
+    return op_.emitError() << "size(operands) is even or less than 3";
+  size_t num_inputs = getNumInputs();
+
+  if (op_->getNumResults() != num_inputs)
+    return op_.emitError()
+           << "size(results) is not the same as the number of inputs";
+
+  for (size_t i = 0; i < num_inputs; ++i) {
+    // C4
+    if (!getInput(i).getType().hasRank())
+      return op_.emitError() << "input " << i << " is unranked";
+    if (getInput(i).getType().getShape() != getInput(0).getType().getShape())
+      return op_.emitError()
+             << "input " << i << " shape does not match input 0 shape";
+    // C5
+    if (!getInitialValue(i).getType().hasRank())
+      return op_.emitError() << "initial value " << i << " is unranked";
+    if (0 != getInitialValue(i).getType().getRank())
+      return op_.emitError()
+             << "initial value " << i << " does not have rank 0";
+    // C6
+    if (getInitialValue(i).getType().getElementType() !=
+        getInput(i).getType().getElementType())
+      return op_.emitError() << "initial value " << i
+                             << " element type does not match input type";
+    // C7
+    if (!getOutput(i).getType().hasRank())
+      return op_.emitError() << "output " << i << " is unranked";
+    if (getOutput(i).getType().getShape() != getOutput(0).getType().getShape())
+      return op_.emitError()
+             << "output " << i << " shape does not match output 0 shape";
+    // C8
+    if (getOutput(i).getType().getElementType() !=
+        getInput(i).getType().getElementType())
+      return op_.emitError() << "output " << i
+                             << " element type does not match input type";
+  }
+
+  // C9
+  auto inputShape = getInput(0).getType().getShape();
+  auto outputShape = getOutput(0).getType().getShape();
+  if (reduction_dim < 0 || (size_t)reduction_dim >= inputShape.size())
+    return op_.emitError() << "reduction_dim is out of range";
+
+  // C10
+  for (size_t i = 0; i < inputShape.size(); ++i) {
+    if (i != (size_t)reduction_dim && inputShape[i] != outputShape[i])
+      return op_.emitError()
+             << "output values dimension " << i << " has size "
+             << outputShape[i] << " different than operand dimension size "
+             << inputShape[i];
+  }
+  return success();
+}
+
+size_t DynamicApproxTopKOpAdaptor::getNumInputs() {
+  return (op_->getNumOperands() - 1) / 2;
+}
+
+TypedValue<ShapedType> DynamicApproxTopKOpAdaptor::getInput(size_t idx) {
+  return cast<TypedValue<ShapedType>>(op_.getInputs()[idx]);
+}
+
+TypedValue<ShapedType> DynamicApproxTopKOpAdaptor::getInitialValue(size_t idx) {
+  return cast<TypedValue<ShapedType>>(op_.getInputs()[getNumInputs() + idx]);
+}
+
+TypedValue<ShapedType> DynamicApproxTopKOpAdaptor::getK() {
+  return cast<TypedValue<ShapedType>>(op_.getInputs()[2 * getNumInputs()]);
+}
+
+TypedValue<ShapedType> DynamicApproxTopKOpAdaptor::getOutput(size_t idx) {
+  return cast<TypedValue<ShapedType>>(op_.getResults()[idx]);
+}
+
+std::optional<DynamicApproxTopKOpAdaptor> getDynamicApproxTopKOp(
+    CustomCallOp op) {
+  if (op.getCallTargetName() != "stablehlo.dynamic_approx_top_k") return {};
+  return DynamicApproxTopKOpAdaptor(op);
 }
 
 }  // namespace experimental

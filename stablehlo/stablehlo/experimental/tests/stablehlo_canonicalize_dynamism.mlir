@@ -342,3 +342,134 @@ func.func @dynamic_top_k_error_indices_shape_mismatch(%arg0: tensor<16xf32>) -> 
   %1:2 = stablehlo.custom_call @stablehlo.dynamic_top_k(%arg0, %k) : (tensor<16xf32>, tensor<ui64>) -> (tensor<3xf32>, tensor<4xi32>)
   return %1#0, %1#1 : tensor<3xf32>, tensor<4xi32>
 }
+
+// -----
+
+// approx_dynamic_top_k success
+// CHECK-LABEL: func @approx_dynamic_top_k_success
+func.func @approx_dynamic_top_k_success(%arg0: tensor<3x8xf32>) -> (tensor<3x4xf32>, tensor<3x4xi32>) {
+  %init0 = stablehlo.constant dense<0xFF800000> : tensor<f32>
+  %init1 = stablehlo.constant dense<-1> : tensor<i32>
+  %inp1 = stablehlo.iota dim = 1 : tensor<3x8xi32>
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  // CHECK: ApproxTopK{{.*}}top_k = 3
+  %2:2 = stablehlo.custom_call @stablehlo.dynamic_approx_top_k(%arg0, %inp1, %init0, %init1, %k) {
+    called_computations = [@top_k_gt_f32_comparator],
+    mhlo.backend_config = {
+      aggregate_to_topk = true,
+      is_fallback = true,
+      recall_target = 0.95 : f32,
+      reduction_dim = 1 : i64,
+      reduction_input_size_override = -1 : i64
+    }
+  } : (tensor<3x8xf32>, tensor<3x8xi32>, tensor<f32>, tensor<i32>, tensor<ui64>) -> (tensor<3x4xf32>, tensor<3x4xi32>)
+  return %2#0, %2#1 : tensor<3x4xf32>, tensor<3x4xi32>
+}
+
+func.func private @top_k_gt_f32_comparator(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i32>, %arg3: tensor<i32>) -> tensor<i1> {
+  %0 = stablehlo.compare  GT, %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<i1>
+  return %0 : tensor<i1>
+}
+
+// -----
+
+// CHECK-LABEL: func @approx_dynamic_top_k_error_no_called_computation
+func.func @approx_dynamic_top_k_error_no_called_computation(%arg0: tensor<3x8xf32>) -> (tensor<3x4xf32>, tensor<3x4xi32>) {
+  %init0 = stablehlo.constant dense<0xFF800000> : tensor<f32>
+  %init1 = stablehlo.constant dense<-1> : tensor<i32>
+  %inp1 = stablehlo.iota dim = 1 : tensor<3x8xi32>
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  // expected-error@+1{{must take 1 called_computations}}
+  %2:2 = stablehlo.custom_call @stablehlo.dynamic_approx_top_k(%arg0, %inp1, %init0, %init1, %k) {
+    mhlo.backend_config = {
+      aggregate_to_topk = true,
+      is_fallback = true,
+      recall_target = 0.95 : f32,
+      reduction_dim = 1 : i64,
+      reduction_input_size_override = -1 : i64
+    }
+  } : (tensor<3x8xf32>, tensor<3x8xi32>, tensor<f32>, tensor<i32>, tensor<ui64>) -> (tensor<3x4xf32>, tensor<3x4xi32>)
+  return %2#0, %2#1 : tensor<3x4xf32>, tensor<3x4xi32>
+}
+
+// -----
+
+// CHECK-LABEL: func @approx_dynamic_top_k_error_backend_config_includes_top_k
+func.func @approx_dynamic_top_k_error_backend_config_includes_top_k(%arg0: tensor<3x8xf32>) -> (tensor<3x4xf32>, tensor<3x4xi32>) {
+  %init0 = stablehlo.constant dense<0xFF800000> : tensor<f32>
+  %init1 = stablehlo.constant dense<-1> : tensor<i32>
+  %inp1 = stablehlo.iota dim = 1 : tensor<3x8xi32>
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  // expected-error@+1{{mhlo.backend_config attribute contains top_k}}
+  %2:2 = stablehlo.custom_call @stablehlo.dynamic_approx_top_k(%arg0, %inp1, %init0, %init1, %k) {
+    called_computations = [@top_k_gt_f32_comparator],
+    mhlo.backend_config = {
+      top_k = 3,
+      aggregate_to_topk = true,
+      is_fallback = true,
+      recall_target = 0.95 : f32,
+      reduction_dim = 1 : i64,
+      reduction_input_size_override = -1 : i64
+    }
+  } : (tensor<3x8xf32>, tensor<3x8xi32>, tensor<f32>, tensor<i32>, tensor<ui64>) -> (tensor<3x4xf32>, tensor<3x4xi32>)
+  return %2#0, %2#1 : tensor<3x4xf32>, tensor<3x4xi32>
+}
+
+func.func private @top_k_gt_f32_comparator(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i32>, %arg3: tensor<i32>) -> tensor<i1> {
+  %0 = stablehlo.compare  GT, %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<i1>
+  return %0 : tensor<i1>
+}
+
+// -----
+
+// CHECK-LABEL: func @approx_dynamic_top_k_error_even_operands
+func.func @approx_dynamic_top_k_error_even_operands(%arg0: tensor<3x8xf32>) -> (tensor<3x4xf32>, tensor<3x4xi32>) {
+  %init0 = stablehlo.constant dense<0xFF800000> : tensor<f32>
+  %init1 = stablehlo.constant dense<-1> : tensor<i32>
+  %inp1 = stablehlo.iota dim = 1 : tensor<3x8xi32>
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  // expected-error@+1{{size(operands) is even or less than 3}}
+  %2:2 = stablehlo.custom_call @stablehlo.dynamic_approx_top_k(%arg0, %inp1, %init0, %init1) {
+    called_computations = [@top_k_gt_f32_comparator],
+    mhlo.backend_config = {
+      aggregate_to_topk = true,
+      is_fallback = true,
+      recall_target = 0.95 : f32,
+      reduction_dim = 1 : i64,
+      reduction_input_size_override = -1 : i64
+    }
+  } : (tensor<3x8xf32>, tensor<3x8xi32>, tensor<f32>, tensor<i32>) -> (tensor<3x4xf32>, tensor<3x4xi32>)
+  return %2#0, %2#1 : tensor<3x4xf32>, tensor<3x4xi32>
+}
+
+func.func private @top_k_gt_f32_comparator(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i32>, %arg3: tensor<i32>) -> tensor<i1> {
+  %0 = stablehlo.compare  GT, %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<i1>
+  return %0 : tensor<i1>
+}
+
+// -----
+
+// CHECK-LABEL: func @approx_dynamic_top_k_error_few_operands
+func.func @approx_dynamic_top_k_error_few_operands(%arg0: tensor<3x8xf32>) -> (tensor<3x4xf32>, tensor<3x4xi32>) {
+  %init0 = stablehlo.constant dense<0xFF800000> : tensor<f32>
+  %init1 = stablehlo.constant dense<-1> : tensor<i32>
+  %inp1 = stablehlo.iota dim = 1 : tensor<3x8xi32>
+  %k = stablehlo.constant dense<3> : tensor<ui64>
+  // expected-error@+1{{size(operands) is even or less than 3}}
+  %2:2 = stablehlo.custom_call @stablehlo.dynamic_approx_top_k() {
+    called_computations = [@top_k_gt_f32_comparator],
+    mhlo.backend_config = {
+      aggregate_to_topk = true,
+      is_fallback = true,
+      recall_target = 0.95 : f32,
+      reduction_dim = 1 : i64,
+      reduction_input_size_override = -1 : i64
+    }
+  } : () -> (tensor<3x4xf32>, tensor<3x4xi32>)
+  return %2#0, %2#1 : tensor<3x4xf32>, tensor<3x4xi32>
+}
+
+func.func private @top_k_gt_f32_comparator(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i32>, %arg3: tensor<i32>) -> tensor<i1> {
+  %0 = stablehlo.compare  GT, %arg0, %arg1 : (tensor<f32>, tensor<f32>) -> tensor<i1>
+  return %0 : tensor<i1>
+}

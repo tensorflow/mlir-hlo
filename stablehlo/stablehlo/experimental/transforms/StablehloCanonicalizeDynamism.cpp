@@ -135,6 +135,48 @@ struct CanonicalizeDynamicTopKOpPattern
   }
 };
 
+struct CanonicalizeApproxDynamicTopKOpPattern
+    : public OpRewritePattern<CustomCallOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CustomCallOp impl,
+                                PatternRewriter& rewriter) const override {
+    auto maybeOp = getDynamicApproxTopKOp(impl);
+    if (!maybeOp || failed(maybeOp->verify())) return failure();
+    DynamicApproxTopKOpAdaptor op = *maybeOp;
+
+    SmallVector<int64_t> k;
+    if (failed(hlo::matchInts(op.getK(), k))) {
+      return rewriter.notifyMatchFailure(impl, "expected constant k");
+    }
+
+    SmallVector<Value> newOperands;
+    for (size_t i = 0; i < op.getNumInputs(); ++i) {
+      newOperands.push_back(op.getInput(i));
+    }
+    for (size_t i = 0; i < op.getNumInputs(); ++i) {
+      newOperands.push_back(op.getInitialValue(i));
+    }
+
+    auto stablehloBackendConfig = "mhlo.backend_config";
+    auto backend_config = mlir::dyn_cast_or_null<mlir::DictionaryAttr>(
+        impl->getAttr(stablehloBackendConfig));
+    if (!backend_config)
+      return rewriter.notifyMatchFailure(op,
+                                         "Missing backend_config attribute");
+    SmallVector<NamedAttribute> backend_config_attrs{backend_config.begin(),
+                                                     backend_config.end()};
+    backend_config_attrs.push_back(
+        rewriter.getNamedAttr("top_k", rewriter.getI64IntegerAttr(k[0])));
+
+    auto newOp = rewriter.replaceOpWithNewOp<CustomCallOp>(
+        op, op->getResultTypes(), newOperands, op->getAttrs());
+    newOp.setCallTargetName("ApproxTopK");
+    newOp->setAttr(stablehloBackendConfig,
+                   rewriter.getDictionaryAttr(backend_config_attrs));
+    return success();
+  }
+};
+
 struct StablehloCanonicalizeDynamismPass
     : public impl::StablehloCanonicalizeDynamismPassBase<
           StablehloCanonicalizeDynamismPass> {
@@ -154,6 +196,7 @@ struct StablehloCanonicalizeDynamismPass
     patterns.add<CanonicalizeDynamicReduceWindowOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicRngBitGeneratorOpPattern>(&getContext());
     patterns.add<CanonicalizeDynamicTopKOpPattern>(&getContext());
+    patterns.add<CanonicalizeApproxDynamicTopKOpPattern>(&getContext());
 
     auto funcOp = getOperation();
     if (failed(applyPatternsAndFoldGreedily(funcOp, std::move(patterns),
