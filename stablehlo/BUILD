@@ -436,6 +436,44 @@ td_library(
 )
 
 gentbl_cc_library(
+    name = "interpreter_pass_inc_gen",
+    strip_include_prefix = ".",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=InterpreterTransforms",
+            ],
+            "stablehlo/reference/InterpreterPasses.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "stablehlo/reference/InterpreterPasses.td",
+    deps = ["@llvm-project//mlir:PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "interpreter_passes",
+    srcs = [
+        "stablehlo/reference/InterpreterInstrumentWithProbe.cpp",
+    ],
+    hdrs = [
+        "stablehlo/reference/InterpreterPasses.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":interpreter_ops",
+        ":interpreter_pass_inc_gen",
+        "@llvm-project//mlir:DialectUtils",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TransformUtils",
+        "@llvm-project//mlir:Transforms",
+    ],
+)
+
+gentbl_cc_library(
     name = "linalg_pass_inc_gen",
     strip_include_prefix = ".",
     tbl_outs = [
@@ -1016,9 +1054,9 @@ cc_library(
         "stablehlo/transforms/StablehloAggressiveSimplification.cpp",
         "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
         "stablehlo/transforms/StablehloConvertToSignless.cpp",
-        "stablehlo/transforms/StablehloInstrumentWithProbe.cpp",
         "stablehlo/transforms/StablehloLegalizeCompositeToCall.cpp",
         "stablehlo/transforms/StablehloLegalizeDeprecatedOps.cpp",
+        "stablehlo/transforms/StablehloLegalizeQuantToInt.cpp",
         "stablehlo/transforms/StablehloLegalizeToVhlo.cpp",
         "stablehlo/transforms/StablehloRefineArguments.cpp",
         "stablehlo/transforms/StablehloRefineShapes.cpp",
@@ -1036,7 +1074,6 @@ cc_library(
         ":broadcast_utils",
         ":chlo_ops",
         ":chlo_rewriters_inc_gen",
-        ":interpreter_ops",
         ":linalg_passes",
         ":stablehlo_legalize_deprecated_ops_inc_gen",
         ":stablehlo_ops",
@@ -1054,6 +1091,7 @@ cc_library(
         "@llvm-project//mlir:ComplexDialect",
         "@llvm-project//mlir:DialectUtils",
         "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:FuncTransforms",
         "@llvm-project//mlir:FunctionInterfaces",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:InferTypeOpInterface",
@@ -1215,6 +1253,7 @@ cc_binary(
     deps = [
         ":check_ops",
         ":interpreter_ops",
+        ":interpreter_passes",
         ":linalg_passes",
         ":register",
         ":stablehlo_passes",
