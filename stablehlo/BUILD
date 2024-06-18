@@ -141,6 +141,7 @@ cc_library(
         ":reference_errors",
         ":reference_numpy",
         ":reference_tensor",
+        ":reference_types",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:QuantOps",
@@ -1018,6 +1019,7 @@ td_library(
         "stablehlo/dialect/StablehloEnums.td",
         "stablehlo/dialect/StablehloOps.td",
         "stablehlo/dialect/StablehloTypes.td",
+        "stablehlo/transforms/ChloDecompositionPatternsMath.td",
     ],
     includes = ["."],
     deps = [
@@ -1057,6 +1059,7 @@ cc_library(
         "stablehlo/transforms/StablehloLegalizeCompositeToCall.cpp",
         "stablehlo/transforms/StablehloLegalizeDeprecatedOps.cpp",
         "stablehlo/transforms/StablehloLegalizeQuantToInt.cpp",
+        "stablehlo/transforms/StablehloLegalizeQuantizedOpToQDQ.cpp",
         "stablehlo/transforms/StablehloLegalizeToVhlo.cpp",
         "stablehlo/transforms/StablehloRefineArguments.cpp",
         "stablehlo/transforms/StablehloRefineShapes.cpp",
