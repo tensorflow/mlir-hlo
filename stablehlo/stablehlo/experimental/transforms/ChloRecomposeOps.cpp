@@ -143,7 +143,7 @@ struct ChloRecomposeOpsPass
     // Do a single traversal to recompose CustomCallOp to CHLO ops.
     GreedyRewriteConfig config;
     config.useTopDownTraversal = true;
-    config.enableRegionSimplification = true;
+    config.enableRegionSimplification = GreedySimplifyRegionLevel::Aggressive;
     config.maxIterations = 1;
     config.maxNumRewrites = GreedyRewriteConfig::kNoLimit;
     config.strictMode = GreedyRewriteStrictness::ExistingOps;

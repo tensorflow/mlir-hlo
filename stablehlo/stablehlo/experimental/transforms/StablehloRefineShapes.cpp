@@ -144,7 +144,7 @@ struct StablehloRefineShapesPass
     // upstream, and that might be the reason.
     GreedyRewriteConfig config;
     config.useTopDownTraversal = true;
-    config.enableRegionSimplification = true;
+    config.enableRegionSimplification = GreedySimplifyRegionLevel::Aggressive;
     config.maxIterations = 3;
     config.maxNumRewrites = GreedyRewriteConfig::kNoLimit;
     config.strictMode = GreedyRewriteStrictness::AnyOp;

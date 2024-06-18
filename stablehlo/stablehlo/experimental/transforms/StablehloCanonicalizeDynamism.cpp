@@ -186,7 +186,7 @@ struct StablehloCanonicalizeDynamismPass
   void runOnOperation() override {
     GreedyRewriteConfig config;
     config.useTopDownTraversal = true;
-    config.enableRegionSimplification = true;
+    config.enableRegionSimplification = GreedySimplifyRegionLevel::Aggressive;
     config.maxIterations = 2;
     config.maxNumRewrites = GreedyRewriteConfig::kNoLimit;
     config.strictMode = GreedyRewriteStrictness::AnyOp;
