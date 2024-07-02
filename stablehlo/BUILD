@@ -880,12 +880,14 @@ gentbl_cc_library(
 STABLEHLO_CAPI_SOURCES = [
     "stablehlo/integrations/c/StablehloAttributes.cpp",
     "stablehlo/integrations/c/StablehloDialect.cpp",
+    "stablehlo/integrations/c/StablehloPasses.cpp",
     "stablehlo/integrations/c/StablehloTypes.cpp",
 ]
 
 STABLEHLO_CAPI_HEADERS = [
     "stablehlo/integrations/c/StablehloAttributes.h",
     "stablehlo/integrations/c/StablehloDialect.h",
+    "stablehlo/integrations/c/StablehloPasses.h",
     "stablehlo/integrations/c/StablehloTypes.h",
 ]
 
@@ -895,6 +897,7 @@ cc_library(
     hdrs = STABLEHLO_CAPI_HEADERS,
     deps = [
         ":stablehlo_ops",
+        ":stablehlo_passes",
         "@llvm-project//mlir:CAPIIR",
     ],
 )
@@ -916,6 +919,7 @@ cc_library(
     hdrs = STABLEHLO_CAPI_HEADERS,
     deps = [
         ":stablehlo_ops",
+        ":stablehlo_passes",
         "@llvm-project//mlir:CAPIIRObjects",
     ],
     alwayslink = True,
