@@ -12,7 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-add_subdirectory(dialect)
-add_subdirectory(tests)
-add_subdirectory(tools)
-add_subdirectory(transforms)
+set(LLVM_TARGET_DEFINITIONS passes.td)
+mlir_tablegen(passes.h.inc -gen-pass-decls)
+add_public_tablegen_target(StablehloExtensionPassesIncGen)
+
+add_mlir_dialect_library(StablehloExtensionPasses
+  PARTIAL_SOURCES_INTENDED
+  chlo_recompose_ops.cpp
+  stablehlo_canonicalize_dynamism.cpp
+  stablehlo_refine_shapes.cpp
+
+  DEPENDS
+  StablehloExtensionPassesIncGen
+
+  LINK_LIBS PUBLIC
+  ChloOps
+  MLIRFuncDialect
+  MLIRIR
+  MLIRInferTypeOpInterface
+  MLIRSupport
+  MLIRTransformUtils
+  StablehloExtensionOps
+  StablehloBase
+  StablehloOps
+  StablehloPasses
+  StablehloTypeInference
+)

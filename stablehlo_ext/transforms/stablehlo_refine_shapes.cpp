@@ -12,8 +12,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "stablehlo/transforms/StablehloRefineShapes.h"
-
 #include <cstdint>
 
 #include "llvm/ADT/SmallVector.h"
@@ -25,16 +23,17 @@ limitations under the License.
 #include "stablehlo/dialect/Base.h"
 #include "stablehlo/dialect/StablehloOps.h"
 #include "stablehlo/dialect/TypeInference.h"
-#include "stablehlo/experimental/dialect/StablehloOps.h"
-#include "stablehlo/experimental/transforms/Passes.h"
 #include "stablehlo/transforms/Passes.h"
+#include "stablehlo/transforms/StablehloRefineShapes.h"
+#include "stablehlo_ext/IR/stablehlo_ops.h"
+#include "stablehlo_ext/transforms/passes.h"
 
 namespace mlir {
 namespace stablehlo {
 namespace experimental {
 
 #define GEN_PASS_DEF_STABLEHLOREFINESHAPESPASS
-#include "stablehlo/experimental/transforms/Passes.h.inc"
+#include "stablehlo_ext/transforms/passes.h.inc"
 
 namespace {
 

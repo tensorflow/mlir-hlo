@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "stablehlo/experimental/dialect/StablehloOps.h"
+#include "stablehlo_ext/IR/stablehlo_ops.h"
 
 #include <cstddef>
 #include <cstdint>

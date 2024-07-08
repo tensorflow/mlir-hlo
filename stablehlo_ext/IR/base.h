@@ -1,4 +1,4 @@
-/* Copyright 2020 The TensorFlow Authors. All Rights Reserved.
+/* Copyright 2021 The TensorFlow Authors. All Rights Reserved.
    Copyright 2022 The StableHLO Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,26 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "stablehlo/experimental/dialect/Base.h"
+#ifndef STABLEHLO_EXT_DIALECT_BASE_H
+#define STABLEHLO_EXT_DIALECT_BASE_H
 
+#include "llvm/ADT/ArrayRef.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/MLIRContext.h"
 
 namespace mlir {
 namespace hlo {
 
-DenseIntElementsAttr getPaddingAttr(MLIRContext* context,
-                                    ArrayRef<int64_t> values) {
-  return DenseIntElementsAttr::get(
-      RankedTensorType::get({static_cast<int64_t>(values.size()) / 2, 2},
-                            IntegerType::get(context, 64)),
-      values);
-}
-
-DenseIntElementsAttr getPaddingAttr(Builder* builder,
-                                    ArrayRef<int64_t> values) {
-  return getPaddingAttr(builder->getContext(), values);
-}
+DenseIntElementsAttr getPaddingAttr(MLIRContext *context,
+                                    ArrayRef<int64_t> value);
+DenseIntElementsAttr getPaddingAttr(Builder *builder, ArrayRef<int64_t> value);
 
 }  // namespace hlo
 }  // namespace mlir
+
+#endif  // STABLEHLO_EXT_DIALECT_BASE_H

@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef STABLEHLO_EXPERIMENTAL_DIALECT_STABLEHLO_OPS_H
-#define STABLEHLO_EXPERIMENTAL_DIALECT_STABLEHLO_OPS_H
+#ifndef STABLEHLO_EXT_DIALECT_STABLEHLO_OPS_H
+#define STABLEHLO_EXT_DIALECT_STABLEHLO_OPS_H
 
 // This file supports XLA-specific experiments with the StableHLO opset.
 // These experiments are not yet ready to be upstreamed to openxla/stablehlo
@@ -31,7 +31,7 @@ limitations under the License.
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LogicalResult.h"
 #include "stablehlo/dialect/StablehloOps.h"
-#include "stablehlo/experimental/dialect/Base.h"
+#include "stablehlo_ext/IR/base.h"
 
 namespace mlir {
 namespace stablehlo {
@@ -302,4 +302,4 @@ std::optional<DynamicApproxTopKOpAdaptor> getDynamicApproxTopKOp(
 }  // namespace stablehlo
 }  // namespace mlir
 
-#endif  // STABLEHLO_EXPERIMENTAL_DIALECT_STABLEHLO_OPS_H
+#endif  // STABLEHLO_EXT_DIALECT_STABLEHLO_OPS_H

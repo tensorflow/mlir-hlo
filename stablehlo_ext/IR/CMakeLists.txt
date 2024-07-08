@@ -1,3 +1,4 @@
+# Copyright 2020 The TensorFlow Authors. All Rights Reserved.
 # Copyright 2023 The StableHLO Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,29 +13,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(LLVM_TARGET_DEFINITIONS Passes.td)
-mlir_tablegen(Passes.h.inc -gen-pass-decls)
-add_public_tablegen_target(ExperimentalPassesIncGen)
-
-add_mlir_dialect_library(ExperimentalStablehloPasses
+add_mlir_library(StablehloExtensionBase
   PARTIAL_SOURCES_INTENDED
-  ChloRecomposeOps.cpp
-  StablehloCanonicalizeDynamism.cpp
-  StablehloRefineShapes.cpp
-
-  DEPENDS
-  ExperimentalPassesIncGen
+  base.cpp
 
   LINK_LIBS PUBLIC
-  ChloOps
+  MLIRIR
+)
+
+add_mlir_dialect_library(StablehloExtensionOps
+  PARTIAL_SOURCES_INTENDED
+  stablehlo_ops.cpp
+
+  DEPENDS
+  StablehloOpsIncGen
+
+  LINK_LIBS PUBLIC
+  StablehloExtensionBase
   MLIRFuncDialect
   MLIRIR
-  MLIRInferTypeOpInterface
   MLIRSupport
-  MLIRTransformUtils
-  ExperimentalStablehloOps
-  StablehloBase
   StablehloOps
-  StablehloPasses
-  StablehloTypeInference
+)
+
+target_include_directories(StablehloExtensionOps INTERFACE
+  $<BUILD_INTERFACE:${STABLEHLO_SOURCE_DIR}>
+  $<BUILD_INTERFACE:${STABLEHLO_BINARY_DIR}>
 )

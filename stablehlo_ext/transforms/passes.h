@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef STABLEHLO_EXPERIMENTAL_TRANSFORMS_PASSES_H
-#define STABLEHLO_EXPERIMENTAL_TRANSFORMS_PASSES_H
+#ifndef STABLEHLO_EXT_TRANSFORMS_PASSES_H
+#define STABLEHLO_EXT_TRANSFORMS_PASSES_H
 
 #include <memory>
 
@@ -27,7 +27,7 @@ namespace experimental {
 
 #define GEN_PASS_DECL
 #define GEN_PASS_REGISTRATION
-#include "stablehlo/experimental/transforms/Passes.h.inc"
+#include "stablehlo_ext/transforms/passes.h.inc"
 
 void createChloLegalizeToStablehloPipeline(OpPassManager &pm);
 
@@ -35,4 +35,4 @@ void createChloLegalizeToStablehloPipeline(OpPassManager &pm);
 }  // namespace stablehlo
 }  // namespace mlir
 
-#endif  // STABLEHLO_EXPERIMENTAL_TRANSFORMS_PASSES_H
+#endif  // STABLEHLO_EXT_TRANSFORMS_PASSES_H

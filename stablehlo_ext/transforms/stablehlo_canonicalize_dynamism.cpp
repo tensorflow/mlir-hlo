@@ -24,16 +24,16 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "stablehlo/dialect/ChloOps.h"
 #include "stablehlo/dialect/StablehloOps.h"
-#include "stablehlo/experimental/dialect/StablehloOps.h"
-#include "stablehlo/experimental/transforms/Passes.h"
 #include "stablehlo/transforms/Passes.h"
+#include "stablehlo_ext/IR/stablehlo_ops.h"
+#include "stablehlo_ext/transforms/passes.h"
 
 namespace mlir {
 namespace stablehlo {
 namespace experimental {
 
 #define GEN_PASS_DEF_STABLEHLOCANONICALIZEDYNAMISMPASS
-#include "stablehlo/experimental/transforms/Passes.h.inc"
+#include "stablehlo_ext/transforms/passes.h.inc"
 
 namespace {
 
