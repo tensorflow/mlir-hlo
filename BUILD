@@ -1079,7 +1079,7 @@ cc_library(
     ],
     strip_include_prefix = ".",
     deps = [
-        ":stablehlo_extension_base",
+        "//stablehlo:base",
         "//stablehlo:stablehlo_ops",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
@@ -1116,6 +1116,7 @@ cc_library(
     ],
     strip_include_prefix = ".",
     deps = [
+        ":stablehlo_extension_base",
         ":stablehlo_extension_ops",
         ":stablehlo_extension_pass_inc_gen",
         "//stablehlo:base",
