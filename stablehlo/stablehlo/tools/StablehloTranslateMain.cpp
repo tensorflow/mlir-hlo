@@ -73,8 +73,8 @@ llvm::Error evalCustomCallCheckEq(stablehlo::CustomCallOp op,
   bool isInt = isa<IntegerType>(expectedResult.getElementType());
   auto status =
       isInt ? stablehlo::check::evalExpectEqOp(actualResult, expectedResult)
-            : stablehlo::check::evalExpectAlmostEqOp(actualResult,
-                                                     expectedResult);
+            : stablehlo::check::evalExpectAlmostEqOp(
+                  actualResult, expectedResult, APFloat(0.0001));
   if (status)
     scope.add(op.getResults(), stablehlo::InterpreterValue(
                                    makeBooleanTensor(op->getContext(), false)));
@@ -97,10 +97,34 @@ class StablehloTranslateInterpreterFallback
                                  stablehlo::Process *process) final {
     llvm::StringRef funcName = op.getParentOfType<func::FuncOp>().getSymName();
     if (auto customCall = dyn_cast<stablehlo::CustomCallOp>(op)) {
-      if (customCall.getCallTargetName() == "check.eq") {
+      auto callTarget = customCall.getCallTargetName();
+      if (callTarget == "check.eq") {
         auto status = evalCustomCallCheckEq(customCall, scope);
         return stablehlo::wrapFallbackStatus(
             std::move(status), funcName, "stablehlo.custom_call(@check.eq)");
+      }
+      if (customCall->getNumOperands() == 2) {
+        // TODO: Replace with custom_call --> check dialect pass
+        auto runtimeLhs = scope.findTensor(customCall->getOperand(0));
+        auto runtimeRhs = scope.findTensor(customCall->getOperand(1));
+        if (callTarget == "check.expect_close") {
+          auto status =
+              stablehlo::check::evalExpectCloseOp(runtimeLhs, runtimeRhs, 0, 3);
+          return stablehlo::wrapFallbackStatus(std::move(status), funcName,
+                                               "check.expect_close");
+        }
+        if (customCall.getCallTargetName() == "check.expect_eq") {
+          auto status =
+              stablehlo::check::evalExpectEqOp(runtimeLhs, runtimeRhs);
+          return stablehlo::wrapFallbackStatus(std::move(status), funcName,
+                                               "check.expect_eq");
+        }
+        if (customCall.getCallTargetName() == "check.expect_almost_eq") {
+          auto status = stablehlo::check::evalExpectAlmostEqOp(
+              runtimeLhs, runtimeRhs, APFloat(0.001));
+          return stablehlo::wrapFallbackStatus(std::move(status), funcName,
+                                               "check.expect_almost_eq");
+        }
       }
 
       return stablehlo::invalidArgument("Unsupported custom call: %s",
@@ -111,8 +135,9 @@ class StablehloTranslateInterpreterFallback
             dyn_cast<stablehlo::check::ExpectAlmostEqOp>(op)) {
       auto runtimeLhs = scope.findTensor(expectAlmostEqOp.getLhs());
       auto runtimeRhs = scope.findTensor(expectAlmostEqOp.getRhs());
-      auto status =
-          stablehlo::check::evalExpectAlmostEqOp(runtimeLhs, runtimeRhs);
+      auto tolerance = expectAlmostEqOp.getTolerance();
+      auto status = stablehlo::check::evalExpectAlmostEqOp(
+          runtimeLhs, runtimeRhs, tolerance);
       return stablehlo::wrapFallbackStatus(std::move(status), funcName,
                                            "check.expect_almost_eq");
     }
@@ -120,8 +145,9 @@ class StablehloTranslateInterpreterFallback
     if (auto expectAlmostEqConstOp =
             dyn_cast<stablehlo::check::ExpectAlmostEqConstOp>(op)) {
       auto runtimeOperand = scope.findTensor(expectAlmostEqConstOp.getLhs());
+      auto tolerance = expectAlmostEqConstOp.getTolerance();
       auto status = stablehlo::check::evalExpectAlmostEqConstOp(
-          runtimeOperand, expectAlmostEqConstOp.getValue());
+          runtimeOperand, expectAlmostEqConstOp.getValue(), tolerance);
       return stablehlo::wrapFallbackStatus(std::move(status), funcName,
                                            "check.expect_almost_eq_const");
     }
@@ -188,7 +214,10 @@ TranslateFromMLIRRegistration interpretRegistration(
       auto results = evalModule(module, inputs, config);
       if (failed(results)) return failure();
 
-      for (auto &result : *results) result.print(os);
+      for (auto &result : *results) {
+        result.print(os);
+        os << '\n';
+      }
 
       return success();
     },

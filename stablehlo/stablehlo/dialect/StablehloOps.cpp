@@ -199,6 +199,7 @@ INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(SignOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(SineOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(SqrtOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(SubtractOp)
+INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(TanOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(TanhOp)
 INFER_RETURN_TYPE_COMPONENTS_FROM_OPERANDS(XorOp)
 
@@ -2480,9 +2481,13 @@ LogicalResult TupleOp::inferReturnTypes(
 void CompareOp::build(OpBuilder& builder, OperationState& result, Value lhs,
                       Value rhs, ComparisonDirection comparisonDirection,
                       ComparisonType compareType) {
+  ComparisonTypeAttr comparisonTypeAttr;
+  if (compareType != ComparisonType::NOTYPE)
+    comparisonTypeAttr =
+        ComparisonTypeAttr::get(builder.getContext(), compareType);
   build(builder, result, lhs, rhs,
         ComparisonDirectionAttr::get(builder.getContext(), comparisonDirection),
-        ComparisonTypeAttr::get(builder.getContext(), compareType));
+        comparisonTypeAttr);
 }
 
 LogicalResult CompareOp::inferReturnTypeComponents(
