@@ -66,7 +66,7 @@ std::optional<Value> materializeCastToIllegal(OpBuilder &builder, Type type,
       ->getResult(0);
 }
 
-std::optional<Value> scalarToTensor(OpBuilder& builder, Type type,
+std::optional<Value> scalarToTensor(OpBuilder &builder, Type type,
                                     ValueRange inputs, Location loc) {
   assert(inputs.size() == 1);
   if (mlir::isa<ShapedType>(inputs.front().getType())) {
