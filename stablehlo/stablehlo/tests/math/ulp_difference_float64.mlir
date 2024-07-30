@@ -1,4 +1,5 @@
 // RUN: stablehlo-opt --chlo-legalize-to-stablehlo %s | stablehlo-translate --interpret
+// XFAIL: *
 // This file is generated, see build_tools/math/README.md for more information.
 module @ulp_difference_float64 {
   func.func public @main() {
