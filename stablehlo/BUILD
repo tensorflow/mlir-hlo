@@ -1065,7 +1065,7 @@ cc_library(
         "stablehlo/transforms/StablehloConvertToSignless.cpp",
         "stablehlo/transforms/StablehloLegalizeCompositeToCall.cpp",
         "stablehlo/transforms/StablehloLegalizeDeprecatedOps.cpp",
-        "stablehlo/transforms/StablehloLegalizeQuantToInt.cpp",
+        "stablehlo/transforms/StablehloLegalizeQuantToMath.cpp",
         "stablehlo/transforms/StablehloLegalizeQuantizedOpToQDQ.cpp",
         "stablehlo/transforms/StablehloLegalizeToVhlo.cpp",
         "stablehlo/transforms/StablehloRefineArguments.cpp",
