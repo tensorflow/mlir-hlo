@@ -1356,11 +1356,11 @@ def StableHLO_AllGatherOp : StableHLO_Op<"all_gather",
 
     Example:
     ```mlir
-    %result = "stablehlo.all_gather"(%operand) {
+    %result:2 = "stablehlo.all_gather"(%operand0, %operand1) {
       all_gather_dim = 1 : i64,
       replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>,
       channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
-    } : (tensor<2x2xi64>) -> tensor<2x4xi64>
+    } : (tensor<2x2xi64>, tensor<2x2xi64>) -> (tensor<2x4xi64>, tensor<2x4xi64>)
     ```
   }];
 
@@ -1395,15 +1395,14 @@ def StableHLO_AllReduceOp : StableHLO_Op<"all_reduce",
 
     Example:
     ```mlir
-    %result = "stablehlo.all_reduce"(%operand) ({
+    %result:2 = "stablehlo.all_reduce"(%operand0, %operand0) ({
       ^bb0(%arg0: tensor<i64>, %arg1: tensor<i64>):
-        %0 = stablehlo.add %arg1, %arg2 : tensor<i64>
-        stablehlo.return %0 : tensor<i64>
+      %0 = "stablehlo.add"(%arg0, %arg1) : (tensor<i64>, tensor<i64>) -> tensor<i64>
+      "stablehlo.return"(%0) : (tensor<i64>) -> ()
     }) {
-      replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
+      replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>,
       channel_handle = #stablehlo.channel_handle<handle = 0, type = 0>
-      // use_global_device_ids = false
-    } : (tensor<4xi64>) -> tensor<4xi64>
+    } : (tensor<4xi64>, tensor<4xi64>) -> (tensor<4xi64>, tensor<4xi64>)
     ```
   }];
 
@@ -1483,12 +1482,12 @@ def StableHLO_AllToAllOp : StableHLO_Op<"all_to_all",
 
     Example:
     ```mlir
-    %result = "stablehlo.all_to_all"(%operand) {
+    %result:2 = "stablehlo.all_to_all"(%operand1, %operand2) {
       split_dimension = 1 : i64,
       concat_dimension = 0 : i64,
       split_count = 2 : i64,
       replica_groups = dense<[[0, 1]]> : tensor<1x2xi64>
-    } : (tensor<2x4xi64>) -> tensor<4x2xi64>
+    } : (tensor<2x4xi64>, tensor<2x4xi64>) -> (tensor<4x2xi64>, tensor<4x2xi64>)
     ```
   }];
 
@@ -2304,7 +2303,7 @@ def StableHLO_ConvolutionOp : StableHLO_Op<"convolution",
     StableHLO_ConvDimensionNumbers:$dimension_numbers, /*convolution_i8...convolution_i16*/
     ConfinedAttr<I64Attr, [IntPositive]>:$feature_group_count, /*convolution_c21, convolution_i17*/
     ConfinedAttr<I64Attr, [IntPositive]>:$batch_group_count, /*convolution_c22, convolution_i18*/
-    StableHLO_PrecisionConfigAttr:$precision_config /*convolution_i19*/
+    OptionalAttr<StableHLO_PrecisionConfigAttr>:$precision_config /*convolution_i19*/
   );
 
   let results = (outs HLO_TensorOrPerAxisQuantizedTensor);
@@ -2437,7 +2436,7 @@ def StableHLO_DotOp: StableHLO_Op<"dot", [Pure]> {
   let arguments = (
     ins HLO_Tensor:$lhs,
     HLO_TensorOrPerAxisQuantizedTensor:$rhs,
-    StableHLO_PrecisionConfigAttr:$precision_config
+    OptionalAttr<StableHLO_PrecisionConfigAttr>:$precision_config
   );
   let results = (outs HLO_TensorOrPerAxisQuantizedTensor);
   let hasVerifier = 1;
@@ -2464,7 +2463,8 @@ def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general",
     %result = stablehlo.dot_general %lhs, %rhs,
       batching_dims = [0] x [0],
       contracting_dims = [2] x [1],
-      precision = [DEFAULT, DEFAULT]
+      precision = [DEFAULT, DEFAULT],
+      algorithm = <lhs_precision_type = tf32, rhs_precision_type = tf32, accumulation_type = f32, lhs_component_count = 1, rhs_component_count = 1, num_primitive_operations = 1, allow_imprecise_accumulation = false>
       : (tensor<2x2x2xi64>, tensor<2x2x2xi64>) -> tensor<2x2x2xi64>
     ```
   }];
@@ -2472,7 +2472,8 @@ def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general",
     HLO_Tensor:$lhs /*dot_general_i1*/,
     HLO_TensorOrPerAxisQuantizedTensor:$rhs /*dot_general_i2*/,
     StableHLO_DotDimensionNumbers:$dot_dimension_numbers /*dot_general_i3, dot_general_i4, dot_general_i5, dot_general_i6*/,
-    StableHLO_PrecisionConfigAttr:$precision_config /*dot_general_i7*/
+    OptionalAttr<StableHLO_PrecisionConfigAttr>:$precision_config /*dot_general_i7*/,
+    OptionalAttr<StableHLO_DotAlgorithm>:$algorithm
   );
 
   let results = (outs HLO_TensorOrPerAxisQuantizedTensor);
@@ -2481,7 +2482,7 @@ def StableHLO_DotGeneralOp: StableHLO_ShapedInterfaceOp<"dot_general",
   // Use empty `` to prevent extra whitespace before precision config.
   let assemblyFormat = [{
     $lhs `,` $rhs `,` custom<DotDimensionNumbers>($dot_dimension_numbers) ``
-    custom<PrecisionConfig>($precision_config) attr-dict
+    custom<PrecisionConfigAndAlgorithm>($precision_config, $algorithm) attr-dict
       `:` functional-type(operands, results)
   }];
 
@@ -3575,7 +3576,7 @@ def StableHLO_DynamicConvOp : StableHLO_Op<"dynamic_conv",
        StableHLO_ConvDimensionNumbers:$dimension_numbers, /*dynamic_conv_i8...dynamic_conv_i16*/
        ConfinedAttr<I64Attr, [IntPositive]>:$feature_group_count, /*dynamic_conv_c21, dynamic_conv_i17*/
        ConfinedAttr<I64Attr, [IntPositive]>:$batch_group_count, /*dynamic_conv_c22, dynamic_conv_i18*/
-       StableHLO_PrecisionConfigAttr:$precision_config /*dynamic_conv_i19*/
+       OptionalAttr<StableHLO_PrecisionConfigAttr>:$precision_config /*dynamic_conv_i19*/
     );
   let results = (outs HLO_Tensor);
   let hasVerifier = 1;

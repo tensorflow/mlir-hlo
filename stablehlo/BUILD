@@ -1078,6 +1078,7 @@ cc_library(
         "stablehlo/transforms/StablehloConvertToSignless.cpp",
         "stablehlo/transforms/StablehloLegalizeCompositeToCall.cpp",
         "stablehlo/transforms/StablehloLegalizeDeprecatedOps.cpp",
+        "stablehlo/transforms/StablehloLegalizeQDQToQuantizedOp.cpp",
         "stablehlo/transforms/StablehloLegalizeQuantToMath.cpp",
         "stablehlo/transforms/StablehloLegalizeQuantizedOpToQDQ.cpp",
         "stablehlo/transforms/StablehloLegalizeToVhlo.cpp",
@@ -1387,6 +1388,8 @@ cc_library(
     srcs = [
         "stablehlo/conversions/tosa/transforms/StablehloLegalizeToTosa.cpp",
         "stablehlo/conversions/tosa/transforms/StablehloPrepareForTosa.cpp",
+        "stablehlo/conversions/tosa/transforms/StablehloQuantLegalizeToTosaRescale.cpp",
+        "stablehlo/conversions/tosa/transforms/TosaRescaleLegalizeToStablehlo.cpp",
     ],
     hdrs = [
         "stablehlo/conversions/tosa/transforms/Passes.h",
@@ -1403,6 +1406,7 @@ cc_library(
         "@llvm-project//mlir:PDLInterpDialect",
         "@llvm-project//mlir:Parser",
         "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:QuantOps",
         "@llvm-project//mlir:Rewrite",
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TosaDialect",
