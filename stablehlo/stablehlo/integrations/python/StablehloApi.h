@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef STABLEHLO_INTEGRATIONS_PYTHON_API_PORTABLEAPI_H
-#define STABLEHLO_INTEGRATIONS_PYTHON_API_PORTABLEAPI_H
+#ifndef STABLEHLO_INTEGRATIONS_PYTHON_API_STABLEHLOAPI_H
+#define STABLEHLO_INTEGRATIONS_PYTHON_API_STABLEHLOAPI_H
 
 #include "pybind11/pybind11.h"
 
@@ -34,4 +34,4 @@ void AddPortableApi(pybind11::module& m);
 }  // namespace stablehlo
 }  // namespace mlir
 
-#endif  // STABLEHLO_INTEGRATIONS_PYTHON_API_PORTABLEAPI_H
+#endif  // STABLEHLO_INTEGRATIONS_PYTHON_API_STABLEHLOAPI_H

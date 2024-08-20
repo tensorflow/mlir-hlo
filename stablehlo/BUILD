@@ -16,6 +16,8 @@ package(
 exports_files([
     "LICENSE",
     "stablehlo/integrations/python/ChloModule.cpp",
+    "stablehlo/integrations/python/StablehloApi.cpp",
+    "stablehlo/integrations/python/StablehloApi.h",
     "stablehlo/integrations/python/PortableApi.cpp",
     "stablehlo/integrations/python/PortableApi.h",
     "stablehlo/integrations/python/StablehloModule.cpp",
@@ -895,6 +897,7 @@ STABLEHLO_CAPI_SOURCES = [
     "stablehlo/integrations/c/StablehloAttributes.cpp",
     "stablehlo/integrations/c/StablehloDialect.cpp",
     "stablehlo/integrations/c/StablehloPasses.cpp",
+    "stablehlo/integrations/c/StablehloApi.cpp",
     "stablehlo/integrations/c/StablehloTypes.cpp",
 ]
 
@@ -902,6 +905,7 @@ STABLEHLO_CAPI_HEADERS = [
     "stablehlo/integrations/c/StablehloAttributes.h",
     "stablehlo/integrations/c/StablehloDialect.h",
     "stablehlo/integrations/c/StablehloPasses.h",
+    "stablehlo/integrations/c/StablehloApi.h",
     "stablehlo/integrations/c/StablehloTypes.h",
 ]
 
@@ -910,10 +914,17 @@ cc_library(
     srcs = STABLEHLO_CAPI_SOURCES,
     hdrs = STABLEHLO_CAPI_HEADERS,
     deps = [
+        ":reference_api",
+        ":reference_configuration",
         ":stablehlo_ops",
         ":stablehlo_passes",
+        ":stablehlo_portable_api",
+        ":stablehlo_serialization",
+        ":version",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:CAPIIR",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
     ],
 )
 
@@ -933,10 +944,17 @@ cc_library(
     srcs = STABLEHLO_CAPI_SOURCES,
     hdrs = STABLEHLO_CAPI_HEADERS,
     deps = [
+        ":reference_api",
+        ":reference_configuration",
         ":stablehlo_ops",
         ":stablehlo_passes",
+        ":stablehlo_portable_api",
+        ":stablehlo_serialization",
+        ":version",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:CAPIIRObjects",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
     ],
     alwayslink = True,
 )
