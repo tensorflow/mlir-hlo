@@ -14,7 +14,6 @@ limitations under the License.
 #ifndef STABLEHLO_INTEGRATIONS_C_STABLEHLO_DIALECT_H
 #define STABLEHLO_INTEGRATIONS_C_STABLEHLO_DIALECT_H
 
-#include "mlir-c/IR.h"
 #include "mlir-c/RegisterEverything.h"
 
 #ifdef __cplusplus
