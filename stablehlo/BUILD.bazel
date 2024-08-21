@@ -254,6 +254,13 @@ td_library(
     ],
 )
 
+filegroup(
+    name = "chlo_py_api_files",
+    srcs = [
+        "stablehlo/integrations/python/ChloModule.cpp",
+    ],
+)
+
 cc_library(
     name = "chlo_ops",
     srcs = [
@@ -1002,6 +1009,15 @@ gentbl_filegroup(
     deps = [
         ":stablehlo_ops_td_files",
         "@llvm-project//mlir:OpBaseTdFiles",
+    ],
+)
+
+filegroup(
+    name = "stablehlo_py_api_files",
+    srcs = [
+        "stablehlo/integrations/python/PortableApi.cpp",
+        "stablehlo/integrations/python/PortableApi.h",
+        "stablehlo/integrations/python/StablehloModule.cpp",
     ],
 )
 
