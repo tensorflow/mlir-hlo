@@ -279,7 +279,7 @@ gentbl_filegroup(
 )
 
 filegroup(
-    name = "chlo_py_api_filegroup",
+    name = "chlo_py_api_files",
     srcs = [
         "stablehlo/integrations/python/ChloModule.cpp",
     ],
@@ -1039,7 +1039,7 @@ gentbl_filegroup(
 )
 
 filegroup(
-    name = "stablehlo_py_api_filegroup",
+    name = "stablehlo_py_api_files",
     srcs = [
         "stablehlo/integrations/python/PortableApi.cpp",
         "stablehlo/integrations/python/PortableApi.h",
