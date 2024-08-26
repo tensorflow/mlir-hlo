@@ -18,13 +18,11 @@ limitations under the License.
 #include <string>
 #include <string_view>
 
+#include "llvm/Support/raw_ostream.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/PybindAdaptors.h"
-#include "mlir/CAPI/IR.h"
-#include "mlir/CAPI/Support.h"
-#include "mlir/CAPI/Utils.h"
 #include "stablehlo/integrations/c/StablehloApi.h"
 
 namespace py = pybind11;
@@ -65,7 +63,10 @@ static MlirStringRef toMlirStringRef(std::string_view s) {
   return mlirStringRefCreate(s.data(), s.size());
 }
 
-void AddStablehloApi(py::module& m) {
+void AddStablehloApi(py::module &m) {
+  // Portable API is a subset of StableHLO API
+  AddPortableApi(m);
+
   //
   // Utility APIs.
   //
@@ -76,15 +77,16 @@ void AddStablehloApi(py::module& m) {
       .value("WEEK_12", MlirStablehloCompatibilityRequirement::WEEK_12)
       .value("MAX", MlirStablehloCompatibilityRequirement::MAX);
 
-  m.def("get_version_from_compatibility_requirement",
-        [](MlirStablehloCompatibilityRequirement requirement) -> py::str {
-          StringWriterHelper accumulator;
-          stablehloVersionFromCompatibilityRequirement(
-              requirement, accumulator.getMlirStringCallback(),
-              accumulator.getUserData());
-          return accumulator.toString();
-        },
-       py::arg("requirement"));
+  m.def(
+      "get_version_from_compatibility_requirement",
+      [](MlirStablehloCompatibilityRequirement requirement) -> py::str {
+        StringWriterHelper accumulator;
+        stablehloVersionFromCompatibilityRequirement(
+            requirement, accumulator.getMlirStringCallback(),
+            accumulator.getUserData());
+        return accumulator.toString();
+      },
+      py::arg("requirement"));
 
   //
   // Serialization APIs.
@@ -134,8 +136,8 @@ void AddStablehloApi(py::module& m) {
         }
 
         int errorCode(0);
-        MlirAttribute resultArrayAttr = stablehloEvalModule(
-            module, static_cast<int>(args.size()), args.data(), &errorCode);
+        MlirAttribute resultArrayAttr =
+            stablehloEvalModule(module, args.size(), args.data(), &errorCode);
 
         if (errorCode != 0) {
           PyErr_SetString(PyExc_ValueError, "interpreter failed");
@@ -149,9 +151,6 @@ void AddStablehloApi(py::module& m) {
         return pyResults;
       },
       py::arg("module"), py::arg("args"));
-
-  // Portable API is a subset of StableHLO API
-  AddPortableApi(m);
 }
 
 void AddPortableApi(py::module &m) {

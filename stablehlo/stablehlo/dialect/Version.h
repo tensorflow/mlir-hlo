@@ -38,7 +38,7 @@ class Version {
   static FailureOr<Version> fromString(llvm::StringRef versionRef);
 
   /// Return a Version representing the current VHLO dialect version.
-  static Version getCurrentVersion() { return Version(1, 6, 0); }
+  static Version getCurrentVersion() { return Version(1, 6, 1); }
 
   /// Return a Version representing the minimum supported VHLO dialect version.
   static Version getMinimumVersion() { return Version(0, 9, 0); }
@@ -49,7 +49,7 @@ class Version {
   //
   // New enum values can be added per use case.
   //
-  // Values represent a minimum requirement, i.e. MONTH_3 may return a 4 month
+  // Values represent a minimum requirement, i.e. WEEK_4 will return a >=4w
   // old version, the specific implementation detail can be updated at any time
   // by the community as long as it satisfies the requirement.
   //

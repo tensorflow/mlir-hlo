@@ -65,6 +65,15 @@ declare_mlir_python_sources(StablehloToSavedModelPythonSources
     stablehlo/savedmodel/stablehlo_to_tf_saved_model.py
 )
 
+declare_mlir_python_sources(StablehloTestdataGeneratorPythonSources
+  ADD_TO_PARENT StablehloPythonSources
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}"
+  SOURCES
+    stablehlo/testdata_generator/testdata_execution_utils.py
+    stablehlo/testdata_generator/testdata_generator_lib.py
+    stablehlo/testdata_generator/testdata_processor.py
+)
+
 declare_mlir_python_sources(VhloPythonSources)
 declare_mlir_python_sources(VhloPythonSources.Dialects
   ADD_TO_PARENT VhloPythonSources
@@ -115,6 +124,7 @@ declare_mlir_python_extension(StablehloPythonExtensions.Main
   EMBED_CAPI_LINK_LIBS
     StablehloCAPI
   PRIVATE_LINK_LIBS
+    StablehloCAPI
     LLVMSupport
 )
 
