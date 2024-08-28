@@ -254,10 +254,9 @@ def test_version_requirements():
       stablehlo.StablehloCompatibilityRequirement.WEEK_4,
       stablehlo.StablehloCompatibilityRequirement.WEEK_12,
       stablehlo.StablehloCompatibilityRequirement.MAX,
-  ):
+    ):
     assert is_semver_format(
-        stablehlo.get_version_from_compatibility_requirement(req)
-    )
+        stablehlo.get_version_from_compatibility_requirement(req))
 
 
 ASM_FORMAT = """
@@ -302,7 +301,6 @@ def test_reference_api():
 def test_get_smaller_version():
   curr_version = stablehlo.get_current_version()
   min_version = stablehlo.get_minimum_version()
-  print(curr_version)
   assert stablehlo.get_smaller_version(curr_version, min_version) == min_version
 
 
@@ -335,9 +333,7 @@ def test_str_serialization_apis():
     assert m is not None
     module_str = str(m)
     bytecode = module_to_bytecode(m)
-    serialized = stablehlo.serialize_portable_artifact_str(
-        bytecode, curr_version
-    )
+    serialized = stablehlo.serialize_portable_artifact_str(bytecode, curr_version)
     deserialized = stablehlo.deserialize_portable_artifact_str(serialized)
     deserialized_module = ir.Module.parse(deserialized)
     assert module_str == str(deserialized_module)
