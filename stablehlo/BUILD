@@ -1116,6 +1116,7 @@ cc_library(
     srcs = [
         "stablehlo/transforms/ChloLegalizeToStablehlo.cpp",
         "stablehlo/transforms/PassPipelines.cpp",
+        "stablehlo/transforms/PassUtils.cpp",
         "stablehlo/transforms/ShapeLegalizeToStablehlo.cpp",
         "stablehlo/transforms/StablehloAggressiveFolder.cpp",
         "stablehlo/transforms/StablehloAggressiveSimplification.cpp",
@@ -1132,13 +1133,12 @@ cc_library(
         "stablehlo/transforms/StablehloRefineShapes.cpp",
         "stablehlo/transforms/VhloLegalizeToStablehlo.cpp",
         "stablehlo/transforms/VhloToVersion.cpp",
-        "stablehlo/transforms/passes_utils.cpp",
     ],
     hdrs = [
         "stablehlo/transforms/MapStablehloToVhlo.h",
+        "stablehlo/transforms/PassUtils.h",
         "stablehlo/transforms/Passes.h",
         "stablehlo/transforms/StablehloRefineShapes.h",
-        "stablehlo/transforms/passes_utils.h",
     ],
     includes = ["."],
     deps = [
