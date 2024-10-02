@@ -377,15 +377,15 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
-    name = "stablehlo_create_compatibility_expander_inc_gen",
+    name = "stablehlo_compatibility_expander_inc_gen",
     tbl_outs = [
         (
             ["--gen-rewriters"],
-            "stablehlo/transforms/StablehloCreateCompatibilityExpanderPatterns.h.inc",
+            "stablehlo/transforms/StablehloCompatibilityExpanderPatterns.h.inc",
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "stablehlo/transforms/StablehloCreateCompatibilityExpanderPatterns.td",
+    td_file = "stablehlo/transforms/StablehloCompatibilityExpanderPatterns.td",
     deps = [
         ":stablehlo_ops_td_files",
     ],
@@ -1121,8 +1121,8 @@ cc_library(
         "stablehlo/transforms/StablehloAggressiveFolder.cpp",
         "stablehlo/transforms/StablehloAggressiveSimplification.cpp",
         "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
+        "stablehlo/transforms/StablehloCompatibilityExpander.cpp",
         "stablehlo/transforms/StablehloConvertToSignless.cpp",
-        "stablehlo/transforms/StablehloCreateCompatibilityExpander.cpp",
         "stablehlo/transforms/StablehloLegalizeCompositeToCall.cpp",
         "stablehlo/transforms/StablehloLegalizeDeprecatedOps.cpp",
         "stablehlo/transforms/StablehloLegalizeQDQToQuantizedOp.cpp",
@@ -1147,7 +1147,7 @@ cc_library(
         ":chlo_ops",
         ":chlo_rewriters_inc_gen",
         ":linalg_passes",
-        ":stablehlo_create_compatibility_expander_inc_gen",
+        ":stablehlo_compatibility_expander_inc_gen",
         ":stablehlo_legalize_deprecated_ops_inc_gen",
         ":stablehlo_ops",
         ":stablehlo_ops_inc_gen",

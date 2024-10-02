@@ -41,7 +41,7 @@ limitations under the License.
 
 namespace mlir {
 namespace stablehlo {
-#define GEN_PASS_DEF_STABLEHLOCREATECOMPATIBILITYEXPANDERPASS
+#define GEN_PASS_DEF_STABLEHLOCOMPATIBILITYEXPANDERPASS
 #include "stablehlo/transforms/Passes.h.inc"
 
 namespace {
@@ -266,16 +266,16 @@ class ScatterWithBatchingDimsExpander : public OpRewritePattern<ScatterOp> {
 // Pass
 //===----------------------------------------------------------------------===//
 
-struct StablehloCreateCompatibilityExpanderPass
-    : public impl::StablehloCreateCompatibilityExpanderPassBase<
-          StablehloCreateCompatibilityExpanderPass> {
-  StablehloCreateCompatibilityExpanderPass()
-      : StablehloCreateCompatibilityExpanderPassBase<
-            StablehloCreateCompatibilityExpanderPass>() {}
-  StablehloCreateCompatibilityExpanderPass(
-      const StablehloCreateCompatibilityExpanderPassOptions &opts)
-      : StablehloCreateCompatibilityExpanderPassBase<
-            StablehloCreateCompatibilityExpanderPass>(opts) {}
+struct StablehloCompatibilityExpanderPass
+    : public impl::StablehloCompatibilityExpanderPassBase<
+          StablehloCompatibilityExpanderPass> {
+  StablehloCompatibilityExpanderPass()
+      : StablehloCompatibilityExpanderPassBase<
+            StablehloCompatibilityExpanderPass>() {}
+  StablehloCompatibilityExpanderPass(
+      const StablehloCompatibilityExpanderPassOptions &opts)
+      : StablehloCompatibilityExpanderPassBase<
+            StablehloCompatibilityExpanderPass>(opts) {}
 
  public:
   LogicalResult initialize(MLIRContext *context) override {
@@ -283,8 +283,8 @@ struct StablehloCreateCompatibilityExpanderPass
 
     config.useTopDownTraversal = true;
     RewritePatternSet patterns_(context);
-    populateStablehloCreateCompatibilityExpanderPatterns(&patterns_, context,
-                                                         targetVersion);
+    populateStablehloCompatibilityExpanderPatterns(&patterns_, context,
+                                                   targetVersion);
     patterns = std::move(patterns_);
     return success();
   }
@@ -293,7 +293,7 @@ struct StablehloCreateCompatibilityExpanderPass
     auto func = getOperation();
     if (failed(applyPatternsAndFoldGreedily(func, patterns, config))) {
       func.emitError(
-          "Failed to converge StableHLOCreateCompatibilityExpanderPass in ")
+          "Failed to converge StableHLOCompatibilityExpanderPass in ")
           << config.maxIterations << " iterations";
       signalPassFailure();
     }
@@ -304,24 +304,23 @@ struct StablehloCreateCompatibilityExpanderPass
   GreedyRewriteConfig config;
 };
 
-#include "stablehlo/transforms/StablehloCreateCompatibilityExpanderPatterns.h.inc"
+#include "stablehlo/transforms/StablehloCompatibilityExpanderPatterns.h.inc"
 
 }  // namespace
 
-void populateStablehloCreateCompatibilityExpanderPatterns(
+void populateStablehloCompatibilityExpanderPatterns(
     RewritePatternSet *patterns, MLIRContext *context,
     vhlo::Version targetVersion) {
   // StableHLO GatherOp/ScatterOp with batching dims is introduced in v1.1.0.
-  if (targetVersion < vhlo::Version(1, 1, 0)) {
+  if (targetVersion < vhlo::Version(1, 1, 0))
     patterns
         ->add<GatherWithBatchingDimsExpander, ScatterWithBatchingDimsExpander>(
             context);
-  }
+
   // StableHLO TanOp is introduced in v1.4.0.
-  if (targetVersion < vhlo::Version(1, 4, 0)) {
+  if (targetVersion < vhlo::Version(1, 4, 0))
     patterns->add<TanOp_ComplexElementType_CompatiblityExpander,
                   TanOp_CompatiblityExpander>(context);
-  }
 }
 
 }  // namespace stablehlo
