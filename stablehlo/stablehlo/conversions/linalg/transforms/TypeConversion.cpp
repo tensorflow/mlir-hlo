@@ -48,8 +48,7 @@ Type convertShapedType(ShapedType shapedType) {
 }
 
 Value materializeCastFromIllegal(OpBuilder &builder, Type type,
-                                                ValueRange inputs,
-                                                Location loc) {
+                                 ValueRange inputs, Location loc) {
   Type fromType = getElementTypeOrSelf(inputs[0].getType());
   Type toType = getElementTypeOrSelf(type);
   if ((!fromType.isSignedInteger() && !fromType.isUnsignedInteger()) ||
@@ -60,8 +59,8 @@ Value materializeCastFromIllegal(OpBuilder &builder, Type type,
       ->getResult(0);
 }
 
-Value materializeCastToIllegal(OpBuilder &builder, Type type,
-                                              ValueRange inputs, Location loc) {
+Value materializeCastToIllegal(OpBuilder &builder, Type type, ValueRange inputs,
+                               Location loc) {
   Type fromType = getElementTypeOrSelf(inputs[0].getType());
   Type toType = getElementTypeOrSelf(type);
   if (!fromType.isSignlessInteger() ||
@@ -72,8 +71,8 @@ Value materializeCastToIllegal(OpBuilder &builder, Type type,
       ->getResult(0);
 }
 
-Value scalarToTensor(OpBuilder &builder, Type type,
-                                    ValueRange inputs, Location loc) {
+Value scalarToTensor(OpBuilder &builder, Type type, ValueRange inputs,
+                     Location loc) {
   assert(inputs.size() == 1);
   if (mlir::isa<ShapedType>(inputs.front().getType())) {
     return Value();
