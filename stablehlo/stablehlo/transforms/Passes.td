@@ -394,4 +394,5 @@ def VhloToVersionPass : Pass<"vhlo-to-version"> {
     Option<"targetVersionOption", "target", "std::string", "",
            "The target version. Must be a version of the form #.#.# .">,
   ];
+  let dependentDialects = ["mlir::vhlo::VhloDialect"];
 }
