@@ -292,7 +292,7 @@ class RefinementKey {
       MLIRContext& context) const {
     SmallVector<Type> types(getLeadingTokenOperands() +
                             getFunctionalArgumentTypes().size());
-    for (size_t i = 0; i < leadingTokenOperands; ++i)
+    for (size_t i = 0; i < static_cast<size_t>(leadingTokenOperands); ++i)
       types[i] = stablehlo::TokenType::get(&context);
     for (auto [i, refinedType] : llvm::enumerate(getFunctionalArgumentTypes()))
       types[i + leadingTokenOperands] = refinedType;
@@ -444,9 +444,9 @@ class RefineShapeState {
   LogicalResult emitDifferentRefinementContextError(func::FuncOp func,
                                                     RefinementKey key,
                                                     RefinementKey prevKey) {
-    return func.emitOpError()
-           << "refined with invompatible refinement keys:" << "\n  curr="
-           << key.toString() << "\n  prev=" << prevKey.toString();
+    return func.emitOpError() << "refined with invompatible refinement keys:"
+                              << "\n  curr=" << key.toString()
+                              << "\n  prev=" << prevKey.toString();
   }
 };
 
