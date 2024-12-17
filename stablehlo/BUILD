@@ -948,6 +948,7 @@ cc_library(
     srcs = STABLEHLO_CAPI_SOURCES,
     hdrs = STABLEHLO_CAPI_HEADERS,
     deps = [
+        ":linalg_passes",
         ":reference_api",
         ":reference_configuration",
         ":stablehlo_ops",
@@ -978,6 +979,7 @@ cc_library(
     srcs = STABLEHLO_CAPI_SOURCES,
     hdrs = STABLEHLO_CAPI_HEADERS,
     deps = [
+        ":linalg_passes",
         ":reference_api",
         ":reference_configuration",
         ":stablehlo_ops",
@@ -1151,6 +1153,7 @@ cc_library(
         "stablehlo/transforms/VhloToVersion.cpp",
     ],
     hdrs = [
+        "stablehlo/transforms/ChloDecompositionUtils.h",
         "stablehlo/transforms/MapStablehloToVhlo.h",
         "stablehlo/transforms/PassUtils.h",
         "stablehlo/transforms/Passes.h",
