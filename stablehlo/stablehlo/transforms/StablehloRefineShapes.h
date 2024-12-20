@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef STABLEHLO_TRANSFORMS_STABLEHLO_REFINE_SHAPES_H
 #define STABLEHLO_TRANSFORMS_STABLEHLO_REFINE_SHAPES_H
 
-#include "llvm/ADT/SmallVector.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"

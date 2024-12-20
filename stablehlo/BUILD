@@ -407,6 +407,21 @@ gentbl_cc_library(
     ],
 )
 
+gentbl_cc_library(
+    name = "stablehlo_complex_math_expander_inc_gen",
+    tbl_outs = [
+        (
+            ["--gen-rewriters"],
+            "stablehlo/transforms/StablehloComplexMathExpanderPatterns.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "stablehlo/transforms/StablehloComplexMathExpanderPatterns.td",
+    deps = [
+        ":stablehlo_ops_td_files",
+    ],
+)
+
 cc_test(
     name = "example_add",
     srcs = [
@@ -1140,6 +1155,7 @@ cc_library(
         "stablehlo/transforms/StablehloAggressiveSimplification.cpp",
         "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
         "stablehlo/transforms/StablehloCompatibilityExpander.cpp",
+        "stablehlo/transforms/StablehloComplexMathExpander.cpp",
         "stablehlo/transforms/StablehloConvertToSignless.cpp",
         "stablehlo/transforms/StablehloLegalizeCompositeToCall.cpp",
         "stablehlo/transforms/StablehloLegalizeDeprecatedOps.cpp",
@@ -1168,6 +1184,7 @@ cc_library(
         ":linalg_passes",
         ":stablehlo_aggressive_simplification_inc_gen",
         ":stablehlo_compatibility_expander_inc_gen",
+        ":stablehlo_complex_math_expander_inc_gen",
         ":stablehlo_legalize_deprecated_ops_inc_gen",
         ":stablehlo_ops",
         ":stablehlo_ops_inc_gen",
