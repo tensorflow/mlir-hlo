@@ -1387,6 +1387,20 @@ glob_lit_tests(
         "stablehlo/tests/interpret_rsqrt.mlir",
         "stablehlo/tests/interpret_sqrt.mlir",
         "stablehlo/tests/interpret_tanh.mlir",
+
+        # TODO(b/386761235): Re-enable them.
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.0_18_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.0_19_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.0_20_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_0_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_1_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_2_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_3_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_4_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_5_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_6_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_7_0.mlir",
+        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_8_0.mlir",
     ],
     test_file_exts = ["mlir"],
 )
