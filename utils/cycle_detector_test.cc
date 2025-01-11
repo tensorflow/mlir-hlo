@@ -15,7 +15,7 @@ limitations under the License.
 
 #include "utils/cycle_detector.h"
 
-#include "third_party/tensorflow/compiler/xla/test.h"
+#include "third_party/tensorflow/compiler/xla/hlo/testlib/test.h"
 
 class GraphCyclesTest : public ::testing::Test {
  public:
