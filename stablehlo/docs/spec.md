@@ -5593,8 +5593,7 @@ undefined.
 #### Constraints
 
 * (C1) `same(shape(inputs...))`.
-* (C2) `rank(inputs[0]) = size(update_window_dims) + size(inserted_window_dims)
-       + size(input_batching_dims)`.
+* (C2) `rank(inputs[0]) = size(update_window_dims) + size(inserted_window_dims) + size(input_batching_dims)`.
 * (C3) `same(shape(updates...))`.
 * (C4) `shape(updates[0]) = combine(update_scatter_dim_sizes,
        update_window_dim_sizes)` where:
