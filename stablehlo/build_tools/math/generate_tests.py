@@ -54,6 +54,10 @@ operations = [
     #   that defines the precision of computing reference values:
     #   mpmath.mp.prec * extra_prec_multiplier
     #
+    #   namespace - "chlo" or "stablehlo"
+    #
+    #   passes - a string of pass arguments
+    #
     # When unspecifed, these parameters are retrieved from
     # functional_algorithms database of support functions.
     #
@@ -64,12 +68,22 @@ operations = [
     dict(name="acosh", mpmath_name="arccosh"),
     dict(name="atanh", mpmath_name="arctanh"),
     dict(name="square", mpmath_name="square"),
-    dict(
-        name="log_plus_one",
-        mpmath_name="log1p",
-        namespace="stablehlo",
-        passes="--stablehlo-complex-math-expander",
-    ),
+    dict(name="exponential",
+         mpmath_name="exp",
+         namespace="stablehlo",
+         passes="--stablehlo-complex-math-expander"),
+    dict(name="log_plus_one",
+         mpmath_name="log1p",
+         namespace="stablehlo",
+         passes="--stablehlo-complex-math-expander"),
+    dict(name="log",
+         mpmath_name="log",
+         namespace="stablehlo",
+         passes="--stablehlo-complex-math-expander"),
+    dict(name="sqrt",
+         mpmath_name="sqrt",
+         namespace="stablehlo",
+         passes="--stablehlo-complex-math-expander"),
 ]
 
 
@@ -111,8 +125,8 @@ def main():
 
   if fa_version < required_fa_version:
     msg = (
-        f"functional_algorithm version {'.'.join(map(str, required_fa_version))}"
-        f" or newer is required, got {fa.__version__}")
+        f"functional_algorithms version {'.'.join(map(str, required_fa_version))}"
+        f" or newer is required, got {fa.__version__}, stopping.")
     warnings.warn(msg)
     return
 

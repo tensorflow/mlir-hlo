@@ -29,6 +29,13 @@ static Value getConstantLikeMaxFiniteValue(OpBuilder &b, Location loc,
       b, loc, llvm::APFloat::getLargest(ty.getFloatSemantics()), val);
 }
 
+static Value getConstantLikeInfValue(OpBuilder &b, Location loc, Value val,
+                                     bool negative) {
+  auto ty = cast<FloatType>(getElementTypeOrSelf(val.getType()));
+  return getConstantLike(
+      b, loc, llvm::APFloat::getInf(ty.getFloatSemantics(), negative), val);
+}
+
 //===----------------------------------------------------------------------===//
 // Pass
 //===----------------------------------------------------------------------===//
@@ -51,7 +58,7 @@ struct StablehloComplexMathExpanderPass
 
   void runOnOperation() override {
     auto func = getOperation();
-    if (failed(applyPatternsAndFoldGreedily(func, patterns, config))) {
+    if (failed(applyPatternsGreedily(func, patterns, config))) {
       func.emitError("Failed to converge StableHLOComplexMathExpanderPass in ")
           << config.maxIterations << " iterations";
       signalPassFailure();
