@@ -957,6 +957,7 @@ cc_binary(
         ":stablehlo_extension_passes",
         ":transforms_gpu_passes",
         "//stablehlo:register",
+        "//third_party/openxla/shardy/src/shardy/dialect/sdy/ir:dialect",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:AllExtensions",
         "@llvm-project//mlir:AllPassesAndDialects",
@@ -1061,11 +1062,14 @@ cc_library(
     name = "stablehlo_extension_passes",
     srcs = [
         "stablehlo_ext/transforms/chlo_recompose_ops.cpp",
+        "stablehlo_ext/transforms/sdy_refine_shapes.cpp",
         "stablehlo_ext/transforms/stablehlo_canonicalize_dynamism.cpp",
         "stablehlo_ext/transforms/stablehlo_refine_shapes.cpp",
     ],
     hdrs = [
         "stablehlo_ext/transforms/passes.h",
+        "stablehlo_ext/transforms/sdy_refine_shapes.h",
+        "stablehlo_ext/transforms/stablehlo_refine_shapes.h",
     ],
     strip_include_prefix = ".",
     deps = [
@@ -1078,6 +1082,7 @@ cc_library(
         "//stablehlo:stablehlo_ops_inc_gen",
         "//stablehlo:stablehlo_passes",
         "//stablehlo:stablehlo_type_inference",
+        "//third_party/openxla/shardy/src/shardy/dialect/sdy/ir:dialect",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:IR",

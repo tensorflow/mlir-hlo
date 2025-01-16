@@ -109,7 +109,13 @@ LogicalResult refineValues(PatternRewriter& rewriter, Operation* op,
       // their operands and results. Any operand type in these ops can change
       // within what's supported by `inferMostSpecificType` without breaking
       // verification of the op.
-      if (isa<chlo::ChloDialect, StablehloDialect>(user->getDialect()))
+      if (isa<chlo::ChloDialect, StablehloDialect>(
+              user->getDialect()))
+        continue;
+      // TODO(bartchr): Consider if the dialect allow-listing approach is too
+      // strict. In the meantime, allow some shape interop with the shardy
+      // dialect.
+      if (user->getDialect()->getNamespace() == "sdy")
         continue;
 
       // Simply changing operand type of `func.return` won't work because
