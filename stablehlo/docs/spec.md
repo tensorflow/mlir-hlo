@@ -5592,6 +5592,7 @@ undefined.
 
 #### Constraints
 
+<!-- markdownlint-disable line-length -->
 * (C1) `same(shape(inputs...))`.
 * (C2) `rank(inputs[0]) = size(update_window_dims) + size(inserted_window_dims) + size(input_batching_dims)`.
 * (C3) `same(shape(updates...))`.
@@ -5633,6 +5634,7 @@ undefined.
   where `is_promotable(element_type(inputs[i]), Ei)`.
 * (C24) `shape(inputs...) = shape(results...)`.
 * (C25) `element_type(results[i]) = Ei` for all `i` in `[0,N)`.
+<!-- markdownlint-enable line-length -->
 
 #### Examples
 
