@@ -1450,12 +1450,18 @@ struct ReorderElementwiseAndShapeOp final
       return rewriter.notifyMatchFailure(
           op, "defining operation of unexpected type");
 
+    // Reshape and broadcast are not allowed to have dynamic shape.
+    Value result = op->getResult(0);
+    if (isa<ReshapeOp, BroadcastOp>(definingOp) &&
+        !cast<ShapedType>(result.getType()).hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "cannot reorder around reshape/broadcast with dynamic shape");
+
     // Only reorder if the defining op has no other uses.
     if (!llvm::hasSingleElement(definingOp->getResult(0).getUses()))
       return rewriter.notifyMatchFailure(op, "operation has more than one use");
 
     Value input = definingOp->getOperand(0);
-    Value result = op->getResult(0);
     auto intermediateType = cast<ShapedType>(input.getType())
                                 .clone(getElementTypeOrSelf(result.getType()));
 
