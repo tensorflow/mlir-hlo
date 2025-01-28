@@ -1985,7 +1985,7 @@ ArrayAttr convertPrecisionConfig(mlir::ArrayAttr precisionConfig,
     }
   }
   return ArrayAttr::get(rewriter.getContext(), precisions);
-};
+}
 
 // Mode 1, where the ragged dimension is an lhs non-contracting dim (m).
 //   lhs : [b, m, k]

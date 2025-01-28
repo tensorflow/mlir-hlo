@@ -149,13 +149,14 @@ struct StablehloRefineArgumentsPass
 
 LogicalResult refinementError(Operation* op, int64_t idx, Type argType,
                               Type refinedType, StringRef msg) {
-  return op->emitOpError()
-         << "invalid refinement for argument " << idx << ", refinement " << msg
-         << " in " << mlir::debugString(argType) << " -> "
-         << mlir::debugString(refinedType);
+  return op->emitOpError() << "invalid refinement for argument " << idx
+                           << ", refinement " << msg << " in "
+                           << mlir::debugString(argType) << " -> "
+                           << mlir::debugString(refinedType);
 }
 
-LogicalResult validateRefinedTypes(Operation* op, TypeRange argTypes, TypeRange refinedTypes) {
+LogicalResult validateRefinedTypes(Operation* op, TypeRange argTypes,
+                                   TypeRange refinedTypes) {
   // Validate refined shapes
   if (argTypes.size() != refinedTypes.size()) {
     return op->emitOpError(
@@ -164,7 +165,7 @@ LogicalResult validateRefinedTypes(Operation* op, TypeRange argTypes, TypeRange 
   }
 
   // Validate that refinements are valid
-  for (int64_t i = 0; i < argTypes.size(); ++i) {
+  for (size_t i = 0; i < argTypes.size(); ++i) {
     Type type = argTypes[i];
     Type refinedType = refinedTypes[i];
 
