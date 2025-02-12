@@ -352,11 +352,11 @@ gentbl_cc_library(
     tbl_outs = [
         (
             ["--gen-rewriters"],
-            "stablehlo/transforms/StablehloAggressiveSimplificationPatterns.h.inc",
+            "stablehlo/transforms/optimization/StablehloAggressiveSimplificationPatterns.h.inc",
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "stablehlo/transforms/StablehloAggressiveSimplificationPatterns.td",
+    td_file = "stablehlo/transforms/optimization/StablehloAggressiveSimplificationPatterns.td",
     deps = [
         ":stablehlo_ops_td_files",
     ],
@@ -572,6 +572,7 @@ cc_library(
         ":chlo_ops",
         ":linalg_pass_inc_gen",
         ":stablehlo_ops",
+        ":stablehlo_type_conversions",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:ArithUtils",
@@ -942,32 +943,26 @@ gentbl_cc_library(
     ],
 )
 
-STABLEHLO_CAPI_SOURCES = [
+STABLEHLO_DIALECT_CAPI_SOURCES = [
     "stablehlo/integrations/c/StablehloAttributes.cpp",
     "stablehlo/integrations/c/StablehloDialect.cpp",
-    "stablehlo/integrations/c/StablehloPasses.cpp",
-    "stablehlo/integrations/c/StablehloApi.cpp",
+    "stablehlo/integrations/c/StablehloDialectApi.cpp",
     "stablehlo/integrations/c/StablehloTypes.cpp",
 ]
 
-STABLEHLO_CAPI_HEADERS = [
+STABLEHLO_DIALECT_CAPI_HEADERS = [
     "stablehlo/integrations/c/StablehloAttributes.h",
     "stablehlo/integrations/c/StablehloDialect.h",
-    "stablehlo/integrations/c/StablehloPasses.h",
-    "stablehlo/integrations/c/StablehloApi.h",
+    "stablehlo/integrations/c/StablehloDialectApi.h",
     "stablehlo/integrations/c/StablehloTypes.h",
 ]
 
 cc_library(
-    name = "stablehlo_capi",
-    srcs = STABLEHLO_CAPI_SOURCES,
-    hdrs = STABLEHLO_CAPI_HEADERS,
+    name = "stablehlo_dialect_capi",
+    srcs = STABLEHLO_DIALECT_CAPI_SOURCES,
+    hdrs = STABLEHLO_DIALECT_CAPI_HEADERS,
     deps = [
-        ":linalg_passes",
-        ":reference_api",
-        ":reference_configuration",
         ":stablehlo_ops",
-        ":stablehlo_passes",
         ":stablehlo_portable_api",
         ":stablehlo_serialization",
         ":version",
@@ -980,24 +975,98 @@ cc_library(
 
 # Header-only target, used when using the C API from a separate shared library.
 cc_library(
-    name = "stablehlo_capi_headers",
-    hdrs = STABLEHLO_CAPI_HEADERS,
+    name = "stablehlo_dialect_capi_headers",
+    hdrs = STABLEHLO_DIALECT_CAPI_HEADERS,
     includes = ["."],
     deps = [
-        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:CAPIIRHeaders",
     ],
 )
 
 # Alwayslink target, used when exporting the C API from a shared library.
 cc_library(
-    name = "stablehlo_capi_objects",
-    srcs = STABLEHLO_CAPI_SOURCES,
-    hdrs = STABLEHLO_CAPI_HEADERS,
+    name = "stablehlo_dialect_capi_objects",
+    srcs = STABLEHLO_DIALECT_CAPI_SOURCES,
+    hdrs = STABLEHLO_DIALECT_CAPI_HEADERS,
+    deps = [
+        ":stablehlo_ops",
+        ":stablehlo_portable_api",
+        ":stablehlo_serialization",
+        ":version",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:CAPIIRObjects",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+    alwayslink = True,
+)
+
+STABLEHLO_UNIFIED_CAPI_SOURCES = [
+    "stablehlo/integrations/c/StablehloPasses.cpp",
+    "stablehlo/integrations/c/StablehloUnifiedApi.cpp",
+]
+
+STABLEHLO_UNIFIED_CAPI_HEADERS = [
+    "stablehlo/integrations/c/StablehloAttributes.h",
+    "stablehlo/integrations/c/StablehloDialect.h",
+    "stablehlo/integrations/c/StablehloPasses.h",
+    "stablehlo/integrations/c/StablehloDialectApi.h",
+    "stablehlo/integrations/c/StablehloUnifiedApi.h",
+    "stablehlo/integrations/c/StablehloTypes.h",
+]
+
+cc_library(
+    name = "stablehlo_unified_capi",
+    srcs = STABLEHLO_UNIFIED_CAPI_SOURCES,
+    hdrs = STABLEHLO_UNIFIED_CAPI_HEADERS,
     deps = [
         ":linalg_passes",
         ":reference_api",
         ":reference_configuration",
+        ":stablehlo_dialect_capi",
+        ":stablehlo_ops",
+        ":stablehlo_passes",
+        ":stablehlo_portable_api",
+        ":stablehlo_serialization",
+        ":version",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:BytecodeReader",
+        "@llvm-project//mlir:CAPIIR",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+alias(
+    name = "stablehlo_capi",
+    actual = "stablehlo_unified_capi",
+)
+
+# Header-only target, used when using the C API from a separate shared library.
+cc_library(
+    name = "stablehlo_unified_capi_headers",
+    hdrs = STABLEHLO_UNIFIED_CAPI_HEADERS,
+    includes = ["."],
+    deps = [
+        "@llvm-project//mlir:CAPIIRHeaders",
+    ],
+)
+
+alias(
+    name = "stablehlo_capi_headers",
+    actual = "stablehlo_unified_capi_headers",
+)
+
+# Alwayslink target, used when exporting the C API from a shared library.
+cc_library(
+    name = "stablehlo_unified_capi_objects",
+    srcs = STABLEHLO_UNIFIED_CAPI_SOURCES,
+    hdrs = STABLEHLO_UNIFIED_CAPI_HEADERS,
+    deps = [
+        ":linalg_passes",
+        ":reference_api",
+        ":reference_configuration",
+        ":stablehlo_dialect_capi_objects",
         ":stablehlo_ops",
         ":stablehlo_passes",
         ":stablehlo_portable_api",
@@ -1009,6 +1078,11 @@ cc_library(
         "@llvm-project//mlir:Support",
     ],
     alwayslink = True,
+)
+
+alias(
+    name = "stablehlo_capi_objects",
+    actual = "stablehlo_unified_capi_objects",
 )
 
 gentbl_cc_library(
@@ -1146,14 +1220,32 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "stablehlo_pass_utils",
+    srcs = [
+        "stablehlo/transforms/PassUtils.cpp",
+    ],
+    hdrs = [
+        "stablehlo/transforms/PassUtils.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":base",
+        ":chlo_ops",
+        ":stablehlo_ops",
+        ":stablehlo_pass_inc_gen",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:ComplexDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
     name = "stablehlo_passes",
     srcs = [
         "stablehlo/transforms/ChloLegalizeToStablehlo.cpp",
         "stablehlo/transforms/PassPipelines.cpp",
-        "stablehlo/transforms/PassUtils.cpp",
         "stablehlo/transforms/ShapeLegalizeToStablehlo.cpp",
-        "stablehlo/transforms/StablehloAggressiveFolder.cpp",
-        "stablehlo/transforms/StablehloAggressiveSimplification.cpp",
         "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
         "stablehlo/transforms/StablehloCompatibilityExpander.cpp",
         "stablehlo/transforms/StablehloComplexMathExpander.cpp",
@@ -1172,7 +1264,6 @@ cc_library(
     hdrs = [
         "stablehlo/transforms/ChloDecompositionUtils.h",
         "stablehlo/transforms/MapStablehloToVhlo.h",
-        "stablehlo/transforms/PassUtils.h",
         "stablehlo/transforms/Passes.h",
         "stablehlo/transforms/StablehloRefineShapes.h",
     ],
@@ -1182,14 +1273,15 @@ cc_library(
         ":broadcast_utils",
         ":chlo_ops",
         ":chlo_rewriters_inc_gen",
-        ":linalg_passes",
-        ":stablehlo_aggressive_simplification_inc_gen",
         ":stablehlo_compatibility_expander_inc_gen",
         ":stablehlo_complex_math_expander_inc_gen",
         ":stablehlo_legalize_deprecated_ops_inc_gen",
         ":stablehlo_ops",
         ":stablehlo_ops_inc_gen",
         ":stablehlo_pass_inc_gen",
+        ":stablehlo_pass_utils",
+        ":stablehlo_passes_optimization",
+        ":stablehlo_type_conversions",
         ":stablehlo_type_inference",
         ":version",
         ":vhlo_ops",
@@ -1198,9 +1290,7 @@ cc_library(
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:ArithDialect",
         "@llvm-project//mlir:AsmParser",
-        "@llvm-project//mlir:CommonFolders",
         "@llvm-project//mlir:ComplexDialect",
-        "@llvm-project//mlir:DialectUtils",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:FuncTransforms",
         "@llvm-project//mlir:IR",
@@ -1212,6 +1302,55 @@ cc_library(
         "@llvm-project//mlir:ShapeDialect",
         "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TensorDialect",
+        "@llvm-project//mlir:TransformUtils",
+        "@llvm-project//mlir:Transforms",
+    ],
+)
+
+gentbl_cc_library(
+    name = "stablehlo_passes_optimization_inc_gen",
+    strip_include_prefix = ".",
+    tbl_outs = [
+        (
+            [
+                "-gen-pass-decls",
+                "-name=Optimization",
+            ],
+            "stablehlo/transforms/optimization/Passes.h.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "stablehlo/transforms/optimization/Passes.td",
+    deps = ["@llvm-project//mlir:PassBaseTdFiles"],
+)
+
+cc_library(
+    name = "stablehlo_passes_optimization",
+    srcs = [
+        "stablehlo/transforms/optimization/StablehloAggressiveFolder.cpp",
+        "stablehlo/transforms/optimization/StablehloAggressiveSimplification.cpp",
+        "stablehlo/transforms/optimization/StablehloTargetIndependentOptimization.cpp",
+    ],
+    hdrs = [
+        "stablehlo/transforms/optimization/Passes.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":base",
+        ":stablehlo_aggressive_simplification_inc_gen",
+        ":stablehlo_ops",
+        ":stablehlo_pass_inc_gen",
+        ":stablehlo_pass_utils",
+        ":stablehlo_passes_optimization_inc_gen",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:ArithDialect",
+        "@llvm-project//mlir:CommonFolders",
+        "@llvm-project//mlir:DialectUtils",
+        "@llvm-project//mlir:FuncDialect",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:Rewrite",
+        "@llvm-project//mlir:Support",
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
@@ -1258,6 +1397,23 @@ cc_library(
         "@llvm-project//mlir:Parser",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
+    name = "stablehlo_type_conversions",
+    srcs = [
+        "stablehlo/transforms/conversions/TypeConversion.cpp",
+    ],
+    hdrs = [
+        "stablehlo/transforms/conversions/TypeConversion.h",
+    ],
+    includes = ["."],
+    deps = [
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+        "@llvm-project//mlir:TransformUtils",
     ],
 )
 
@@ -1368,6 +1524,7 @@ cc_binary(
         ":linalg_passes",
         ":register",
         ":stablehlo_passes",
+        ":stablehlo_passes_optimization",
         ":test_utils",
         ":tosa_passes",
         "@llvm-project//llvm:Support",

@@ -1,4 +1,4 @@
-# Copyright 2023 The StableHLO Authors.
+# Copyright 2025 The StableHLO Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,31 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(LLVM_TARGET_DEFINITIONS passes.td)
-mlir_tablegen(passes.h.inc -gen-pass-decls)
-add_public_tablegen_target(StablehloExtensionPassesIncGen)
+set(LLVM_TARGET_DEFINITIONS Passes.td)
+mlir_tablegen(Passes.h.inc -gen-pass-decls -name=Optimization)
+add_public_tablegen_target(OptimizationPassesIncGen)
 
-add_mlir_dialect_library(StablehloExtensionPasses
+set(LLVM_TARGET_DEFINITIONS StablehloAggressiveSimplificationPatterns.td)
+mlir_tablegen(StablehloAggressiveSimplificationPatterns.h.inc --gen-rewriters)
+add_public_tablegen_target(StablehloAggressiveSimplificationPatternsIncGen)
+
+add_mlir_dialect_library(StablehloOptimizationPasses
   PARTIAL_SOURCES_INTENDED
-  chlo_recompose_ops.cpp
-  stablehlo_canonicalize_dynamism.cpp
-  stablehlo_refine_shapes.cpp
-  sdy_refine_shapes.cpp
+  StablehloAggressiveFolder.cpp
+  StablehloAggressiveSimplification.cpp
+  StablehloTargetIndependentOptimization.cpp
 
   DEPENDS
-  StablehloExtensionPassesIncGen
+  OptimizationPassesIncGen
+  StablehloAggressiveSimplificationPatternsIncGen
 
   LINK_LIBS PUBLIC
   ChloOps
+  MLIRArithDialect
+  MLIRDialectUtils
   MLIRFuncDialect
   MLIRIR
-  MLIRInferTypeOpInterface
+  MLIRRewrite
   MLIRSupport
   MLIRTransformUtils
-  StablehloExtensionOps
   StablehloBase
   StablehloOps
-  StablehloOptimizationPasses
-  StablehloPasses
   StablehloTypeInference
 )

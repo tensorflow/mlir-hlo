@@ -1,3 +1,4 @@
+# Copyright 2020 The TensorFlow Authors. All Rights Reserved.
 # Copyright 2023 The StableHLO Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,31 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set(LLVM_TARGET_DEFINITIONS passes.td)
-mlir_tablegen(passes.h.inc -gen-pass-decls)
-add_public_tablegen_target(StablehloExtensionPassesIncGen)
-
-add_mlir_dialect_library(StablehloExtensionPasses
+add_mlir_library(StablehloTypeConversion
   PARTIAL_SOURCES_INTENDED
-  chlo_recompose_ops.cpp
-  stablehlo_canonicalize_dynamism.cpp
-  stablehlo_refine_shapes.cpp
-  sdy_refine_shapes.cpp
-
-  DEPENDS
-  StablehloExtensionPassesIncGen
+  TypeConversion.cpp
 
   LINK_LIBS PUBLIC
-  ChloOps
-  MLIRFuncDialect
+  LLVMSupport
   MLIRIR
-  MLIRInferTypeOpInterface
   MLIRSupport
   MLIRTransformUtils
-  StablehloExtensionOps
-  StablehloBase
-  StablehloOps
-  StablehloOptimizationPasses
-  StablehloPasses
-  StablehloTypeInference
 )

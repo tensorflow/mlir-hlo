@@ -1084,6 +1084,7 @@ cc_library(
         "//stablehlo:stablehlo_ops",
         "//stablehlo:stablehlo_ops_inc_gen",
         "//stablehlo:stablehlo_passes",
+        "//stablehlo:stablehlo_passes_optimization",
         "//stablehlo:stablehlo_type_inference",
         "//third_party/openxla/shardy/src/shardy/dialect/sdy/ir:dialect",
         "@llvm-project//llvm:Support",
