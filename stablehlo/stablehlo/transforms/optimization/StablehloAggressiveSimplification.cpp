@@ -934,8 +934,12 @@ struct PadOpBroadcastEmptyTensor : public OpRewritePattern<PadOp> {
     auto padVal = op.getPaddingValue();
 
     auto resultTy = cast<RankedTensorType>(op.getType());
+    auto operandTy = cast<RankedTensorType>(operand.getType());
 
-    if (cast<ShapedType>(operand.getType()).getNumElements() != 0)
+    if (!operandTy.hasStaticShape())
+      return rewriter.notifyMatchFailure(op, "operand shape is dynamic");
+
+    if (operandTy.getNumElements() != 0)
       return rewriter.notifyMatchFailure(op, "operand is not empty tensor");
 
     if (resultTy.hasStaticShape()) {

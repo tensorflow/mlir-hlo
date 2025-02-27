@@ -926,6 +926,15 @@ func.func @pad_zero_length(%arg0: tensor<5x0xf32>, %arg1: tensor<f32>) -> tensor
   return %0 : tensor<7x2xf32>
 }
 
+// Can't do anything with the dynamic shape, but shouldn't crash.
+// CHECK-LABEL: @dynamic_pad
+func.func @dynamic_pad(%arg0: tensor<?x2x3xi1>, %arg1: tensor<i1>) -> tensor<?x2x1xi1> {
+  %0 = stablehlo.pad %arg0, %arg1, low = [0, 0, -1], high = [0, 0, -1], interior = [0, 0, 0] : (tensor<?x2x3xi1>, tensor<i1>) -> tensor<?x2x1xi1>
+  // CHECK-NEXT: %[[RES:.+]] = stablehlo.pad %arg0, %arg1, low = [0, 0, -1], high = [0, 0, -1], interior = [0, 0, 0] : (tensor<?x2x3xi1>, tensor<i1>) -> tensor<?x2x1xi1>
+  // CHECK-NEXT: return %[[RES]]
+  return %0 : tensor<?x2x1xi1>
+}
+
 // -----
 
 /////////
