@@ -1404,6 +1404,12 @@ struct ZeroExtentToEmptyConstant final : RewritePattern {
     if (isa<ConstantOp>(op))
       return rewriter.notifyMatchFailure(op, "op is empty constant");
 
+    // Skip ops that have memory effects, similar to XLA's zero extent
+    // simplification, replacing these doesn't save any computation.
+    auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op);
+    if (effectInterface && !effectInterface.hasNoEffect())
+      return rewriter.notifyMatchFailure(op, "op has memory effect");
+
     // If the result is a zero-extent tensor, replace the whole op with an empty
     // constant.
     bool didUpdate = false;
@@ -1530,6 +1536,12 @@ void populateStablehloCanonicalizationPatterns(MLIRContext *context,
   patterns
       ->add<GetDimensionSizeOpCanon, DynamicBroadcastInDimOpNotActuallyDynamic,
             DynamicReshapeOpIsStatic, DynamicIotaIsStatic>(context);
+}
+
+void populateStablehloHloImportCanonicalizationPatterns(
+    MLIRContext *context, RewritePatternSet *patterns) {
+  patterns->add<TupleIsRepacking, TupleIsUnpacked, WhileOpImplicitCapture>(
+      context);
 }
 
 std::unique_ptr<Pass> createStablehloAggressiveSimplificationPass(

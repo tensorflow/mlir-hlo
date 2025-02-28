@@ -1917,6 +1917,19 @@ func.func public @while_zero_extent(%arg0: tensor<i32>, %arg1: tensor<3xf32>, %a
 
 // -----
 
+// CHECK-LABEL: @side_effecting_custom_call
+func.func @side_effecting_custom_call(%arg0: tensor<0xf32>) -> (tensor<0xf32>, tensor<0xf32>) {
+  // CHECK:      %[[CST:.*]] = stablehlo.constant dense<> : tensor<0xf32>
+  // CHECK-NEXT: %[[CC:.*]] = stablehlo.custom_call @foo(%arg0) {api_version = 0 : i32, has_side_effect = true} : (tensor<0xf32>) -> tensor<0xf32>
+  %0 = stablehlo.custom_call @foo(%arg0) {api_version = 0 : i32, has_side_effect = true} : (tensor<0xf32>) -> tensor<0xf32>
+  // CHECK-NOT:  stablehlo.custom_call{{.*}}has_side_effect = false
+  %1 = stablehlo.custom_call @foo(%arg0) {api_version = 0 : i32, has_side_effect = false} : (tensor<0xf32>) -> tensor<0xf32>
+  // CHECK: return %[[CC]], %[[CST]]
+  return %0, %1 : tensor<0xf32>, tensor<0xf32>
+}
+
+// -----
+
 /////////
 // Generic Shape Ops
 
