@@ -280,6 +280,7 @@ func.func @exponential_DEFAULT(%arg0: tensor<8x16xf32>) -> tensor<8x16xf32> {
   func.return %0 : tensor<8x16xf32>
 }
 
+
 // GatherDimensionNumbers aka #stablehlo.gather is covered below.
 
 // CHECK-LABEL: "attr_precision_config_default"
