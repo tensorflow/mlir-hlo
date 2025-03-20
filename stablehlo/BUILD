@@ -1541,25 +1541,13 @@ glob_lit_tests(
     data = [":test_data"],
     driver = "@llvm-project//mlir:run_lit.sh",
     exclude = [
-        # TODO(#268): Fix lit checks with floating-point ops having
-        # implementation defined precision.
-        "stablehlo/tests/interpret_rsqrt.mlir",
-        "stablehlo/tests/interpret_sqrt.mlir",
-        "stablehlo/tests/interpret_tanh.mlir",
-
-        # TODO(b/386761235): Re-enable them.
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.0_18_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.0_19_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.0_20_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_0_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_1_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_2_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_3_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_4_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_5_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_6_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_7_0.mlir",
-        "stablehlo/tests/vhlo/stablehlo_legalize_to_vhlo.1_8_0.mlir",
+        # TODO: remove the following excludes once #2751 is fixed.
+        "stablehlo/conversions/tosa/tests/legalize_quant_ops_to_tosa_rescale.mlir",
+        "stablehlo/conversions/tosa/tests/legalize_tosa_rescale_to_stablehlo.mlir",
+        "stablehlo/conversions/tosa/tests/rescale_interpreter.mlir",
+        "stablehlo/conversions/tosa/tests/binary.mlir",
+        "stablehlo/conversions/tosa/tests/nullary.mlir",
+        "stablehlo/conversions/tosa/tests/unary.mlir",
     ],
     test_file_exts = ["mlir"],
 )
@@ -1650,8 +1638,9 @@ cc_library(
     srcs = [
         "stablehlo/conversions/tosa/transforms/StablehloLegalizeToTosa.cpp",
         "stablehlo/conversions/tosa/transforms/StablehloPrepareForTosa.cpp",
-        "stablehlo/conversions/tosa/transforms/StablehloQuantLegalizeToTosaRescale.cpp",
-        "stablehlo/conversions/tosa/transforms/TosaRescaleLegalizeToStablehlo.cpp",
+        # TODO: un-comment the following once #2751 is fixed
+        # "stablehlo/conversions/tosa/transforms/StablehloQuantLegalizeToTosaRescale.cpp",
+        # "stablehlo/conversions/tosa/transforms/TosaRescaleLegalizeToStablehlo.cpp",
     ],
     hdrs = [
         "stablehlo/conversions/tosa/transforms/Passes.h",
