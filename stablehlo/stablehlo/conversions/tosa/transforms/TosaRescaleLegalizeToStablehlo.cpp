@@ -65,7 +65,7 @@ LogicalResult ConvertTosaRescaleToStablehlo::matchAndRewrite(
   }
 
   bool scale32 = op.getScale32();
-  bool doubleRound = op.getDoubleRound();
+  bool doubleRound = op.getRoundingMode() == "DOUBLE_ROUND";
   bool perChannel = op.getPerChannel();
 
   if (perChannel || doubleRound || !scale32) {
@@ -106,18 +106,48 @@ LogicalResult ConvertTosaRescaleToStablehlo::matchAndRewrite(
   auto i32Type = inputType.clone(rewriter.getI32Type());
   auto i64Type = inputType.clone(rewriter.getI64Type());
 
-  // construct multiplier, shift constant values from op attrs
-  // for scale32, multiplier is tensor of i32
+  // construct multiplier, shift constant values for scale32, multiplier and
+  // shift are constant tensors of i32 or i8, respectively.
+  DenseElementsAttr multiplierElems;
+  if (!matchPattern(op.getMultiplier(), m_Constant(&multiplierElems))) {
+    return rewriter.notifyMatchFailure(
+        op, "tosa.rescale requires constant multiplier input values");
+  }
+  llvm::SmallVector<int32_t> multiplierValues =
+      llvm::to_vector(multiplierElems.getValues<int32_t>());
   Value multiplier = getStablehloConstantOp(
-      rewriter, loc, DenseElementsAttr::get(i32Type, op.getMultiplier()));
+      rewriter, loc,
+      DenseElementsAttr::get(
+          i32Type, rewriter.getI32IntegerAttr(multiplierValues.front())));
+  DenseElementsAttr shiftElems;
+  if (!matchPattern(op.getShift(), m_Constant(&shiftElems))) {
+    return rewriter.notifyMatchFailure(
+        op, "tosa.rescale requires constant shift input values");
+  }
+  llvm::SmallVector<int8_t> shiftValues =
+      llvm::to_vector(shiftElems.getValues<int8_t>());
   Value shift = getStablehloConstantOp(
-      rewriter, loc, DenseElementsAttr::get(i8Type, op.getShift()));
+      rewriter, loc,
+      DenseElementsAttr::get(i8Type,
+                             rewriter.getI8IntegerAttr(shiftValues.front())));
 
-  // construct inputZp and outputZp from op attrs
+  // construct inputZp and outputZp
+  FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+  if (failed(maybeIZp)) {
+    return rewriter.notifyMatchFailure(
+        op, "input zero point cannot be statically determined");
+  }
   Value inputZpI32 = getStablehloConstantOp(
-      rewriter, loc, DenseElementsAttr::get(i32Type, op.getInputZpAttr()));
+      rewriter, loc,
+      DenseElementsAttr::get(i32Type, rewriter.getI32IntegerAttr(*maybeIZp)));
+  FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
+  if (failed(maybeOZp)) {
+    return rewriter.notifyMatchFailure(
+        op, "output zero point cannot be statically determined");
+  }
   Value outputZpI32 = getStablehloConstantOp(
-      rewriter, loc, DenseElementsAttr::get(i32Type, op.getOutputZpAttr()));
+      rewriter, loc,
+      DenseElementsAttr::get(i32Type, rewriter.getI32IntegerAttr(*maybeOZp)));
 
   // construct constant 1, min and max tensors
   Value onesI64 = getStablehloConstantOp(rewriter, loc,

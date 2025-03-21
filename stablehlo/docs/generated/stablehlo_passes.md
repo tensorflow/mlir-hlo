@@ -351,3 +351,17 @@ _Convert between versions of VHLO._
 ```
 -target : The target version. Must be a version of the form #.#.# .
 ```
+
+### `-stablehlo-quant-legalize-to-tosa-rescale`
+
+_Legalize StableHLO Quantized operations to TOSA rescale operations_
+
+This pass rewrites StableHLO quantized operations to integer operations
+by inserting TOSA rescale operations at the inputs and outputs of the
+integer operations.
+
+### `-tosa-rescale-legalize-to-stablehlo`
+
+_Legalize TOSA rescales to StableHlo primitive math operations_
+
+This pass rewrites TOSA rescale operations to StableHLO primitive math operations.

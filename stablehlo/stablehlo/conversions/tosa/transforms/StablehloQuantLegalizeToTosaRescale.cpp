@@ -45,13 +45,24 @@ Value buildRescale(PatternRewriter &rewriter, Location loc,
                    ShapedType outputType, Value inputVal, int32_t multiplier,
                    int32_t shift, int64_t inputZp, int64_t outputZp,
                    bool doubleRound, bool scale32, bool perChannel) {
+  auto multiplierVal = getConstTensorInt<int32_t>(rewriter, loc, {multiplier});
+  auto shiftVal =
+      getConstTensorInt<int8_t>(rewriter, loc, static_cast<int8_t>(shift));
+  auto inputZpVal =
+      createZeroPointTensor(rewriter, loc, inputVal.getType(), inputZp);
+  if (!inputZpVal) {
+    (void)emitError(loc,
+                    "Failed to create input zero point tensor for RescaleOp");
+  }
+  auto outputZpVal = createZeroPointTensor(rewriter, loc, outputType, outputZp);
+  if (!outputZpVal) {
+    (void)emitError(loc,
+                    "Failed to create output zero point tensor for RescaleOp");
+  }
   auto rescale_op = rewriter.create<RescaleOp>(
-      loc, outputType, inputVal,
-      rewriter.getI32IntegerAttr(static_cast<int32_t>(inputZp)),
-      rewriter.getI32IntegerAttr(static_cast<int32_t>(outputZp)),
-      rewriter.getDenseI32ArrayAttr({multiplier}),
-      rewriter.getDenseI8ArrayAttr({static_cast<int8_t>(shift)}),
-      rewriter.getBoolAttr(scale32), rewriter.getBoolAttr(doubleRound),
+      loc, outputType, inputVal, multiplierVal, shiftVal, inputZpVal.value(),
+      outputZpVal.value(), rewriter.getBoolAttr(scale32),
+      rewriter.getStringAttr(doubleRound ? "DOUBLE_ROUND" : "SINGLE_ROUND"),
       rewriter.getBoolAttr(perChannel),
       /*input_unsigned=*/rewriter.getBoolAttr(false),
       /*output_unsigned=*/rewriter.getBoolAttr(false));

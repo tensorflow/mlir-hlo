@@ -26,7 +26,12 @@ config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 config.suffixes = ['.mlir']
 config.test_source_root = os.path.dirname(__file__)
 # TODO: remove the following once #2751 is fixed.
-config.excludes = ['legalize_quant_ops_to_tosa_rescale.mlir', 'legalize_tosa_rescale_to_stablehlo.mlir', 'rescale_interpreter.mlir', 'binary.mlir', 'nullary.mlir', 'unary.mlir']
+config.excludes = [
+    'rescale_interpreter.mlir',
+    'binary.mlir',
+    'nullary.mlir',
+    'unary.mlir',
+]
 
 # Disallow reusing variables across CHECK-LABEL matches.
 # A variable can eschew this (be made "global") by prefixing its name with $.

@@ -59,8 +59,6 @@ RUNFILES_DIR = LITE_CFG_PY.parents[4].absolute().as_posix()''',
     for src in glob(
         ["**/*.mlir"],
         exclude = [
-            "legalize_quant_ops_to_tosa_rescale.mlir",
-            "legalize_tosa_rescale_to_stablehlo.mlir",
             "rescale_interpreter.mlir",
             "binary.mlir",
             "nullary.mlir",

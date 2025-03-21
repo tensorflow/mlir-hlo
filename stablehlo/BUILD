@@ -1542,8 +1542,6 @@ glob_lit_tests(
     driver = "@llvm-project//mlir:run_lit.sh",
     exclude = [
         # TODO: remove the following excludes once #2751 is fixed.
-        "stablehlo/conversions/tosa/tests/legalize_quant_ops_to_tosa_rescale.mlir",
-        "stablehlo/conversions/tosa/tests/legalize_tosa_rescale_to_stablehlo.mlir",
         "stablehlo/conversions/tosa/tests/rescale_interpreter.mlir",
         "stablehlo/conversions/tosa/tests/binary.mlir",
         "stablehlo/conversions/tosa/tests/nullary.mlir",
@@ -1638,9 +1636,8 @@ cc_library(
     srcs = [
         "stablehlo/conversions/tosa/transforms/StablehloLegalizeToTosa.cpp",
         "stablehlo/conversions/tosa/transforms/StablehloPrepareForTosa.cpp",
-        # TODO: un-comment the following once #2751 is fixed
-        # "stablehlo/conversions/tosa/transforms/StablehloQuantLegalizeToTosaRescale.cpp",
-        # "stablehlo/conversions/tosa/transforms/TosaRescaleLegalizeToStablehlo.cpp",
+        "stablehlo/conversions/tosa/transforms/StablehloQuantLegalizeToTosaRescale.cpp",
+        "stablehlo/conversions/tosa/transforms/TosaRescaleLegalizeToStablehlo.cpp",
     ],
     hdrs = [
         "stablehlo/conversions/tosa/transforms/Passes.h",
