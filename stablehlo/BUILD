@@ -1541,13 +1541,6 @@ glob_lit_tests(
     name = "all_tests",
     data = [":test_data"],
     driver = "@llvm-project//mlir:run_lit.sh",
-    exclude = [
-        # TODO: remove the following excludes once #2751 is fixed.
-        "stablehlo/conversions/tosa/tests/rescale_interpreter.mlir",
-        "stablehlo/conversions/tosa/tests/binary.mlir",
-        "stablehlo/conversions/tosa/tests/nullary.mlir",
-        "stablehlo/conversions/tosa/tests/unary.mlir",
-    ],
     test_file_exts = ["mlir"],
 )
 

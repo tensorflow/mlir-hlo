@@ -40,30 +40,42 @@ namespace tosa {
 
 namespace {
 
+Value buildRescaleMultiplier(bool scale32, OpBuilder &builder, Location loc,
+                             ArrayRef<int32_t> multipliers) {
+  if (scale32) {
+    return tosa::getConstTensorInt<int32_t>(builder, loc, multipliers);
+  } else {
+    SmallVector<int16_t> vec(multipliers.begin(), multipliers.end());
+    return tosa::getConstTensorInt<int16_t>(builder, loc, vec);
+  }
+}
+
 // create a tosa rescale op and return its result value
 Value buildRescale(PatternRewriter &rewriter, Location loc,
                    ShapedType outputType, Value inputVal, int32_t multiplier,
                    int32_t shift, int64_t inputZp, int64_t outputZp,
                    bool doubleRound, bool scale32, bool perChannel) {
-  auto multiplierVal = getConstTensorInt<int32_t>(rewriter, loc, {multiplier});
-  auto shiftVal =
-      getConstTensorInt<int8_t>(rewriter, loc, static_cast<int8_t>(shift));
+  auto multiplierVal =
+      buildRescaleMultiplier(scale32, rewriter, loc, {multiplier});
+  auto shiftVal = tosa::getConstTensorInt<int8_t>(rewriter, loc,
+                                                  {static_cast<int8_t>(shift)});
   auto inputZpVal =
-      createZeroPointTensor(rewriter, loc, inputVal.getType(), inputZp);
-  if (!inputZpVal) {
-    (void)emitError(loc,
-                    "Failed to create input zero point tensor for RescaleOp");
-  }
-  auto outputZpVal = createZeroPointTensor(rewriter, loc, outputType, outputZp);
-  if (!outputZpVal) {
-    (void)emitError(loc,
-                    "Failed to create output zero point tensor for RescaleOp");
-  }
+      tosa::createZeroPointTensor(rewriter, loc, inputVal.getType(), inputZp);
+  assert(
+      inputZpVal.has_value() &&
+      "buildRescale: Failed to create input zero-point tensor for RescaleOp.");
+  auto outputZpVal =
+      tosa::createZeroPointTensor(rewriter, loc, outputType, outputZp);
+  assert(
+      outputZpVal.has_value() &&
+      "buildRescale: Failed to create output zero-point tensor for RescaleOp.");
+
+  std::string roundingMode = doubleRound ? "DOUBLE_ROUND" : "SINGLE_ROUND";
+
   auto rescale_op = rewriter.create<RescaleOp>(
       loc, outputType, inputVal, multiplierVal, shiftVal, inputZpVal.value(),
       outputZpVal.value(), rewriter.getBoolAttr(scale32),
-      rewriter.getStringAttr(doubleRound ? "DOUBLE_ROUND" : "SINGLE_ROUND"),
-      rewriter.getBoolAttr(perChannel),
+      rewriter.getStringAttr(roundingMode), rewriter.getBoolAttr(perChannel),
       /*input_unsigned=*/rewriter.getBoolAttr(false),
       /*output_unsigned=*/rewriter.getBoolAttr(false));
 
@@ -288,6 +300,13 @@ LogicalResult matchAndRewriteBinaryOp(StablehloOp op, PatternRewriter &rewriter,
         op,
         "The conversion supports operands/results with per-tensor quantized "
         "types only");
+  }
+
+  if (!lhsQType.isSigned() || !rhsQType.isSigned() || !resultQType.isSigned()) {
+    return rewriter.notifyMatchFailure(
+        op,
+        "The conversion supports operands/results with signed storage types "
+        "only");
   }
 
   double lhsRescaleScale, rhsRescaleScale, resultRescaleScale;
