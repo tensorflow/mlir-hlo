@@ -49,16 +49,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "base_attr_interfaces_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-attr-interface-decls"],
-            "stablehlo/dialect/BaseAttrInterfaces.h.inc",
-        ),
-        (
-            ["-gen-attr-interface-defs"],
-            "stablehlo/dialect/BaseAttrInterfaces.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/BaseAttrInterfaces.h.inc": ["-gen-attr-interface-decls"],
+        "stablehlo/dialect/BaseAttrInterfaces.cpp.inc": ["-gen-attr-interface-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/Base.td",
     deps = [":stablehlo_ops_td_files"],
@@ -96,16 +90,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "check_ops_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "stablehlo/tests/CheckOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "stablehlo/tests/CheckOps.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/tests/CheckOps.h.inc": ["-gen-op-decls"],
+        "stablehlo/tests/CheckOps.cpp.inc": ["-gen-op-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/tests/CheckOps.td",
     deps = [
@@ -150,16 +138,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "chlo_attrs_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-attrdef-decls"],
-            "stablehlo/dialect/ChloAttrs.h.inc",
-        ),
-        (
-            ["-gen-attrdef-defs"],
-            "stablehlo/dialect/ChloAttrs.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/ChloAttrs.h.inc": ["-gen-attrdef-decls"],
+        "stablehlo/dialect/ChloAttrs.cpp.inc": ["-gen-attrdef-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/ChloOps.td",
     deps = [
@@ -213,16 +195,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "chlo_enums_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-enum-decls"],
-            "stablehlo/dialect/ChloEnums.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "stablehlo/dialect/ChloEnums.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/ChloEnums.h.inc": ["-gen-enum-decls"],
+        "stablehlo/dialect/ChloEnums.cpp.inc": ["-gen-enum-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/ChloOps.td",
     deps = [
@@ -232,16 +208,10 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "chlo_ops_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "stablehlo/dialect/ChloOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "stablehlo/dialect/ChloOps.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/ChloOps.h.inc": ["-gen-op-decls"],
+        "stablehlo/dialect/ChloOps.cpp.inc": ["-gen-op-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/ChloOps.td",
     deps = [
@@ -333,12 +303,7 @@ cc_library(
 
 gentbl_cc_library(
     name = "chlo_rewriters_inc_gen",
-    tbl_outs = [
-        (
-            ["--gen-rewriters"],
-            "stablehlo/transforms/ChloDecompositionPatterns.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/transforms/ChloDecompositionPatterns.h.inc": ["--gen-rewriters"]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/transforms/ChloDecompositionPatterns.td",
     deps = [
@@ -349,12 +314,7 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "stablehlo_aggressive_simplification_inc_gen",
-    tbl_outs = [
-        (
-            ["--gen-rewriters"],
-            "stablehlo/transforms/optimization/StablehloAggressiveSimplificationPatterns.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/transforms/optimization/StablehloAggressiveSimplificationPatterns.h.inc": ["--gen-rewriters"]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/transforms/optimization/StablehloAggressiveSimplificationPatterns.td",
     deps = [
@@ -364,12 +324,7 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "stablehlo_legalize_deprecated_ops_inc_gen",
-    tbl_outs = [
-        (
-            ["--gen-rewriters"],
-            "stablehlo/transforms/StablehloLegalizeDeprecatedOpsPatterns.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/transforms/StablehloLegalizeDeprecatedOpsPatterns.h.inc": ["--gen-rewriters"]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/transforms/StablehloLegalizeDeprecatedOpsPatterns.td",
     deps = [
@@ -379,12 +334,7 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "vhlo_rewriters_inc_gen",
-    tbl_outs = [
-        (
-            ["--gen-rewriters"],
-            "stablehlo/transforms/VhloToVersionPatterns.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/transforms/VhloToVersionPatterns.h.inc": ["--gen-rewriters"]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/transforms/VhloToVersionPatterns.td",
     deps = [
@@ -394,12 +344,7 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "stablehlo_compatibility_expander_inc_gen",
-    tbl_outs = [
-        (
-            ["--gen-rewriters"],
-            "stablehlo/transforms/StablehloCompatibilityExpanderPatterns.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/transforms/StablehloCompatibilityExpanderPatterns.h.inc": ["--gen-rewriters"]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/transforms/StablehloCompatibilityExpanderPatterns.td",
     deps = [
@@ -409,12 +354,7 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "stablehlo_complex_math_expander_inc_gen",
-    tbl_outs = [
-        (
-            ["--gen-rewriters"],
-            "stablehlo/transforms/StablehloComplexMathExpanderPatterns.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/transforms/StablehloComplexMathExpanderPatterns.h.inc": ["--gen-rewriters"]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/transforms/StablehloComplexMathExpanderPatterns.td",
     deps = [
@@ -464,16 +404,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "interpreter_ops_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "stablehlo/reference/InterpreterOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "stablehlo/reference/InterpreterOps.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/reference/InterpreterOps.h.inc": ["-gen-op-decls"],
+        "stablehlo/reference/InterpreterOps.cpp.inc": ["-gen-op-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/reference/InterpreterOps.td",
     deps = [
@@ -495,15 +429,10 @@ td_library(
 gentbl_cc_library(
     name = "interpreter_pass_inc_gen",
     strip_include_prefix = ".",
-    tbl_outs = [
-        (
-            [
-                "-gen-pass-decls",
-                "-name=InterpreterTransforms",
-            ],
-            "stablehlo/reference/InterpreterPasses.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/reference/InterpreterPasses.h.inc": [
+        "-gen-pass-decls",
+        "-name=InterpreterTransforms",
+    ]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/reference/InterpreterPasses.td",
     deps = ["@llvm-project//mlir:PassBaseTdFiles"],
@@ -532,15 +461,10 @@ cc_library(
 gentbl_cc_library(
     name = "linalg_pass_inc_gen",
     strip_include_prefix = ".",
-    tbl_outs = [
-        (
-            [
-                "-gen-pass-decls",
-                "-name=StablehloLinalgTransforms",
-            ],
-            "stablehlo/conversions/linalg/transforms/Passes.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/conversions/linalg/transforms/Passes.h.inc": [
+        "-gen-pass-decls",
+        "-name=StablehloLinalgTransforms",
+    ]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/conversions/linalg/transforms/Passes.td",
     deps = ["@llvm-project//mlir:PassBaseTdFiles"],
@@ -926,16 +850,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "stablehlo_attrs_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-attrdef-decls"],
-            "stablehlo/dialect/StablehloAttrs.h.inc",
-        ),
-        (
-            ["-gen-attrdef-defs"],
-            "stablehlo/dialect/StablehloAttrs.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/StablehloAttrs.h.inc": ["-gen-attrdef-decls"],
+        "stablehlo/dialect/StablehloAttrs.cpp.inc": ["-gen-attrdef-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/StablehloOps.td",
     deps = [
@@ -1087,16 +1005,10 @@ alias(
 
 gentbl_cc_library(
     name = "stablehlo_enums_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-enum-decls"],
-            "stablehlo/dialect/StablehloEnums.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "stablehlo/dialect/StablehloEnums.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/StablehloEnums.h.inc": ["-gen-enum-decls"],
+        "stablehlo/dialect/StablehloEnums.cpp.inc": ["-gen-enum-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/StablehloOps.td",
     deps = [
@@ -1106,22 +1018,16 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "stablehlo_types_inc_gen",
-    tbl_outs = [
-        (
-            [
-                "-gen-typedef-decls",
-                "--typedefs-dialect=stablehlo",
-            ],
-            "stablehlo/dialect/StablehloTypeDefs.h.inc",
-        ),
-        (
-            [
-                "-gen-typedef-defs",
-                "--typedefs-dialect=stablehlo",
-            ],
-            "stablehlo/dialect/StablehloTypeDefs.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/StablehloTypeDefs.h.inc": [
+            "-gen-typedef-decls",
+            "--typedefs-dialect=stablehlo",
+        ],
+        "stablehlo/dialect/StablehloTypeDefs.cpp.inc": [
+            "-gen-typedef-defs",
+            "--typedefs-dialect=stablehlo",
+        ],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/StablehloOps.td",
     deps = [
@@ -1131,16 +1037,10 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "stablehlo_ops_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "stablehlo/dialect/StablehloOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "stablehlo/dialect/StablehloOps.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/StablehloOps.h.inc": ["-gen-op-decls"],
+        "stablehlo/dialect/StablehloOps.cpp.inc": ["-gen-op-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/StablehloOps.td",
     deps = [
@@ -1206,14 +1106,9 @@ td_library(
 gentbl_cc_library(
     name = "stablehlo_pass_inc_gen",
     strip_include_prefix = ".",
-    tbl_outs = [
-        (
-            [
-                "-gen-pass-decls",
-            ],
-            "stablehlo/transforms/Passes.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/transforms/Passes.h.inc": [
+        "-gen-pass-decls",
+    ]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/transforms/Passes.td",
     deps = ["@llvm-project//mlir:PassBaseTdFiles"],
@@ -1312,15 +1207,10 @@ cc_library(
 gentbl_cc_library(
     name = "stablehlo_passes_optimization_inc_gen",
     strip_include_prefix = ".",
-    tbl_outs = [
-        (
-            [
-                "-gen-pass-decls",
-                "-name=Optimization",
-            ],
-            "stablehlo/transforms/optimization/Passes.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/transforms/optimization/Passes.h.inc": [
+        "-gen-pass-decls",
+        "-name=Optimization",
+    ]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/transforms/optimization/Passes.td",
     deps = ["@llvm-project//mlir:PassBaseTdFiles"],
@@ -1564,15 +1454,10 @@ filegroup(
 
 gentbl_cc_library(
     name = "test_utils_inc_gen",
-    tbl_outs = [
-        (
-            [
-                "-gen-pass-decls",
-                "-name=HloTest",
-            ],
-            "stablehlo/tests/TestUtils.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/tests/TestUtils.h.inc": [
+        "-gen-pass-decls",
+        "-name=HloTest",
+    ]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/tests/TestUtils.td",
     deps = [
@@ -1618,15 +1503,10 @@ cc_library(
 gentbl_cc_library(
     name = "tosa_pass_inc_gen",
     strip_include_prefix = ".",
-    tbl_outs = [
-        (
-            [
-                "-gen-pass-decls",
-                "-name=StablehloTOSATransforms",
-            ],
-            "stablehlo/conversions/tosa/transforms/Passes.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/conversions/tosa/transforms/Passes.h.inc": [
+        "-gen-pass-decls",
+        "-name=StablehloTOSATransforms",
+    ]},
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/conversions/tosa/transforms/Passes.td",
     deps = ["@llvm-project//mlir:PassBaseTdFiles"],
@@ -1666,12 +1546,7 @@ cc_library(
 gentbl_cc_library(
     name = "tosa_pdll_inc_gen",
     strip_include_prefix = ".",
-    tbl_outs = [
-        (
-            ["-x=cpp"],
-            "stablehlo/conversions/tosa/transforms/StablehloLegalizeToTosa.pdll.h.inc",
-        ),
-    ],
+    tbl_outs = {"stablehlo/conversions/tosa/transforms/StablehloLegalizeToTosa.pdll.h.inc": ["-x=cpp"]},
     tblgen = "@llvm-project//mlir:mlir-pdll",
     td_file = "stablehlo/conversions/tosa/transforms/StablehloLegalizeToTosa.pdll",
     deps = [
@@ -1699,16 +1574,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "vhlo_attr_interfaces_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-attr-interface-decls"],
-            "stablehlo/dialect/VhloAttrInterfaces.h.inc",
-        ),
-        (
-            ["-gen-attr-interface-defs"],
-            "stablehlo/dialect/VhloAttrInterfaces.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/VhloAttrInterfaces.h.inc": ["-gen-attr-interface-decls"],
+        "stablehlo/dialect/VhloAttrInterfaces.cpp.inc": ["-gen-attr-interface-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/VhloEnums.td",
     deps = [
@@ -1718,16 +1587,10 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "vhlo_attrs_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-attrdef-decls"],
-            "stablehlo/dialect/VhloAttrs.h.inc",
-        ),
-        (
-            ["-gen-attrdef-defs"],
-            "stablehlo/dialect/VhloAttrs.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/VhloAttrs.h.inc": ["-gen-attrdef-decls"],
+        "stablehlo/dialect/VhloAttrs.cpp.inc": ["-gen-attrdef-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/VhloOps.td",
     deps = [
@@ -1777,16 +1640,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "vhlo_enums_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-enum-decls"],
-            "stablehlo/dialect/VhloEnums.h.inc",
-        ),
-        (
-            ["-gen-enum-defs"],
-            "stablehlo/dialect/VhloEnums.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/VhloEnums.h.inc": ["-gen-enum-decls"],
+        "stablehlo/dialect/VhloEnums.cpp.inc": ["-gen-enum-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/VhloEnums.td",
     deps = [
@@ -1796,16 +1653,10 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "vhlo_op_interfaces_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-op-interface-decls"],
-            "stablehlo/dialect/VhloOpInterfaces.h.inc",
-        ),
-        (
-            ["-gen-op-interface-defs"],
-            "stablehlo/dialect/VhloOpInterfaces.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/VhloOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "stablehlo/dialect/VhloOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/VhloOps.td",
     deps = [
@@ -1846,16 +1697,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "vhlo_ops_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-op-decls"],
-            "stablehlo/dialect/VhloOps.h.inc",
-        ),
-        (
-            ["-gen-op-defs"],
-            "stablehlo/dialect/VhloOps.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/VhloOps.h.inc": ["-gen-op-decls"],
+        "stablehlo/dialect/VhloOps.cpp.inc": ["-gen-op-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/VhloOps.td",
     deps = [
@@ -1933,16 +1778,10 @@ cc_library(
 
 gentbl_cc_library(
     name = "vhlo_type_interfaces_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-type-interface-decls"],
-            "stablehlo/dialect/VhloTypeInterfaces.h.inc",
-        ),
-        (
-            ["-gen-type-interface-defs"],
-            "stablehlo/dialect/VhloTypeInterfaces.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/VhloTypeInterfaces.h.inc": ["-gen-type-interface-decls"],
+        "stablehlo/dialect/VhloTypeInterfaces.cpp.inc": ["-gen-type-interface-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/VhloTypes.td",
     deps = [
@@ -1952,16 +1791,10 @@ gentbl_cc_library(
 
 gentbl_cc_library(
     name = "vhlo_types_inc_gen",
-    tbl_outs = [
-        (
-            ["-gen-typedef-decls"],
-            "stablehlo/dialect/VhloTypeDefs.h.inc",
-        ),
-        (
-            ["-gen-typedef-defs"],
-            "stablehlo/dialect/VhloTypeDefs.cpp.inc",
-        ),
-    ],
+    tbl_outs = {
+        "stablehlo/dialect/VhloTypeDefs.h.inc": ["-gen-typedef-decls"],
+        "stablehlo/dialect/VhloTypeDefs.cpp.inc": ["-gen-typedef-defs"],
+    },
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "stablehlo/dialect/VhloOps.td",
     deps = [
