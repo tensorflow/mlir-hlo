@@ -1431,13 +1431,6 @@ glob_lit_tests(
     name = "all_tests",
     data = [":test_data"],
     driver = "@llvm-project//mlir:run_lit.sh",
-    exclude = [
-        # TODO(b/408067494): Re-enable these tests.
-        "stablehlo/testdata/fft_complex64_14_15_0_17.mlir",
-        "stablehlo/testdata/fft_complex128_14_15_0_17.mlir",
-        "stablehlo/testdata/fft_float32_14_15_0_17.mlir",
-        "stablehlo/testdata/fft_float64_14_15_0_17.mlir",
-    ],
     test_file_exts = ["mlir"],
 )
 
