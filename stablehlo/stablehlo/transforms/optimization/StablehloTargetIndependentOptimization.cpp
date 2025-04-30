@@ -56,10 +56,10 @@ struct StablehloTargetIndependentOptimizationPass
 
   void runOnOperation() override {
     GreedyRewriteConfig config;
-    config.fold = true;
-    config.cseConstants = true;
-    config.maxIterations = kFoldOpEltLimit;
-    config.useTopDownTraversal = false;
+    config.enableFolding(true)
+        .enableConstantCSE(true)
+        .setMaxIterations(kFoldOpEltLimit)
+        .setUseTopDownTraversal(false);
     if (failed(applyPatternsGreedily(getOperation(), patterns, config)))
       signalPassFailure();
   }
