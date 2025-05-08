@@ -460,7 +460,7 @@ class RefineShapeState {
   LogicalResult emitDifferentRefinementContextError(func::FuncOp func,
                                                     RefinementKey key,
                                                     RefinementKey prevKey) {
-    return func.emitOpError() << "refined with incompatible refinement keys:"
+    return func.emitOpError() << "refined with invompatible refinement keys:"
                               << "\n  curr=" << key.toString()
                               << "\n  prev=" << prevKey.toString();
   }
