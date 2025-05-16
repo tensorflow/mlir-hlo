@@ -22,6 +22,7 @@ limitations under the License.
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <iterator>
@@ -2645,20 +2646,20 @@ class FoldConstantCaseOp : public OpRewritePattern<CaseOp> {
     if (!matchPattern(op.getIndex(), m_Constant(&branch))) return failure();
 
     int index = *branch.getValues<int>().begin();
-    if (index >= op.getBranches().size() || index < 0) {
+    if (static_cast<size_t>(index) >= op.getBranches().size() || index < 0) {
       return failure();
     }
 
-    Block &block = op.getBranches()[index].back();
+    Block& block = op.getBranches()[index].back();
     IRMapping mapping;
-    for (auto &block_op : block.without_terminator()) {
+    for (auto& block_op : block.without_terminator()) {
       rewriter.clone(block_op, mapping);
     }
     rewriter.replaceOp(
         op, llvm::to_vector(llvm::map_range(
-            block.getTerminator()->getOperands(),
-            [&](Value v) { return mapping.lookupOrDefault(v); })));
-      return success();
+                block.getTerminator()->getOperands(),
+                [&](Value v) { return mapping.lookupOrDefault(v); })));
+    return success();
   }
 };
 
