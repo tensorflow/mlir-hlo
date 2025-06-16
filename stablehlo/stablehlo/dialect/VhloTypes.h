@@ -27,7 +27,6 @@ limitations under the License.
 namespace mlir {
 namespace vhlo {
 
-
 // This class is used to manage conversions between VHLO and Builtin
 // dialects.
 class VhloTypeConverter : public TypeConverter {
