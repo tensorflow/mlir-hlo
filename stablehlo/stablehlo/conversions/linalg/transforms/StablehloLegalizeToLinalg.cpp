@@ -30,6 +30,7 @@ limitations under the License.
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Casting.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
@@ -71,7 +72,6 @@ limitations under the License.
 #include "stablehlo/conversions/linalg/transforms/Rewriters.h"
 #include "stablehlo/conversions/linalg/transforms/TypeConversion.h"
 #include "stablehlo/dialect/StablehloOps.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "stablehlo-legalize-to-linalg"
 
