@@ -411,6 +411,12 @@ func.func @attr_type_extensions_bounds(%arg0: tensor<?x?xf32, #stablehlo.type_ex
   func.return %arg0 : tensor<?x?xf32, #stablehlo.type_extensions<bounds = [16, ?]>>
 }
 
+// CHECK-LABEL: "attr_frontend_attributes"
+func.func @attr_frontend_attributes(%arg0: tensor<f32>) -> tensor<f32> {
+  // CHECK: some.unregistered_attr
+  %1 = stablehlo.cosine %arg0 {some.unregistered_attr = 1 : i32} : tensor<f32>
+  return %1 : tensor<f32>
+}
 
 // ============ DEFAULTS ============
 
