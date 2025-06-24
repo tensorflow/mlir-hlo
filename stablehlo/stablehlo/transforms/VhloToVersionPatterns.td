@@ -19,9 +19,9 @@ include "mlir/IR/CommonAttrConstraints.td"
 include "stablehlo/dialect/VhloEnums.td"
 include "stablehlo/dialect/VhloAttrs.td"
 
-def VHLO_GetEmptyDims : NativeCodeCall<"getEmptyI64Tensor($_builder)">;
+def VHLO_GetEmptyTensor : NativeCodeCall<"getEmptyI64Tensor($_builder)">;
 
-def VHLO_EmptyDims : AttrConstraint<CPred<"isEmptyTensor($_self)">, "Empty dims">;
+def VHLO_EmptyTensor : AttrConstraint<CPred<"isEmptyTensor($_self)">, "Empty dims">;
 
 def VHLO_NoneType : AttrConstraint<CPred<"isNoneType($_self)">, "None type">;
 
@@ -53,21 +53,21 @@ def DynamicConvDowngradeV2ToV1:
 
 def GatherOpUpgradeV1ToV2:
   Pat<(VHLO_GatherOpV1:$src $operand, $start_indices, $offset_dims, $collapsed_slice_dims, $start_index_map, $index_vector_dim, $slice_sizes, $indices_are_sorted),
-      (VHLO_GatherOpV2:$dst $operand, $start_indices, $offset_dims, $collapsed_slice_dims, (VHLO_GetEmptyDims), (VHLO_GetEmptyDims), $start_index_map, $index_vector_dim, $slice_sizes, $indices_are_sorted),
+      (VHLO_GatherOpV2:$dst $operand, $start_indices, $offset_dims, $collapsed_slice_dims, (VHLO_GetEmptyTensor), (VHLO_GetEmptyTensor), $start_index_map, $index_vector_dim, $slice_sizes, $indices_are_sorted),
       [], [(VHLO_CopyDiscardableAttrs $src, $dst)]>;
 
 def GatherOpDowngradeV2ToV1 :
-  Pat<(VHLO_GatherOpV2:$src $operand, $start_indices, $offset_dims, $collapsed_slice_dims, VHLO_EmptyDims:$operand_batching_dims, VHLO_EmptyDims:$start_indices_batching_dims, $start_index_map, $index_vector_dim, $slice_sizes, $indices_are_sorted),
+  Pat<(VHLO_GatherOpV2:$src $operand, $start_indices, $offset_dims, $collapsed_slice_dims, VHLO_EmptyTensor:$operand_batching_dims, VHLO_EmptyTensor:$start_indices_batching_dims, $start_index_map, $index_vector_dim, $slice_sizes, $indices_are_sorted),
       (VHLO_GatherOpV1:$dst $operand, $start_indices, $offset_dims, $collapsed_slice_dims, $start_index_map, $index_vector_dim, $slice_sizes, $indices_are_sorted),
       [], [(VHLO_CopyDiscardableAttrs $src, $dst)]>;
 
 def DynamicGatherOpUpgradeV1ToV2:
   Pat<(VHLO_DynamicGatherOpV1:$src $operand, $start_indices, $slice_sizes, $offset_dims, $collapsed_slice_dims, $start_index_map, $index_vector_dim, $indices_are_sorted),
-      (VHLO_DynamicGatherOpV2:$dst $operand, $start_indices, $slice_sizes, $offset_dims, $collapsed_slice_dims, (VHLO_GetEmptyDims), (VHLO_GetEmptyDims), $start_index_map, $index_vector_dim, $indices_are_sorted),
+      (VHLO_DynamicGatherOpV2:$dst $operand, $start_indices, $slice_sizes, $offset_dims, $collapsed_slice_dims, (VHLO_GetEmptyTensor), (VHLO_GetEmptyTensor), $start_index_map, $index_vector_dim, $indices_are_sorted),
       [], [(VHLO_CopyDiscardableAttrs $src, $dst)]>;
 
 def DynamicGatherOpDowngradeV2ToV1 :
-  Pat<(VHLO_DynamicGatherOpV2:$src $operand, $start_indices, $slice_sizes, $offset_dims, $collapsed_slice_dims, VHLO_EmptyDims:$operand_batching_dims, VHLO_EmptyDims:$start_indices_batching_dims, $start_index_map, $index_vector_dim, $indices_are_sorted),
+  Pat<(VHLO_DynamicGatherOpV2:$src $operand, $start_indices, $slice_sizes, $offset_dims, $collapsed_slice_dims, VHLO_EmptyTensor:$operand_batching_dims, VHLO_EmptyTensor:$start_indices_batching_dims, $start_index_map, $index_vector_dim, $indices_are_sorted),
       (VHLO_DynamicGatherOpV1:$dst $operand, $start_indices, $slice_sizes, $offset_dims, $collapsed_slice_dims, $start_index_map, $index_vector_dim, $indices_are_sorted),
       [], [(VHLO_CopyDiscardableAttrs $src, $dst)]>;
 
@@ -102,6 +102,26 @@ def DotGeneralOpUpradeV1ToV2 :
       (VHLO_DotGeneralOpV2:$dst $lhs, $rhs, $lhs_batching_dimensions, $rhs_batching_dimensions, $lhs_contracting_dimensions, $rhs_contracting_dimensions, $precision_config,
          (VHLO_GetNoneType), (VHLO_GetNoneType), (VHLO_GetNoneType), (VHLO_GetNoneType), (VHLO_GetNoneType), (VHLO_GetNoneType), (VHLO_GetNoneType)),
          [], [(VHLO_CopyDiscardableAttrs $src, $dst)]>;
+
+def SendOpDowngradeV2ToV1 :
+  Pat<(VHLO_SendOpV2:$src $operand, $token, $channel_id, $channel_type, $is_host_transfer, VHLO_EmptyTensor:$source_target_pairs),
+      (VHLO_SendOpV1:$dst $operand, $token, $channel_id, $channel_type, $is_host_transfer),
+      [], [(VHLO_CopyDiscardableAttrs $src, $dst)]>;
+
+def SendOpUpgradeV1ToV2 :
+  Pat<(VHLO_SendOpV1:$src $operand, $token, $channel_id, $channel_type, $is_host_transfer),
+      (VHLO_SendOpV2:$dst $operand, $token, $channel_id, $channel_type, $is_host_transfer, (VHLO_GetEmptyTensor)),
+      [], [(VHLO_CopyDiscardableAttrs $src, $dst)]>;
+
+def RecvOpDowngradeV2ToV1 :
+  Pat<(VHLO_RecvOpV2:$src $token, $channel_id, $channel_type, $is_host_transfer, VHLO_EmptyTensor:$source_target_pairs),
+      (VHLO_RecvOpV1:$dst $token, $channel_id, $channel_type, $is_host_transfer),
+      [], [(VHLO_CopyDiscardableAttrs (VHLO_GetFirstOperand $src), (VHLO_GetFirstOperand $dst))]>;
+
+def RecvOpUpgradeV1ToV2 :
+  Pat<(VHLO_RecvOpV1:$src $token, $channel_id, $channel_type, $is_host_transfer),
+      (VHLO_RecvOpV2:$dst $token, $channel_id, $channel_type, $is_host_transfer, (VHLO_GetEmptyTensor)),
+      [], [(VHLO_CopyDiscardableAttrs (VHLO_GetFirstOperand $src), (VHLO_GetFirstOperand $dst))]>;
 
 foreach resultAccuracyOpV1V2Pair = [
   [VHLO_CbrtOpV1, VHLO_CbrtOpV2],
