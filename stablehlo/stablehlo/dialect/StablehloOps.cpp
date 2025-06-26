@@ -88,6 +88,7 @@ limitations under the License.
 #include "stablehlo/dialect/AssemblyFormat.h"
 #include "stablehlo/dialect/Base.h"
 #include "stablehlo/dialect/StablehloBytecode.h"
+#include "stablehlo/dialect/StablehloOps.h"
 #include "stablehlo/dialect/StablehloOps.h.inc"
 #include "stablehlo/dialect/TypeInference.h"
 
@@ -127,6 +128,15 @@ LogicalResult TypeExtensionsAttr::verifyEncoding(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) const {
   return hlo::verifyBounds(
       getBounds(), RankedTensorType::get(shape, elementType), emitError);
+}
+
+ArrayAttr PrecisionConfigAttr::get(MLIRContext* context,
+                                   ArrayRef<Precision> precisions) {
+  SmallVector<Attribute> precisionAttrs =
+      llvm::map_to_vector(precisions, [&](Precision precision) -> Attribute {
+        return PrecisionAttr::get(context, precision);
+      });
+  return ArrayAttr::get(context, precisionAttrs);
 }
 
 //===----------------------------------------------------------------------===//

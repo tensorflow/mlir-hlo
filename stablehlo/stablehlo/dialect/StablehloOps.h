@@ -40,6 +40,7 @@ limitations under the License.
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "stablehlo/dialect/Base.h"
 #include "stablehlo/dialect/Version.h"
@@ -191,6 +192,13 @@ void buildReduceBody(Type elementType, Region &body, OpBuilder &builder) {
       builder.create<OpTy>(loc, block->getArgument(0), block->getArgument(1));
   builder.create<stablehlo::ReturnOp>(loc, reducer.getResult());
 }
+
+// PrecisionConfigAttr is a constraint attribute on ArrayAttrs.
+// Create this class to allow for building this attr similar to other
+// attributes.
+struct PrecisionConfigAttr : public ArrayAttr {
+  static ArrayAttr get(MLIRContext *context, ArrayRef<Precision> precisions);
+};
 
 }  // end namespace stablehlo
 }  // end namespace mlir
