@@ -18,6 +18,9 @@ exports_files([
     # Export StablehloApi for MLIR-free portable API users.
     "stablehlo/integrations/python/StablehloApi.cpp",
     "stablehlo/integrations/python/StablehloApi.h",
+    # Export TD files for builder code generation.
+    "stablehlo/dialect/ChloOps.td",
+    "stablehlo/dialect/StablehloOps.td",
 ])
 
 filegroup(
