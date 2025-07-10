@@ -1261,6 +1261,9 @@ cc_library(
         "stablehlo/api/PortableApi.h",
     ],
     includes = ["."],
+    visibility = [
+        "//learning/brain/mlir:stablehlo_friends",
+    ],
     deps = [
         ":register",
         ":stablehlo_serialization",
