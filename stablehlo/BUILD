@@ -1,4 +1,6 @@
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
+load("//third_party/bazel_rules/rules_cc/cc:cc_binary.bzl", "cc_binary")
+load("//third_party/bazel_rules/rules_cc/cc:cc_test.bzl", "cc_test")
 
 package(
     # copybara:uncomment default_applicable_licenses = ["//stablehlo:license"],
