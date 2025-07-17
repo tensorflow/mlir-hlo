@@ -871,6 +871,7 @@ STABLEHLO_DIALECT_CAPI_SOURCES = [
     "stablehlo/integrations/c/StablehloDialect.cpp",
     "stablehlo/integrations/c/StablehloDialectApi.cpp",
     "stablehlo/integrations/c/StablehloTypes.cpp",
+    "stablehlo/integrations/c/InterpreterDialect.cpp",
 ]
 
 STABLEHLO_DIALECT_CAPI_HEADERS = [
@@ -878,6 +879,7 @@ STABLEHLO_DIALECT_CAPI_HEADERS = [
     "stablehlo/integrations/c/StablehloDialect.h",
     "stablehlo/integrations/c/StablehloDialectApi.h",
     "stablehlo/integrations/c/StablehloTypes.h",
+    "stablehlo/integrations/c/InterpreterDialect.h",
 ]
 
 cc_library(
@@ -885,6 +887,7 @@ cc_library(
     srcs = STABLEHLO_DIALECT_CAPI_SOURCES,
     hdrs = STABLEHLO_DIALECT_CAPI_HEADERS,
     deps = [
+        ":interpreter_ops",
         ":stablehlo_ops",
         ":stablehlo_portable_api",
         ":stablehlo_serialization",
@@ -912,6 +915,7 @@ cc_library(
     srcs = STABLEHLO_DIALECT_CAPI_SOURCES,
     hdrs = STABLEHLO_DIALECT_CAPI_HEADERS,
     deps = [
+        ":interpreter_ops",
         ":stablehlo_ops",
         ":stablehlo_portable_api",
         ":stablehlo_serialization",
@@ -936,6 +940,7 @@ STABLEHLO_UNIFIED_CAPI_HEADERS = [
     "stablehlo/integrations/c/StablehloDialectApi.h",
     "stablehlo/integrations/c/StablehloUnifiedApi.h",
     "stablehlo/integrations/c/StablehloTypes.h",
+    "stablehlo/integrations/c/InterpreterDialect.h",
 ]
 
 cc_library(
