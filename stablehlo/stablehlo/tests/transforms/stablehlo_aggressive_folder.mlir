@@ -246,6 +246,9 @@ func.func @reshape_fold() -> (tensor<1xi32>, tensor<2x2xi32>) {
 
 // -----
 
+////////
+// ConvertOp
+
 // CHECK-LABEL: func @eval_convert_f32_to_i64
 func.func @eval_convert_f32_to_i64() -> tensor<2xi64> {
   // CHECK-NOT: stablehlo.convert
@@ -254,6 +257,42 @@ func.func @eval_convert_f32_to_i64() -> tensor<2xi64> {
   %0 = stablehlo.constant dense<[1.0, 2.0]> : tensor<2xf32>
   %1 = stablehlo.convert %0 : (tensor<2xf32>) -> tensor<2xi64>
   func.return %1 : tensor<2xi64>
+}
+
+// CHECK-LABEL: func @eval_convert_bool_f32
+func.func @eval_convert_bool_f32() -> tensor<2xf32> {
+  // CHECK-NEXT: [[CST:%.+]] = stablehlo.constant dense<[0.000000e+00, 1.000000e+00]> : tensor<2xf32>
+  %cst = stablehlo.constant dense<[0, 1]> : tensor<2xi1>
+  %0 = stablehlo.convert %cst : (tensor<2xi1>) -> tensor<2xf32>
+  // CHECK-NEXT: return [[CST]]
+  func.return %0 : tensor<2xf32>
+}
+
+// CHECK-LABEL: func @eval_convert_bool_i32
+func.func @eval_convert_bool_i32() -> tensor<2xi32> {
+  // CHECK-NEXT: [[CST:%.+]] = stablehlo.constant dense<[0, 1]> : tensor<2xi32>
+  %cst = stablehlo.constant dense<[0, 1]> : tensor<2xi1>
+  %0 = stablehlo.convert %cst : (tensor<2xi1>) -> tensor<2xi32>
+  // CHECK-NEXT: return [[CST]]
+  func.return %0 : tensor<2xi32>
+}
+
+// CHECK-LABEL: func @eval_convert_i32_bool
+func.func @eval_convert_i32_bool() -> tensor<3xi1> {
+  // CHECK-NEXT: [[CST:%.+]] = stablehlo.constant dense<[false, true, true]> : tensor<3xi1>
+  %cst = stablehlo.constant dense<[0, 1, 10]> : tensor<3xi32>
+  %0 = stablehlo.convert %cst : (tensor<3xi32>) -> tensor<3xi1>
+  // CHECK-NEXT: return [[CST]]
+  func.return %0 : tensor<3xi1>
+}
+
+// CHECK-LABEL: func @eval_convert_f32_bool
+func.func @eval_convert_f32_bool() -> tensor<4xi1> {
+  // CHECK-NEXT: [[CST:%.+]] = stablehlo.constant dense<[true, false, true, true]> : tensor<4xi1>
+  %cst = stablehlo.constant dense<[-1.0, 0.0, 1.0, 10.0]> : tensor<4xf32>
+  %0 = stablehlo.convert %cst : (tensor<4xf32>) -> tensor<4xi1>
+  // CHECK-NEXT: return [[CST]]
+  func.return %0 : tensor<4xi1>
 }
 
 // -----

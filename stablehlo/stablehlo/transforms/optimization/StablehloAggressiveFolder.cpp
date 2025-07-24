@@ -200,8 +200,11 @@ LogicalResult foldConvert(PatternRewriter& rewriter, OpType op,
   auto newType = getElementTypeOrSelf(resultType);
   size_t newBitWidth = newType.getIntOrFloatBitWidth();
 
-  bool isOldTypeUnsigned = oldType.isInteger(1) || oldType.isUnsignedInteger();
-  bool isNewTypeUnsigned = newType.isInteger(1) || newType.isUnsignedInteger();
+  bool isOldTypeUnsigned =
+      oldType.isSignlessInteger(1) || oldType.isUnsignedInteger();
+  bool isNewTypeUnsigned =
+      newType.isSignlessInteger(1) || newType.isUnsignedInteger();
+  bool isNewTypeBoolean = newType.isSignlessInteger(1);
 
   if (isa<FloatType>(oldType)) {
     if (auto newFloatType = dyn_cast<FloatType>(newType)) {
@@ -217,6 +220,16 @@ LogicalResult foldConvert(PatternRewriter& rewriter, OpType op,
                                           llvm::RoundingMode::NearestTiesToEven,
                                           &losesInfo);
             return newValue;
+          });
+    }
+
+    // Float -> Boolean
+    if (isNewTypeBoolean) {
+      return foldConvertHelper<FloatAttr, IntegerAttr>(
+          rewriter, op, elements, resultType,
+          [newBitWidth](const APFloat& operand, bool& /*castStatus*/) {
+            APInt resVal(1, operand.isZero() ? 0 : 1);
+            return resVal.sextOrTrunc(newBitWidth);
           });
     }
 
@@ -249,6 +262,16 @@ LogicalResult foldConvert(PatternRewriter& rewriter, OpType op,
           apf.convertFromAPInt(operand, !isOldTypeUnsigned,
                                APFloat::rmNearestTiesToEven);
           return apf;
+        });
+  }
+
+  // Int -> Boolean
+  if (isNewTypeBoolean) {
+    return foldConvertHelper<IntegerAttr, IntegerAttr>(
+        rewriter, op, elements, resultType,
+        [newBitWidth](const APInt& operand, bool& /*castStatus*/) {
+          APInt resVal(1, operand.isZero() ? 0 : 1);
+          return resVal.sextOrTrunc(newBitWidth);
         });
   }
 
