@@ -455,7 +455,6 @@ cc_library(
     deps = [
         ":interpreter_ops",
         ":interpreter_pass_inc_gen",
-        ":stablehlo_ops",
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:Pass",
         "@llvm-project//mlir:Support",
