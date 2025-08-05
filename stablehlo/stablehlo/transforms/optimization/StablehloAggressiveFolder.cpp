@@ -836,6 +836,36 @@ struct FoldSelectOpPattern : public ShapeOpRewritePattern<SelectOp> {
   };
 };
 
+// Pattern: set_dim_size(op, size, dim) -> op [op[dim] == size]
+struct FoldSetDimensionSizeOpPattern
+    : public ShapeOpRewritePattern<SetDimensionSizeOp> {
+  using ShapeOpRewritePattern::ShapeOpRewritePattern;
+
+  LogicalResult matchAndRewrite(SetDimensionSizeOp op,
+                                PatternRewriter& rewriter) const override {
+    auto resultType = op.getType();
+    // No need to verify static shape or dtype here since we aren't evaluating
+    // dtype, just folding set_dim_size ops with no semantic meaning.
+
+    SplatElementsAttr cstSplatAttr;
+    matchPattern(op.getSize(), m_Constant(&cstSplatAttr));
+    if (!cstSplatAttr)
+      return rewriter.notifyMatchFailure(op, "size operand not constant");
+
+    // Compare to the dimension size, not the bound size.
+    // We can't fold and change shapes, but we do want to fold meaningless
+    // set_dim_size ops that use a constant to set a static dimension size
+    // like `set_dim_size(X, 2, dim=0) : (tensor<2xf32>) -> tensor<2xf32>`
+    if (cstSplatAttr.getSplatValue<APInt>() !=
+        resultType.getDimSize(op.getDimension()))
+      return rewriter.notifyMatchFailure(op,
+                                         "dim size does not match result type");
+
+    rewriter.replaceAllOpUsesWith(op, op.getOperand());
+    return success();
+  }
+};
+
 struct FoldSignOpPattern : public ShapeOpRewritePattern<SignOp> {
   using ShapeOpRewritePattern::ShapeOpRewritePattern;
 
@@ -1411,6 +1441,7 @@ void populateStablehloShapeFolderPatterns(
   patterns->add<FoldRemOpPattern>(context, options, benefit);
   patterns->add<FoldReshapeOpPattern>(context, options, benefit);
   patterns->add<FoldSelectOpPattern>(context, options, benefit);
+  patterns->add<FoldSetDimensionSizeOpPattern>(context, options, benefit);
   patterns->add<FoldSignOpPattern>(context, options, benefit);
   patterns->add<FoldSliceOpPattern>(context, options, benefit);
   patterns->add<FoldSubtractOpPattern>(context, options, benefit);
