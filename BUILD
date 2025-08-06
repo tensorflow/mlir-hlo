@@ -904,6 +904,9 @@ cc_binary(
         "@llvm-project//mlir:IR",
         "@llvm-project//mlir:MlirOptLib",
         "@llvm-project//mlir:Pass",
+        "@llvm-project//mlir:RegisterAllDialects",
+        "@llvm-project//mlir:RegisterAllExtensions",
+        "@llvm-project//mlir:RegisterAllPasses",
         "@llvm-project//mlir:Support",
     ],
 )
