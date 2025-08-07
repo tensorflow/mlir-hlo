@@ -3852,14 +3852,19 @@ ParseResult parseWindowAttributes(OpAsmParser& parser,
 //
 // Note that this right now only does comparision on the first pair of block
 // arguments.
-static void buildSortComparisonBody(llvm::ArrayRef<Type> elementTypes,
-                                    ComparisonDirection direction,
-                                    std::optional<StringRef> compareType,
-                                    Region* body, OpBuilder* builder) {
+void buildSortComparisonBody(llvm::ArrayRef<Type> elementTypes,
+                             ComparisonDirection direction,
+                             std::optional<StringRef> compareType, Region* body,
+                             OpBuilder* builder) {
   OpBuilder::InsertionGuard insertionPointGuard(*builder);
 
   Location loc = body->getLoc();
-  Block* block = builder->createBlock(body);
+  Block* block;
+  if (body->empty()) {
+    block = builder->createBlock(body);
+  } else {
+    block = &body->front();
+  }
   // Add two arguments for each element type.
   for (Type elementType : elementTypes) {
     ShapedType shapedType = RankedTensorType::get({}, elementType);
