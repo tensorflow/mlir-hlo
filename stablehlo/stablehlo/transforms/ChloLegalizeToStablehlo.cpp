@@ -6,6 +6,11 @@
 
 // Implements logic for lowering CHLO ops to StableHLO and Shape dialect ops,
 // taking care of CHLO's broadcasting semantics
+
+// This must preceed all other headers, otherwise during Windows cross
+// compilation, M_PI will not be defined.
+#define _USE_MATH_DEFINES
+
 #include <algorithm>
 #include <array>
 #include <cassert>
