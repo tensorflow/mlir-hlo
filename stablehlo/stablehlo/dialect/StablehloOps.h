@@ -172,16 +172,6 @@ DenseI64ArrayAttr getBroadcastDimensionsFromBroadcastSizes(
 // a DotOp, given the LHS of such an operation.
 DotDimensionNumbersAttr getDefaultDotDimensionNumbers(mlir::Value lhs);
 
-// Builds the region `body` for stablehlo.sort's comparator: for each type in
-// `element_types`, create two block arguments, one for lhs and one for rhs, and
-// generates stablehlo.compare op to compare them with the given `direction`.
-// Note that this right now only does comparision on the first pair of block
-// arguments.
-void buildSortComparisonBody(llvm::ArrayRef<Type> elementTypes,
-                             ComparisonDirection direction,
-                             std::optional<StringRef> compareType, Region *body,
-                             OpBuilder *builder);
-
 SortOp createSortOp(PatternRewriter *rewriter, const Location &loc,
                     const llvm::ArrayRef<Value> &operands,
                     const llvm::ArrayRef<Type> &elementTypes, int64_t dimension,
