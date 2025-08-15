@@ -3850,7 +3850,7 @@ ParseResult parseWindowAttributes(OpAsmParser& parser,
 // `element_types`, create two block arguments, one for lhs and one for rhs, and
 // generates stablehlo.compare op to compare them with the given `direction`.
 //
-// Note that this right now only does comparision on the first pair of block
+// Note that this right now only does comparison on the first pair of block
 // arguments.
 void buildSortComparisonBody(llvm::ArrayRef<Type> elementTypes,
                              ComparisonDirection direction,
