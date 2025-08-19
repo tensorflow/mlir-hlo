@@ -605,6 +605,14 @@ LogicalResult verifyResultAccuracyCombination(
 LogicalResult verifyResultAccuracyAttr(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError, APFloat atol,
     APFloat rtol, int64_t ulps, StringRef mode);
+
+// A few custom calls are used throughout the ecosystem, this verification aims
+// to allow erroring in StableHLO for these custom calls.
+LogicalResult verifyKnownCustomCalls(
+    std::optional<Location> location, Operation* op, StringRef callTargetName,
+    ::llvm::ArrayRef<::llvm::ArrayRef<int64_t>> outputTupleIndicesArray,
+    ::llvm::ArrayRef<int64_t> operandIndicesArray,
+    ::llvm::ArrayRef<::llvm::ArrayRef<int64_t>> operandTupleIndicesArray);
 }  // end namespace hlo
 }  // end namespace mlir
 

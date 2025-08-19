@@ -209,10 +209,6 @@ void buildReduceBody(Type elementType, Region &body, OpBuilder &builder) {
 struct PrecisionConfigAttr : public ArrayAttr {
   static ArrayAttr get(MLIRContext *context, ArrayRef<Precision> precisions);
 };
-
-constexpr StringRef kCreateBufferCustomCallTarget = "CreateBuffer";
-constexpr StringRef kPinCustomCallTarget = "Pin";
-constexpr StringRef kUnpinCustomCallTarget = "Unpin";
 }  // end namespace stablehlo
 }  // end namespace mlir
 
