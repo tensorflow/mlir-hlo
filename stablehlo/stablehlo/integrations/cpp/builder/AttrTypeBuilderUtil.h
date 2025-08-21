@@ -46,9 +46,6 @@ namespace mlir {
 Location unknownLoc(MLIRContext& ctx);
 Location fileLineColLoc(MLIRContext& ctx, StringRef file, int64_t line,
                         int64_t col);
-Location cppFileLineColLoc(
-    MLIRContext& ctx,
-    const std::source_location& loc = std::source_location::current());
 
 //////////////////////
 // Builders - Tensor Types
@@ -138,7 +135,7 @@ inline FloatAttr getFloatAttr(llvm::APSInt value, FloatType type) {
   return getFloatAttr(value.roundToDouble(), type);
 }
 template <typename T>
-inline FloatAttr getFloatAttr(std::complex<T> value, FloatType type) {
+FloatAttr getFloatAttr(std::complex<T> value, FloatType type) {
   return getFloatAttr(value.real(), type);
 }
 

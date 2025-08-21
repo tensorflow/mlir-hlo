@@ -15,6 +15,7 @@ limitations under the License.
 
 #include <string>
 
+#include "testing/base/public/gunit.h"
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -34,8 +35,6 @@ limitations under the License.
 #include "stablehlo/integrations/cpp/builder/FuncBuilder.h"
 #include "stablehlo/integrations/cpp/builder/MlirBuilder.h"
 #include "stablehlo/integrations/cpp/builder/StablehloBuilder.h"
-#include "testing/base/public/gmock.h"
-#include "testing/base/public/gunit.h"
 
 namespace mlir {
 namespace stablehlo {
@@ -74,7 +73,7 @@ TEST(MlirBuilderTest, SimpleAdd) {
 
   StablehloModuleBuilder mb;
   {  // Build Main Func
-    Location funcLoc = FileLineColLoc(mb.get(), "main.mlir", 1, 1);
+    Location funcLoc = fileLineColLoc(mb->getContext(), "main.mlir", 1, 1);
     func::FunctionBuilder fb(mb.get(), "main", funcLoc);
     auto type2xi64 = RankedTensorType::get({2}, fb.getOpBuilder().getI64Type());
     auto arg0 = func::Argument(fb, type2xi64);
@@ -98,7 +97,7 @@ TEST(MlirBuilderTest, MultipleReturn) {
 
   StablehloModuleBuilder mb;
   {  // Build Main Func
-    Location funcLoc = FileLineColLoc(mb.get(), "main.mlir", 1, 1);
+    Location funcLoc = fileLineColLoc(mb->getContext(), "main.mlir", 1, 1);
     func::FunctionBuilder fb(mb.get(), "main", funcLoc);
     auto type2xi64 = makeTensorType(fb.getContext(), {2}, ElementType::I64);
     auto arg0 = func::Argument(fb, type2xi64);
@@ -119,7 +118,7 @@ TEST(MlirBuilderTest, NoReturn) {
 
   StablehloModuleBuilder mb;
   {  // Build Main Func
-    Location funcLoc = FileLineColLoc(mb.get(), "main.mlir", 1, 1);
+    Location funcLoc = fileLineColLoc(mb->getContext(), "main.mlir", 1, 1);
     func::FunctionBuilder fb(mb.get(), "main", funcLoc);
     func::Return(fb, {});
   }
@@ -170,8 +169,8 @@ module {
 
   StablehloModuleBuilder mb;
   {  // Build Main Func
-    ScopedBuilderLocation loc(mb.get(),
-                              FileLineColLoc(mb.get(), "main.mlir", 1, 1));
+    ScopedBuilderLocation loc(
+        mb.get(), fileLineColLoc(mb->getContext(), "main.mlir", 1, 1));
     func::FunctionBuilder fb(mb.get(), "main");
     auto type2xi64 = makeTensorType(fb.getContext(), {}, ElementType::I64);
     auto arg0 = func::Argument(fb, type2xi64);
@@ -179,7 +178,8 @@ module {
 
     // This would typically be a library call, emulate with a lambda.
     auto buildCst = [type2xi64](MlirBuilder& b) {
-      ScopedBuilderLocation loc(b, FileLineColLoc(b, "constant.mlir", 10, 20));
+      ScopedBuilderLocation loc(
+          b, fileLineColLoc(b.getContext(), "constant.mlir", 10, 20));
       return stablehlo::Constant(b, mlir::makeConstant(1L, type2xi64));
     };
 
@@ -191,36 +191,6 @@ module {
   llvm::raw_string_ostream os(moduleString);
   module->print(os, OpPrintingFlags().enableDebugInfo());
   EXPECT_EQ(expected, moduleString);
-}
-
-TEST(MlirBuilderTest, TestCppStackSourceLocation) {
-  std::string expected = R"(#loc1 = loc("main.mlir":1:1)
-module {
-  func.func @main(%arg0: tensor<2xi64> loc("main.mlir":1:1)) -> tensor<2xi64> {
-    %c = stablehlo.constant dense<1> : tensor<i64> loc(#loc1)
-    return %1 : tensor<2xi64> loc(#loc1)
-  } loc(#loc1)
-} loc(#loc)
-#loc = loc(unknown)
-)";
-
-  StablehloModuleBuilder mb;
-  {  // Build Main Func
-    CppStackScopedBuilderLocation loc(mb.get());
-    func::FunctionBuilder fb(mb.get(), "main");
-    auto type2xi64 = makeTensorType(fb.getContext(), {}, ElementType::I64);
-    auto arg0 = func::Argument(fb, type2xi64);
-    auto cst = stablehlo::Constant(fb, mlir::makeConstant(1L, type2xi64));
-    auto broadcast = stablehlo::BroadcastInDim(type2xi64, cst, {});
-    auto add = stablehlo::Add(arg0, broadcast);
-    func::Return(fb, {add});
-  }
-
-  OwningOpRef<ModuleOp> module = mb->build();
-  std::string moduleString;
-  llvm::raw_string_ostream os(moduleString);
-  module->print(os, OpPrintingFlags().enableDebugInfo());
-  EXPECT_THAT(moduleString, testing::HasSubstr(__FILE__));
 }
 
 ////////

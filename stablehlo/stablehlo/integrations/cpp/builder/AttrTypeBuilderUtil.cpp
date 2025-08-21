@@ -16,7 +16,6 @@ limitations under the License.
 #include "stablehlo/integrations/cpp/builder/AttrTypeBuilderUtil.h"
 
 #include <cstdint>
-#include <source_location>
 
 #include "llvm/Support/ErrorHandling.h"
 #include "mlir/IR/Builders.h"
@@ -36,10 +35,6 @@ Location unknownLoc(MLIRContext& ctx) { return UnknownLoc::get(&ctx); }
 Location fileLineColLoc(MLIRContext& ctx, StringRef file, int64_t line,
                         int64_t col) {
   return FileLineColLoc::get(&ctx, file, line, col);
-}
-
-Location cppFileLineColLoc(MLIRContext& ctx, const std::source_location& loc) {
-  return FileLineColLoc::get(&ctx, loc.file_name(), loc.line(), loc.column());
 }
 
 //////////////////////
@@ -141,7 +136,5 @@ APFloat toAPFloat(double val, FloatType floatType) {
 }
 
 }  // namespace detail
-
-// Dense Element Attrs
 
 }  // namespace mlir

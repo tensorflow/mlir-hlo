@@ -95,8 +95,7 @@ SmallVector<T> extractAttributeOrDefault(std::optional<ArrayRef<T>> attr,
 
 Tensor dotGeneralOp(const Tensor &lhs, const Tensor &rhs,
                     const Axes &lhsContractingDimensions,
-                    const Axes &rhsContractingDimensions,
-                    RankedTensorType resultType) {
+                    const Axes &rhsContractingDimensions) {
   SmallVector<ShapedTypeComponents> inferredDotGeneralType;
   if (failed(hlo::inferDotGeneralOp(
           /*location=*/{}, lhs.getType(), rhs.getType(),
@@ -110,7 +109,7 @@ Tensor dotGeneralOp(const Tensor &lhs, const Tensor &rhs,
                       /*rhsBatchingDimensions*/ {}, lhsContractingDimensions,
                       rhsContractingDimensions,
                       RankedTensorType::get(inferredDotGeneralType[0].getDims(),
-                                            resultType.getElementType()));
+                                            lhs.getElementType()));
 }
 
 Tensor padOp(const Tensor &operand, const Tensor &paddingValue,
@@ -1614,8 +1613,7 @@ Tensor convolutionOp(
 
     auto dotProduct =
         dotGeneralOp(reversedLhsWindow, rhs, lhsContractingDimensions,
-                     rhsContractingDimensions,
-                     cast<RankedTensorType>(result.getType()));
+                     rhsContractingDimensions);
 
     Sizes resultNonSpatialDims;
     for (auto i = 0; i < result.getRank(); ++i)

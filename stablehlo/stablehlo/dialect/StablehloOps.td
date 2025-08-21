@@ -2553,6 +2553,7 @@ def StableHLO_CustomCallOp: StableHLO_Op<"custom_call",
   let extraClassDeclaration = commonClassDeclaration # [{
     mlir::Attribute getBackendConfigOrDefault();
     bool hasEmptyBackendConfig();
+    LogicalResult verifyKnownCustomCalls();
   }];
 }
 
