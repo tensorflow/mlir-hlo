@@ -23,7 +23,6 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
@@ -87,18 +86,6 @@ APSInt getAPSInt(Type type, uint64_t value) {
       /*isUnsigned=*/isUnsigned);
 }
 
-APFloat getAPFloat(
-    Type type, double value,
-    llvm::RoundingMode roundingMode = llvm::RoundingMode::NearestTiesToEven) {
-  auto floatType = dyn_cast<FloatType>(type);
-  if (!floatType) llvm::report_fatal_error("expected float type");
-
-  APFloat result(value);
-  bool losesInfo = false;
-  result.convert(floatType.getFloatSemantics(), roundingMode, &losesInfo);
-  return result;
-}
-
 LogicalResult validateStaticShapeResult(PatternRewriter& rewriter,
                                         Operation* op, ShapedType resultType) {
   if (!resultType.hasStaticShape())
@@ -107,30 +94,26 @@ LogicalResult validateStaticShapeResult(PatternRewriter& rewriter,
   return success();
 }
 
-/// Unary constant folder that uses a generic folder function to handle both
-/// ints and floats.
-template <typename Fn, typename IntResultType = IntegerAttr,
-          typename FloatResultType = FloatAttr>
-TypedAttr foldUnaryOpIntOrFloat(Type resultType, TypedAttr operand,
-                                Fn&& folder) {
+template <typename Fn>
+static TypedAttr foldUnaryOpIntOrFloat(Type resultType, TypedAttr operand,
+                                       Fn&& folder) {
   Type elemTy = getElementTypeOrSelf(operand);
 
   Attribute res;
   if (isa<IntegerType>(elemTy))
-    res = constFoldUnaryOp<IntegerAttr, IntegerAttr::ValueType, void,
-                           IntResultType>(operand, folder);
+    res = constFoldUnaryOp<IntegerAttr, IntegerAttr::ValueType, void>(operand,
+                                                                      folder);
   if (isa<FloatType>(elemTy))
-    res = constFoldUnaryOp<FloatAttr, FloatAttr::ValueType, void,
-                           FloatResultType>(operand, folder);
+    res = constFoldUnaryOp<FloatAttr, FloatAttr::ValueType, void>(operand,
+                                                                  folder);
   if (res) return cast<TypedAttr>(res);
 
   return nullptr;
 }
 
-/// Unary constant folder that uses a generic folder function to handle both
+/// Binary constant folder that used a generic folder function to handle both
 /// ints and floats.
-template <typename Fn, typename IntResultType = IntegerAttr,
-          typename FloatResultType = FloatAttr>
+template <typename Fn>
 FailureOr<TypedAttr> foldUnaryOpIntOrFloat(PatternRewriter& rewriter,
                                            Operation* op, Fn&& folder) {
   if (op->getNumOperands() != 1 || op->getNumResults() != 1)
@@ -141,38 +124,35 @@ FailureOr<TypedAttr> foldUnaryOpIntOrFloat(PatternRewriter& rewriter,
 
   if (!attr) return rewriter.notifyMatchFailure(op, "operand not constants");
 
-  TypedAttr res = foldUnaryOpIntOrFloat<Fn, IntResultType, FloatResultType>(
-      op->getResultTypes()[0], attr, std::forward<Fn>(folder));
+  TypedAttr res = foldUnaryOpIntOrFloat(op->getResultTypes()[0], attr, folder);
   if (!res) return rewriter.notifyMatchFailure(op, "folding failed");
 
   return res;
 }
 
-/// Binary constant folder that uses a generic folder function to handle both
+/// Binary constant folder that used a generic folder function to handle both
 /// ints and floats.
-template <typename Fn, typename IntResultType = IntegerAttr,
-          typename FloatResultType = FloatAttr>
-TypedAttr foldBinaryOpIntOrFloat(Type resultType, TypedAttr lhs, TypedAttr rhs,
-                                 Fn&& folder) {
+template <typename Fn>
+static TypedAttr foldBinaryOpIntOrFloat(Type resultType, TypedAttr lhs,
+                                        TypedAttr rhs, Fn&& folder) {
   Attribute operands[2] = {lhs, rhs};
   Type elemTy = getElementTypeOrSelf(lhs);
 
   Attribute res;
   if (isa<IntegerType>(elemTy))
-    res = constFoldBinaryOp<IntegerAttr, IntegerAttr::ValueType, void,
-                            IntResultType>(operands, resultType, folder);
+    res = constFoldBinaryOp<IntegerAttr, IntegerAttr::ValueType, void>(
+        operands, resultType, folder);
   if (isa<FloatType>(elemTy))
-    res = constFoldBinaryOp<FloatAttr, FloatAttr::ValueType, void,
-                            FloatResultType>(operands, resultType, folder);
+    res = constFoldBinaryOp<FloatAttr, FloatAttr::ValueType, void>(
+        operands, resultType, folder);
   if (res) return cast<TypedAttr>(res);
 
   return nullptr;
 }
 
-/// Binary constant folder that uses a generic folder function to handle both
+/// Binary constant folder that used a generic folder function to handle both
 /// ints and floats.
-template <typename Fn, typename IntResultType = IntegerAttr,
-          typename FloatResultType = FloatAttr>
+template <typename Fn>
 FailureOr<TypedAttr> foldBinaryOpIntOrFloat(PatternRewriter& rewriter,
                                             Operation* op, Fn&& folder) {
   if (op->getNumOperands() != 2 || op->getNumResults() != 1)
@@ -185,8 +165,8 @@ FailureOr<TypedAttr> foldBinaryOpIntOrFloat(PatternRewriter& rewriter,
   if (!lhsAttr || !rhsAttr)
     return rewriter.notifyMatchFailure(op, "lhs & rhs operands not constants");
 
-  TypedAttr res = foldBinaryOpIntOrFloat<Fn, IntResultType, FloatResultType>(
-      op->getResultTypes()[0], lhsAttr, rhsAttr, std::forward<Fn>(folder));
+  TypedAttr res =
+      foldBinaryOpIntOrFloat(op->getResultTypes()[0], lhsAttr, rhsAttr, folder);
   if (!res) return rewriter.notifyMatchFailure(op, "folding failed");
 
   return res;
@@ -391,38 +371,23 @@ struct FoldAddOpPattern final
 struct FoldAndOpPattern : public ShapeOpRewritePattern<AndOp> {
   using ShapeOpRewritePattern::ShapeOpRewritePattern;
 
-  LogicalResult matchAndRewrite(AndOp op,
+  LogicalResult matchAndRewrite(mlir::stablehlo::AndOp op,
                                 PatternRewriter& rewriter) const override {
+    // TODO: Support more int types
     auto resultType = op.getType();
-    auto resultElementType = resultType.getElementType();
-    FailureOr<TypedAttr> result;
+    if (!resultType.getElementType().isInteger(1))
+      return rewriter.notifyMatchFailure(op, "expected boolean element type");
 
-    if (resultElementType.isInteger(/*width=*/1)) {
-      result = foldBinaryOpIntOrFloat(rewriter, op, FoldLogicalAnd{});
-    } else if (resultElementType.isInteger()) {
-      result = foldBinaryOpIntOrFloat(rewriter, op, FoldBitwiseAnd{});
-    } else {
-      return rewriter.notifyMatchFailure(op, "Expected integral element type.");
-    }
-
-    if (failed(result)) return failure();
-    rewriter.replaceOpWithNewOp<mlir::stablehlo::ConstantOp>(op,
-                                                             result.value());
+    auto res = foldBinaryOpIntOrFloat(rewriter, op, FoldAnd{});
+    if (failed(res)) return failure();
+    rewriter.replaceOpWithNewOp<mlir::stablehlo::ConstantOp>(op, res.value());
     return success();
   }
 
-  struct FoldLogicalAnd {
+  struct FoldAnd {
     APInt operator()(APInt lhs, APInt rhs) const {
       return APInt(lhs.getBitWidth(), !lhs.isZero() && !rhs.isZero());
     }
-    std::optional<APFloat> operator()(APFloat lhs, APFloat rhs) const {
-      return std::nullopt;
-    }
-  };
-
-  struct FoldBitwiseAnd {
-    APInt operator()(APInt lhs, APInt rhs) const { return lhs & rhs; }
-
     std::optional<APFloat> operator()(APFloat lhs, APFloat rhs) const {
       return std::nullopt;
     }
@@ -461,7 +426,7 @@ struct FoldCompareOpPattern : public ShapeOpRewritePattern<CompareOp> {
     if (failed(validateShapeFoldDtype(rewriter, op, resultType)))
       return failure();
 
-    auto res = foldBinaryOpIntOrFloat<FoldCompare, IntegerAttr, IntegerAttr>(
+    auto res = foldBinaryOpIntOrFloat(
         rewriter, op,
         FoldCompare(op.getComparisonDirection(), op.getCompareType()));
     if (failed(res)) return failure();
@@ -476,29 +441,9 @@ struct FoldCompareOpPattern : public ShapeOpRewritePattern<CompareOp> {
     ComparisonDirection direction;
     std::optional<ComparisonType> kind;
 
-    APInt operator()(APFloat lhs, APFloat rhs) {
-      bool result = false;
-      switch (direction) {
-        case ComparisonDirection::EQ:
-          result = lhs == rhs;
-          break;
-        case ComparisonDirection::NE:
-          result = lhs != rhs;
-          break;
-        case ComparisonDirection::GE:
-          result = lhs >= rhs;
-          break;
-        case ComparisonDirection::GT:
-          result = lhs > rhs;
-          break;
-        case ComparisonDirection::LE:
-          result = lhs <= rhs;
-          break;
-        case ComparisonDirection::LT:
-          result = lhs < rhs;
-          break;
-      }
-      return APInt(/*bitwidth=*/1, result);
+    // TODO: Enable float folding.
+    std::optional<APFloat> operator()(APFloat lhs, APFloat rhs) {
+      return std::nullopt;
     }
     APInt operator()(APInt lhs, APInt rhs) {
       bool result = false;
@@ -564,20 +509,6 @@ class InlineCaseOpWithConstantBranchIndex
     Operation* terminator = blockToInline->getTerminator();
     ValueRange results = terminator->getOperands();
 
-    // TODO: Add support for complex, quantized, and token return types.
-    // Currently, this pattern only supports int and float return types. We'll
-    // need a more general equivalent of `getZeroAttr` to support other types.
-    SmallVector<TypedAttr> placeholderAttrs;
-    for (auto result : op.getResults()) {
-      TypedAttr placeholderAttr = rewriter.getZeroAttr(result.getType());
-      if (!placeholderAttr)
-        return rewriter.notifyMatchFailure(
-            op,
-            "The case op's return type isn't currently supported by this "
-            "optimization pattern.");
-      placeholderAttrs.push_back(placeholderAttr);
-    }
-
     // Inline the active branch of the `case` op.
     rewriter.inlineBlockBefore(blockToInline, op, blockArgs);
     rewriter.replaceAllOpUsesWith(op, results);
@@ -590,9 +521,9 @@ class InlineCaseOpWithConstantBranchIndex
     Block& noopBlock = region.emplaceBlock();
     SmallVector<Value> placeholderResults;
     rewriter.setInsertionPointToEnd(&noopBlock);
-    for (auto placeholderAttr : placeholderAttrs) {
-      placeholderResults.push_back(
-          rewriter.create<ConstantOp>(region.getLoc(), placeholderAttr));
+    for (auto result : op.getResults()) {
+      placeholderResults.push_back(rewriter.create<ConstantOp>(
+          region.getLoc(), rewriter.getZeroAttr(result.getType())));
     }
     rewriter.create<stablehlo::ReturnOp>(region.getLoc(), placeholderResults);
 
@@ -697,7 +628,10 @@ struct FoldDivOpPattern : public ShapeOpRewritePattern<DivOp> {
         : foldIntFn(isUnsignedInt ? foldUint : foldSint) {}
     std::function<APInt(APInt, APInt)> foldIntFn;
 
-    APFloat operator()(APFloat lhs, APFloat rhs) { return lhs / rhs; }
+    // TODO: Enable float folding.
+    std::optional<APFloat> operator()(APFloat lhs, APFloat rhs) {
+      return std::nullopt;  // return lhs / rhs;
+    }
     APInt operator()(APInt lhs, APInt rhs) { return foldIntFn(lhs, rhs); }
     static APInt foldUint(APInt lhs, APInt rhs) { return lhs.udiv(rhs); }
     static APInt foldSint(APInt lhs, APInt rhs) { return lhs.sdiv(rhs); }
@@ -735,8 +669,9 @@ struct FoldMax {
       : foldIntFn(isUnsignedInt ? foldUint : foldSint) {}
   std::function<APInt(APInt, APInt)> foldIntFn;
 
-  APFloat operator()(APFloat lhs, APFloat rhs) {
-    return lhs >= rhs ? lhs : rhs;
+  // TODO: Enable float folding.
+  std::optional<APFloat> operator()(APFloat lhs, APFloat rhs) {
+    return std::nullopt;  // return lhs >= rhs ? lhs : rhs;
   }
   APInt operator()(APInt lhs, APInt rhs) { return foldIntFn(lhs, rhs); }
   static APInt foldUint(APInt lhs, APInt rhs) {
@@ -752,8 +687,9 @@ struct FoldMin {
       : foldIntFn(isUnsignedInt ? foldUint : foldSint) {}
   std::function<APInt(APInt, APInt)> foldIntFn;
 
-  APFloat operator()(APFloat lhs, APFloat rhs) {
-    return lhs <= rhs ? lhs : rhs;
+  // TODO: Enable float folding.
+  std::optional<APFloat> operator()(APFloat lhs, APFloat rhs) {
+    return std::nullopt;  // return lhs <= rhs ? lhs : rhs;
   }
   APInt operator()(APInt lhs, APInt rhs) { return foldIntFn(lhs, rhs); }
   static APInt foldUint(APInt lhs, APInt rhs) {
@@ -770,14 +706,11 @@ struct FoldMaxOpPattern : public ShapeOpRewritePattern<MaxOp> {
   LogicalResult matchAndRewrite(MaxOp op,
                                 PatternRewriter& rewriter) const override {
     auto resultType = op.getType();
-    auto resultElementType = resultType.getElementType();
     if (failed(validateShapeFoldDtype(rewriter, op, resultType)))
       return failure();
 
-    bool isUnsignedIntOrBool = resultElementType.isUnsignedInteger() ||
-                               resultElementType.isInteger(/*width=*/1);
-    auto res =
-        foldBinaryOpIntOrFloat(rewriter, op, FoldMax(isUnsignedIntOrBool));
+    bool isUnsignedInt = resultType.getElementType().isUnsignedInteger();
+    auto res = foldBinaryOpIntOrFloat(rewriter, op, FoldMax(isUnsignedInt));
     if (failed(res)) return failure();
     rewriter.replaceOpWithNewOp<mlir::stablehlo::ConstantOp>(op, res.value());
     return success();
@@ -790,14 +723,11 @@ struct FoldMinOpPattern : public ShapeOpRewritePattern<MinOp> {
   LogicalResult matchAndRewrite(MinOp op,
                                 PatternRewriter& rewriter) const override {
     auto resultType = op.getType();
-    auto resultElementType = resultType.getElementType();
     if (failed(validateShapeFoldDtype(rewriter, op, resultType)))
       return failure();
 
-    bool isUnsignedIntOrBool = resultElementType.isUnsignedInteger() ||
-                               resultElementType.isInteger(/*width=*/1);
-    auto res =
-        foldBinaryOpIntOrFloat(rewriter, op, FoldMin(isUnsignedIntOrBool));
+    bool isUnsignedInt = resultType.getElementType().isUnsignedInteger();
+    auto res = foldBinaryOpIntOrFloat(rewriter, op, FoldMin(isUnsignedInt));
     if (failed(res)) return failure();
     rewriter.replaceOpWithNewOp<mlir::stablehlo::ConstantOp>(op, res.value());
     return success();
@@ -856,36 +786,21 @@ struct FoldOrOpPattern : public ShapeOpRewritePattern<OrOp> {
 
   LogicalResult matchAndRewrite(OrOp op,
                                 PatternRewriter& rewriter) const override {
+    // TODO: Support more int types
     auto resultType = op.getType();
-    auto resultElementType = resultType.getElementType();
-    FailureOr<TypedAttr> result;
+    if (!resultType.getElementType().isInteger(1))
+      return rewriter.notifyMatchFailure(op, "expected boolean element type");
 
-    if (resultElementType.isInteger(/*width=*/1)) {
-      result = foldBinaryOpIntOrFloat(rewriter, op, FoldLogicalOr{});
-    } else if (resultElementType.isInteger()) {
-      result = foldBinaryOpIntOrFloat(rewriter, op, FoldBitwiseOr{});
-    } else {
-      return rewriter.notifyMatchFailure(op, "Expected integral element type.");
-    }
-
-    if (failed(result)) return failure();
-    rewriter.replaceOpWithNewOp<mlir::stablehlo::ConstantOp>(op,
-                                                             result.value());
+    auto res = foldBinaryOpIntOrFloat(rewriter, op, FoldOr{});
+    if (failed(res)) return failure();
+    rewriter.replaceOpWithNewOp<mlir::stablehlo::ConstantOp>(op, res.value());
     return success();
   }
 
-  struct FoldLogicalOr {
+  struct FoldOr {
     APInt operator()(APInt lhs, APInt rhs) const {
       return APInt(lhs.getBitWidth(), !lhs.isZero() || !rhs.isZero());
     }
-    std::optional<APFloat> operator()(APFloat lhs, APFloat rhs) const {
-      return std::nullopt;
-    }
-  };
-
-  struct FoldBitwiseOr {
-    APInt operator()(APInt lhs, APInt rhs) const { return lhs | rhs; }
-
     std::optional<APFloat> operator()(APFloat lhs, APFloat rhs) const {
       return std::nullopt;
     }
@@ -913,12 +828,9 @@ struct FoldRemOpPattern : public ShapeOpRewritePattern<RemOp> {
         : foldIntFn(isUnsignedInt ? foldUint : foldSint) {}
     std::function<APInt(APInt, APInt)> foldIntFn;
 
+    // TODO: Enable float folding.
     std::optional<APFloat> operator()(APFloat lhs, APFloat rhs) {
-      // `APFloat::mod` requires both operands to have identical semantics.
-      if (&lhs.getSemantics() != &rhs.getSemantics()) return std::nullopt;
-
-      lhs.mod(rhs);  // This modifies `lhs` in place.
-      return lhs;    // `lhs` now holds the result.
+      return std::nullopt;  // return lhs.remainder(rhs);
     }
     APInt operator()(APInt lhs, APInt rhs) { return foldIntFn(lhs, rhs); }
     static APInt foldUint(APInt lhs, APInt rhs) { return lhs.urem(rhs); }
@@ -1051,16 +963,8 @@ struct FoldSignOpPattern : public ShapeOpRewritePattern<SignOp> {
   struct FoldSign {
     FoldSign(Type elementType) : elementType(elementType) {}
     Type elementType;
-    double result;
-    APFloat operator()(APFloat operand) {
-      if (operand.isNegative())
-        result = -1.0;
-      else if (operand.isZero())
-        result = 0.0;
-      else
-        result = 1.0;
-      return getAPFloat(elementType, result);
-    }
+    // TODO: Enable float folding.
+    std::optional<APFloat> operator()(APFloat operand) { return std::nullopt; }
 
     APInt operator()(APInt operand) {
       // SignOp only supports signed integers.
@@ -1316,9 +1220,13 @@ struct LowerBoolSplatConstantsIntoReduceOpRegion
 
     for (auto [inputValue, bodyArg] :
          llvm::zip_equal(op.getOperands(), body.getArguments())) {
-      SplatElementsAttr constantSplatAttr;
-      matchPattern(inputValue, m_Constant(&constantSplatAttr));
-      if (!constantSplatAttr)
+      auto inputConstantOp = inputValue.getDefiningOp<ConstantOp>();
+      if (!inputConstantOp)
+        return rewriter.notifyMatchFailure(op, "Input must be a constant.");
+
+      auto inputConstantAttr =
+          dyn_cast_or_null<DenseElementsAttr>(inputConstantOp.getValue());
+      if (!inputConstantAttr)
         return rewriter.notifyMatchFailure(op,
                                            "Input must be a splat constant.");
 
@@ -1328,7 +1236,7 @@ struct LowerBoolSplatConstantsIntoReduceOpRegion
             op, "Could not get the shape of the body argument.");
 
       bodyArgConstantAttrs.push_back(DenseElementsAttr::get(
-          bodyArgShapedType, constantSplatAttr.getSplatValue<Attribute>()));
+          bodyArgShapedType, inputConstantAttr.getSplatValue<Attribute>()));
     }
 
     for (BlockArgument bodyArg : body.getArguments()) {
