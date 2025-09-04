@@ -398,6 +398,7 @@ cc_library(
     deps = [
         ":mlir_hlo",
         "//stablehlo:stablehlo_ops",
+        "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
         "@llvm-project//mlir:FuncTransforms",
         "@llvm-project//mlir:IR",
