@@ -1014,6 +1014,11 @@ struct FoldSetDimensionSizeOpPattern
     // No need to verify static shape or dtype here since we aren't evaluating
     // dtype, just folding set_dim_size ops with no semantic meaning.
 
+    // Don't fold if the input is dynamic and we're washing away the bound.
+    if (op.getOperand().getType() != op.getType())
+      return rewriter.notifyMatchFailure(
+          op, "operand and result type must be the same");
+
     SplatElementsAttr cstSplatAttr;
     matchPattern(op.getSize(), m_Constant(&cstSplatAttr));
     if (!cstSplatAttr)

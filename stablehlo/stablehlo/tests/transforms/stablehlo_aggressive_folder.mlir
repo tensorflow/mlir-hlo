@@ -752,6 +752,19 @@ func.func @no_fold_set_dimension_size(%arg0: tensor<10xf32>) -> tensor<?xf32, #s
 
 // -----
 
+// Don't fold when washing away a bounded dimension, not safe to replace with
+// operand when types mismatch.
+// CHECK-LABEL: func.func @no_fold_set_dimension_size_bounded_input
+func.func @no_fold_set_dimension_size_bounded_input(%arg0: tensor<?x4xf32, #stablehlo.bounds<8, ?>>) -> tensor<8x4xf32> {
+  %c = stablehlo.constant dense<8> : tensor<i32>
+  // CHECK: [[RESULT0:%.+]] = stablehlo.set_dimension_size
+  // CHECK-NEXT: return [[RESULT0]]
+  %0 = stablehlo.set_dimension_size %arg0, %c, dim = 0 : (tensor<?x4xf32, #stablehlo.bounds<8, ?>>, tensor<i32>) -> tensor<8x4xf32>
+  return %0 : tensor<8x4xf32>
+}
+
+// -----
+
 ////////
 // TransposeOp
 
