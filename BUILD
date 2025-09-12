@@ -260,6 +260,7 @@ cc_library(
         ":hlo_ops_inc_gen",
         ":hlo_ops_pattern_inc_gen",
         ":hlo_ops_typedefs_inc_gen",
+        ":unregistered_attributes",
         "//stablehlo:base",
         "//stablehlo:chlo_ops",
         "//stablehlo:stablehlo_assembly_format",
@@ -288,6 +289,14 @@ cc_library(
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
     ],
+)
+
+cc_library(
+    name = "unregistered_attributes",
+    srcs = ["utils/unregistered_attributes.cc"],
+    hdrs = ["utils/unregistered_attributes.h"],
+    strip_include_prefix = ".",
+    deps = [],
 )
 
 cc_library(
@@ -1010,6 +1019,7 @@ cc_library(
         "stablehlo_ext/transforms/stablehlo_legalize_quant_composite.cpp",
         "stablehlo_ext/transforms/stablehlo_prepare_for_hlo_export.cpp",
         "stablehlo_ext/transforms/stablehlo_refine_shapes.cpp",
+        "stablehlo_ext/transforms/stablehlo_sanitize_unregistered_attributes.cpp",
         "stablehlo_ext/transforms/symbolic_shape_optimization.cpp",
     ],
     hdrs = [
@@ -1023,6 +1033,7 @@ cc_library(
         ":stablehlo_extension_base",
         ":stablehlo_extension_ops",
         ":stablehlo_extension_pass_inc_gen",
+        ":unregistered_attributes",
         "//stablehlo:base",
         "//stablehlo:chlo_ops",
         "//stablehlo:stablehlo_ops",
