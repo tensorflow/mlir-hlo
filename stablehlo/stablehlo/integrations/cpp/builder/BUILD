@@ -9,8 +9,13 @@ package(
     licenses = ["notice"],
 )
 
+filegroup(
+    name = "stablehlo_builder_filegroup",
+    srcs = glob(["**"]),
+)
+
 #####
-# [WIP] TableGen
+# TableGen
 #####
 
 cc_binary(
