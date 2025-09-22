@@ -1238,6 +1238,7 @@ cc_library(
     includes = ["."],
     deps = [
         ":base",
+        ":chlo_ops",
         ":stablehlo_aggressive_simplification_inc_gen",
         ":stablehlo_ops",
         ":stablehlo_pass_inc_gen",
