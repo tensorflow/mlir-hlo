@@ -1283,21 +1283,48 @@ struct FoldSliceOpPattern : public ShapeOpRewritePattern<SliceOp> {
       return rewriter.notifyMatchFailure(
           op, "expected operand with static ranked tensor type");
 
-    ElementsAttr els;
+    DenseElementsAttr els;
     if (!matchPattern(operand, m_Constant(&els)))
       return rewriter.notifyMatchFailure(
           op, "expected constant integer or float operand");
 
+    // Short circuit on splat resizes
+    if (els.isSplat()) {
+      rewriter.replaceOpWithNewOp<ConstantOp>(op, els.resizeSplat(resultType));
+      return success();
+    }
+
     DenseElementsAttr resAttr;
-    if (auto data = els.tryGetValues<APInt>())
+    if (auto data = els.tryGetValues<APInt>(); succeeded(data))
       resAttr = sliceType(op, *data);
-    else if (auto data = els.tryGetValues<APFloat>())
+    else if (auto data = els.tryGetValues<APFloat>(); succeeded(data))
       resAttr = sliceType(op, *data);
     else
       return rewriter.notifyMatchFailure(op.getLoc(),
                                          "unsupported element type");
 
     rewriter.replaceOpWithNewOp<ConstantOp>(op, resAttr);
+    return success();
+  }
+};
+
+// Pattern: dynamic_slice(splat_cst, start, end) -> resized_splat_cst
+struct FoldDynamicSliceOpPattern : public FoldOpRewritePattern<DynamicSliceOp> {
+  using FoldOpRewritePattern::FoldOpRewritePattern;
+
+  LogicalResult matchAndRewrite(DynamicSliceOp op,
+                                PatternRewriter& rewriter) const override {
+    auto resultType = op.getType();
+    if (failed(validateStaticShapeResult(rewriter, op, resultType)))
+      return failure();
+
+    SplatElementsAttr inputSplatAttr;
+    if (!matchPattern(op.getOperand(), m_Constant(&inputSplatAttr)) ||
+        !inputSplatAttr)
+      return rewriter.notifyMatchFailure(op, "Input must be a splat constant.");
+
+    rewriter.replaceOpWithNewOp<ConstantOp>(
+        op, inputSplatAttr.resizeSplat(resultType));
     return success();
   }
 };
@@ -1908,6 +1935,7 @@ void populateStablehloShapeFolderPatterns(
   patterns->add<FoldConcatenateOpPattern>(context, options, benefit);
   patterns->add<FoldConvertOpPattern>(context, options, benefit);
   patterns->add<FoldDivOpPattern>(context, options, benefit);
+  patterns->add<FoldDynamicSliceOpPattern>(context, options, benefit);
   patterns->add<FoldGetDimensionSizeOpPattern>(context, options, benefit);
   patterns->add<FoldMaxOpPattern>(context, options, benefit);
   patterns->add<FoldMinOpPattern>(context, options, benefit);

@@ -601,6 +601,37 @@ func.func @reshape_fold() -> (tensor<1xi32>, tensor<2x2xi32>) {
 // -----
 
 ////////
+// SliceOp / DynamicSliceOp
+
+// CHECK-LABEL: @slice_fold
+func.func @slice_fold(%arg0: tensor<6x1xi32>) -> tensor<1x1xi32> {
+  %c = stablehlo.constant dense<[[0], [1], [2], [3], [4], [5]]> : tensor<6x1xi32>
+  %0 = stablehlo.slice %c [2:3, 0:1] : (tensor<6x1xi32>) -> tensor<1x1xi32>
+  // CHECK: stablehlo.constant dense<2> : tensor<1x1xi32>
+  return %0 : tensor<1x1xi32>
+}
+
+// CHECK-LABEL: @slice_fold_splat
+func.func @slice_fold_splat(%arg0: tensor<6x1xi32>) -> tensor<1x1xi32> {
+  %c = stablehlo.constant dense<1> : tensor<6x1xi32>
+  %0 = stablehlo.slice %c [2:3, 0:1] : (tensor<6x1xi32>) -> tensor<1x1xi32>
+  // CHECK: stablehlo.constant dense<1> : tensor<1x1xi32>
+  return %0 : tensor<1x1xi32>
+}
+
+// CHECK-LABEL: @dynamic_slice_fold
+func.func @dynamic_slice_fold(%arg0: tensor<i32>, %arg1: tensor<i32>) -> tensor<1x1xi32> {
+  %0 = stablehlo.constant dense<256> : tensor<6x1xi32>
+  %1 = "stablehlo.dynamic_slice"(%0, %arg0, %arg1) <{slice_sizes = array<i64: 1, 1>}> : (tensor<6x1xi32>, tensor<i32>, tensor<i32>) -> tensor<1x1xi32>
+
+  // CHECK: %[[RESULT:.*]] = stablehlo.constant dense<256> : tensor<1x1xi32>
+  // CHECK: return %[[RESULT]]
+  return %1 : tensor<1x1xi32>
+}
+
+// -----
+
+////////
 // ConvertOp
 
 // CHECK-LABEL: func @eval_convert_f32_to_i64
