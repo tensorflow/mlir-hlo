@@ -1538,6 +1538,14 @@ struct FoldIotaOpPattern : public FoldOpRewritePattern<IotaOp> {
       return success();
     }
 
+    // TODO: Support more iota folding, but doing so currently causes OOMs,
+    // so this pattern needs to be enabled more carefully.
+    if (outputSize != 1) {
+      return rewriter.notifyMatchFailure(
+          op, "expected output size to be 1, but got: " +
+                  std::to_string(outputSize));
+    }
+
     int64_t sequences = 1;
     int64_t sequenceMax = resultType.getDimSize(dimension);
     int64_t elementRepetitions = 1;

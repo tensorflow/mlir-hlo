@@ -529,28 +529,15 @@ func.func @subtract_fold_cst() -> (tensor<i32>, tensor<f32>) {
 // IotaOp
 
 // CHECK-LABEL: func @eval_iota
-func.func @eval_iota() -> (tensor<3x4x5xi32>, tensor<3x4x5xi32>, tensor<3x4x5xi32>) {
-  // CHECK-NOT: stablehlo.iota
-  // CHECK: [[RESULT0:%.*]] = stablehlo.constant dense<
-  // CHECK-SAME: {{\[\[}}[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
-  // CHECK-SAME: {{\[}}[1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1], [1, 1, 1, 1, 1]],
-  // CHECK-SAME: {{\[}}[2, 2, 2, 2, 2], [2, 2, 2, 2, 2], [2, 2, 2, 2, 2], [2, 2, 2, 2, 2]]]> : tensor<3x4x5xi32>
-
-  // CHECK: [[RESULT1:%.*]] = stablehlo.constant dense<
-  // CHECK-SAME: {{\[\[}}[0, 0, 0, 0, 0], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3]],
-  // CHECK-SAME: {{\[}}[0, 0, 0, 0, 0], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3]],
-  // CHECK-SAME: {{\[}}[0, 0, 0, 0, 0], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3]]]> : tensor<3x4x5xi32>
-
-  // CHECK: [[RESULT2:%.*]] = stablehlo.constant dense<
-  // CHECK-SAME: {{\[\[}}[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
-  // CHECK-SAME: {{\[}}[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]],
-  // CHECk-SAME: {{\[}}[0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4], [0, 1, 2, 3, 4]]]> : tensor<3x4x5xi32>
-
+func.func @eval_iota() -> (tensor<1xi32>, tensor<3x4x5xi32>, tensor<3x4x5xi32>) {
+  // CHECK:      [[RESULT0:%.*]] = stablehlo.constant dense<0> : tensor<1xi32>
+  // CHECK-NEXT: [[RESULT1:%.*]] = stablehlo.iota dim = 1 : tensor<3x4x5xi32>
+  // CHECK-NEXT: [[RESULT2:%.*]] = stablehlo.iota dim = 2 : tensor<3x4x5xi32>
   // CHECK: return [[RESULT0]], [[RESULT1]], [[RESULT2]]
-  %0 = stablehlo.iota dim = 0 : tensor<3x4x5xi32>
+  %0 = stablehlo.iota dim = 0 : tensor<1xi32>
   %1 = stablehlo.iota dim = 1 : tensor<3x4x5xi32>
   %2 = stablehlo.iota dim = 2 : tensor<3x4x5xi32>
-  func.return %0, %1, %2 : tensor<3x4x5xi32>, tensor<3x4x5xi32>, tensor<3x4x5xi32>
+  func.return %0, %1, %2 : tensor<1xi32>, tensor<3x4x5xi32>, tensor<3x4x5xi32>
 }
 
 // -----
