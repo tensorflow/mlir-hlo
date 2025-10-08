@@ -75,7 +75,7 @@ bool IsFloat(ElementType elementType);
 
 bool IsInteger(ElementType elementType, bool includeBool);
 
-// In StableHLO, we refer to signed integer as the MLIR's equvalent signless
+// In StableHLO, we refer to signed integer as the MLIR's equivalent signless
 // integer. StableHLO does not have a notion of signless integers like MLIR.
 bool IsSignedInteger(ElementType elementType);
 
