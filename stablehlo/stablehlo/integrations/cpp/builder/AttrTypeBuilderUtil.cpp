@@ -129,8 +129,7 @@ bool IsFloat(ElementType elementType) {
 bool IsInteger(ElementType elementType, bool includeBool = false) {
   MLIRContext ctx;
   Type type = getElementType(ctx, elementType);
-  return type.isInteger() && includeBool ? IsBoolean(elementType)
-                                         : !IsBoolean(elementType);
+  return type.isInteger() && (includeBool || !IsBoolean(elementType));
 }
 
 bool IsSignedInteger(ElementType elementType) {
