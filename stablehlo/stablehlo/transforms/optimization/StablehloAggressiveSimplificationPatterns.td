@@ -120,6 +120,8 @@ def InvertBroadcastDims : NativeCodeCall<"getInvertedBroadcastDimensions($_build
 
 def MergeBroadcastDims : NativeCodeCall<"getMergedBroadcastDimensions($_builder, $0, $1)">;
 
+def MergePermutations : NativeCodeCall<"getMergedTransposePermutation($_builder, $0, $1)">;
+
 def StableHLO_ConvertOpWithShape : NativeCodeCall<
     "$_builder.create<stablehlo::ConvertOp>($_loc, $0.getType(), $1)">;
 
@@ -538,6 +540,12 @@ def SliceOp_RemoveNoop
 def TransposeOp_RemoveNoop
   : Pat<(StableHLO_TransposeOp $lhs, IotaDims:$dims),
         (replaceWithValue $lhs)>;
+
+// Pattern: transpose(transpose(X)) -> transpose(X)
+def TransposeOp_TransposeOfTranspose
+  : Pat<(StableHLO_TransposeOp
+          (StableHLO_TransposeOp $child, $child_dims), $dims),
+        (StableHLO_TransposeOp $child, (MergePermutations $child_dims, $dims))>;
 
 ////////
 // GetTupleElementOp

@@ -1810,6 +1810,15 @@ func.func @transpose_is_not_reshape(%arg0: tensor<1x4x5x2xf32>) -> tensor<2x4x1x
   return %0 : tensor<2x4x1x5xf32>
 }
 
+// CHECK-LABEL: @transpose_of_transpose
+func.func @transpose_of_transpose(%arg0 : tensor<1x2x3x4xf32>) -> tensor<1x2x3x4xf32> {
+  %0 = stablehlo.transpose %arg0, dims = [3,2,1,0] : (tensor<1x2x3x4xf32>) -> tensor<4x3x2x1xf32>
+  %1 = stablehlo.transpose %0, dims = [3,2,1,0] : (tensor<4x3x2x1xf32>) -> tensor<1x2x3x4xf32>
+  // CHECK-NOT: stablehlo.transpose
+  // CHECK: return %arg0
+  return %1 : tensor<1x2x3x4xf32>
+}
+
 // -----
 
 ////////
