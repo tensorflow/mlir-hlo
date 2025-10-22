@@ -557,10 +557,15 @@ struct ShapeOpRewritePattern : public FoldOpRewritePattern<OpType> {
   using FoldOpRewritePattern<OpType>::matchAndRewrite;
   using FoldOpRewritePattern<OpType>::options;
 
+  // TODO: Generalize all relevant folder patterns to support complex data
+  // types, then hard-code `allowComplex` to `true`.
   LogicalResult validateShapeFoldDtype(PatternRewriter& rewriter, OpType op,
-                                       ShapedType resultType) const {
+                                       ShapedType resultType,
+                                       bool allowComplex = false) const {
     if (resultType.getElementType().isInteger()) return success();
-    if (options.optimizeFloat && isa<FloatType>(resultType.getElementType()))
+    if (options.optimizeFloat &&
+        (allowComplex ? isa<FloatType, ComplexType>(resultType.getElementType())
+                      : isa<FloatType>(resultType.getElementType())))
       return success();
     return rewriter.notifyMatchFailure(op, "skipping fold of shape op dtype");
   }
@@ -632,7 +637,8 @@ struct FoldBroadcastInDimOpSplatPattern
                                 PatternRewriter& rewriter) const override {
     auto resultType = op.getType();
     if (failed(validateStaticShapeResult(rewriter, op, resultType)) ||
-        failed(validateShapeFoldDtype(rewriter, op, resultType)))
+        failed(validateShapeFoldDtype(rewriter, op, resultType,
+                                      /*allowComplex=*/true)))
       return failure();
 
     SplatElementsAttr cstAttr;
@@ -1131,7 +1137,7 @@ struct FoldReshapeOpPattern : public ShapeOpRewritePattern<ReshapeOp> {
         failed(validateShapeFoldDtype(rewriter, op, resultType)))
       return failure();
 
-    DenseIntOrFPElementsAttr attr;
+    DenseElementsAttr attr;
     if (!matchPattern(op.getOperand(), m_Constant(&attr)))
       return rewriter.notifyMatchFailure(op, "expected constant operand");
     rewriter.replaceOpWithNewOp<ConstantOp>(op, attr.reshape(resultType));
