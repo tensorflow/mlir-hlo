@@ -831,7 +831,8 @@ struct FoldConvertOpPattern : public ShapeOpRewritePattern<ConvertOp> {
     RankedTensorType resultType = op.getType();
 
     if (failed(validateStaticShapeResult(rewriter, op, resultType)) ||
-        failed(validateShapeFoldDtype(rewriter, op, resultType)))
+        failed(validateShapeFoldDtype(rewriter, op, resultType)) ||
+        failed(validateElementCountForFold(rewriter, op, resultType)))
       return failure();
 
     auto operandElemType = getElementTypeOrSelf(operand.getType());

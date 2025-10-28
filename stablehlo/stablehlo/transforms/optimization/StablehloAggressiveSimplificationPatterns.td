@@ -218,6 +218,36 @@ def BroadcastInDimOp_ReplaceWithTranspose
         [(NumberOfElementsEqual $op, $operand), (RankEqual $op, $operand)]>;
 
 ////////
+// CompareOp
+
+// The canonical form has the constant operand as the RHS.
+class StableHLO_ComparisonDirectionValue<string enumStr> :
+  ConstantAttr<StableHLO_ComparisonDirectionAttr, "::mlir::stablehlo::ComparisonDirection::" # enumStr>;
+
+// Pattern: compare(NE, X, False) : i1 -> X
+def CompareOp_NeBooleanFalse
+  : Pat<(StableHLO_CompareOp
+            $lhs,
+            (StableHLO_ConstantOp:$cst IntZero:$value),
+            StableHLO_ComparisonDirectionValue<"NE">,
+            $type),
+        (replaceWithValue $lhs),
+        [(HLO_PredTensor $cst)]>;
+
+// Pattern: compare(EQ, X, True) : i1 -> X
+def CompareOp_EqBooleanTrue
+  : Pat<(StableHLO_CompareOp
+            $lhs,
+            (StableHLO_ConstantOp:$cst IntOne:$value),
+            StableHLO_ComparisonDirectionValue<"EQ">,
+            $type),
+        (replaceWithValue $lhs),
+        [(HLO_PredTensor $cst)]>;
+
+// TODO: compare(EQ, X, False) : i1 -> not(X)
+// TODO: compare(NE, X, True) : i1 -> not(X)
+
+////////
 // ConvertOp
 
 // Pattern: convert(X, [X.type]) -> X

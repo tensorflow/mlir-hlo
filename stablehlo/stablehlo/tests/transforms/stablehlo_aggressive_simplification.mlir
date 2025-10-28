@@ -239,6 +239,18 @@ func.func @compare_unsigned_arg(%arg0: tensor<i32>)
          tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>, tensor<i1>
 }
 
+// CHECK-LABEL: func.func @compare_op_bool_simplify
+// CHECK-SAME:   ([[ARG0:%.+]]: tensor<i1>)
+func.func @compare_op_bool_simplify(%arg0: tensor<i1>) -> (tensor<i1>, tensor<i1>) {
+  %false = stablehlo.constant dense<false> : tensor<i1>
+  %true = stablehlo.constant dense<true> : tensor<i1>
+  // CHECK-NOT: stablehlo.compare
+  %0 = stablehlo.compare NE, %arg0, %false, UNSIGNED : (tensor<i1>, tensor<i1>) -> tensor<i1>
+  %1 = stablehlo.compare EQ, %arg0, %true, UNSIGNED : (tensor<i1>, tensor<i1>) -> tensor<i1>
+  // CHECK: return [[ARG0]], [[ARG0]]
+  func.return %0, %1 : tensor<i1>, tensor<i1>
+}
+
 // -----
 
 /////////

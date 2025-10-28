@@ -1323,7 +1323,6 @@ DenseI64ArrayAttr getMergedTransposePermutation(OpBuilder& b,
 // Pattern: transpose(X, [no_mem_layout_change...]) -> reshape(X)
 struct TransposeIsReshape final : SimplifyOpRewritePattern<TransposeOp> {
   using SimplifyOpRewritePattern::SimplifyOpRewritePattern;
-
   LogicalResult matchAndRewrite(TransposeOp op,
                                 PatternRewriter& rewriter) const override {
     auto input = op.getOperand();
