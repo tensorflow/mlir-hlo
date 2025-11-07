@@ -1124,6 +1124,24 @@ gentbl_cc_library(
 )
 
 cc_library(
+    name = "stablehlo_broadcast_lowering",
+    srcs = [
+        "stablehlo/transforms/StablehloBroadcastLowering.cpp",
+    ],
+    hdrs = [
+        "stablehlo/transforms/StablehloBroadcastLowering.h",
+    ],
+    includes = ["."],
+    deps = [
+        ":stablehlo_ops",
+        "@llvm-project//llvm:Support",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:ShapeDialect",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_library(
     name = "stablehlo_pass_utils",
     srcs = [
         "stablehlo/transforms/PassUtils.cpp",
@@ -1499,6 +1517,8 @@ cc_library(
     ],
     includes = ["."],
     deps = [
+        ":stablehlo_broadcast_lowering",
+        ":stablehlo_ops",
         ":test_utils_inc_gen",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:FuncDialect",
