@@ -1108,7 +1108,8 @@ struct FoldReshapeOpPattern : public ShapeOpRewritePattern<ReshapeOp> {
                                 PatternRewriter& rewriter) const override {
     auto resultType = op.getType();
     if (failed(validateStaticShapeResult(rewriter, op, resultType)) ||
-        failed(validateShapeFoldDtype(rewriter, op, resultType)))
+        failed(validateShapeFoldDtype(rewriter, op, resultType,
+                                      /*allowComplex=*/true)))
       return failure();
 
     DenseElementsAttr attr;
