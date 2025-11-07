@@ -1152,6 +1152,7 @@ cc_library(
         "stablehlo/transforms/PassPipelines.cpp",
         "stablehlo/transforms/ShapeLegalizeToStablehlo.cpp",
         "stablehlo/transforms/StablehloCanonicalizeDynamism.cpp",
+        "stablehlo/transforms/StablehloCheckShapeAssertions.cpp",
         "stablehlo/transforms/StablehloCompatibilityExpander.cpp",
         "stablehlo/transforms/StablehloComplexMathExpander.cpp",
         "stablehlo/transforms/StablehloConvertToSignless.cpp",
