@@ -23,6 +23,8 @@ limitations under the License.
 #include <utility>
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "mlir/IR/Builders.h"
@@ -34,8 +36,6 @@ limitations under the License.
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
 #include "stablehlo/dialect/StablehloOps.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/Sequence.h"
-#include "third_party/llvm/llvm-project/llvm/include/llvm/ADT/SmallVector.h"
 
 #define DEBUG_TYPE "stablehlo-broadcast-lowering"
 

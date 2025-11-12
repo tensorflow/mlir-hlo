@@ -29,6 +29,7 @@ limitations under the License.
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
@@ -38,7 +39,6 @@ limitations under the License.
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "stablehlo/dialect/StablehloOps.h"
 #include "stablehlo/transforms/StablehloBroadcastLowering.h"
-#include "third_party/llvm/llvm-project/mlir/include/mlir/IR/TypeRange.h"
 
 namespace mlir {
 namespace hlo {
