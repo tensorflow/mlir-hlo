@@ -1136,7 +1136,6 @@ cc_library(
         ":stablehlo_ops",
         "@llvm-project//llvm:Support",
         "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:ShapeDialect",
         "@llvm-project//mlir:Support",
     ],
 )
