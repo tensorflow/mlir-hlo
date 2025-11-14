@@ -44,7 +44,8 @@ def NumberOfElementsEqual : Constraint<
     "same number of elements">;
 
 def BroadcastNotReducibleToReshape : Constraint<
-    CPred<"llvm::isa<stablehlo::BroadcastInDimOp>($0.getDefiningOp()) && "
+    CPred<"!llvm::cast<ShapedType>($0.getType()).hasStaticShape() || "
+          "llvm::isa<stablehlo::BroadcastInDimOp>($0.getDefiningOp()) && "
           "!("
             "llvm::is_sorted($0.getDefiningOp<stablehlo::BroadcastInDimOp>().getBroadcastDimensions()) && "
             "llvm::cast<ShapedType>($0.getType()).getNumElements() == llvm::cast<ShapedType>($1.getType()).getNumElements()"
@@ -210,8 +211,10 @@ def BroadcastInDimOp_MergeComposition
 
 // Pattern: broadcast_in_dim(X, [sorted...]) -> reshape(X, [sorted...])
 //          [if same numel]
+// TODO: Figure out if static extents matching is valid (i.e. <=10 -> 1x[<=10])
+// for bounded dynamism, same for BroadcastInDimOp_ReplaceWithReshape
 def BroadcastInDimOp_ReplaceWithReshape
-  : Pat<(StableHLO_BroadcastInDimOp:$op $operand, SortedDims:$dims),
+  : Pat<(StableHLO_BroadcastInDimOp:$op AnyStaticShapeTensor:$operand, SortedDims:$dims),
         (StableHLO_ReshapeOpWithShape $op, $operand),
         [(NumberOfElementsEqual $op, $operand)],
         [],
@@ -220,7 +223,7 @@ def BroadcastInDimOp_ReplaceWithReshape
 // Pattern: broadcast_in_dim(X, [dims...]) -> transpose(X, [dims...])
 //          [if same numel & rank]
 def BroadcastInDimOp_ReplaceWithTranspose
-  : Pat<(StableHLO_BroadcastInDimOp:$op $operand, $dims),
+  : Pat<(StableHLO_BroadcastInDimOp:$op AnyStaticShapeTensor:$operand, $dims),
         (StableHLO_TransposeOp $operand, (InvertBroadcastDims $dims)),
         [(NumberOfElementsEqual $op, $operand), (RankEqual $op, $operand)]>;
 
