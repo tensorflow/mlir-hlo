@@ -1197,6 +1197,7 @@ cc_library(
         ":broadcast_utils",
         ":chlo_ops",
         ":chlo_rewriters_inc_gen",
+        ":stablehlo_broadcast_lowering",
         ":stablehlo_compatibility_expander_inc_gen",
         ":stablehlo_complex_math_expander_inc_gen",
         ":stablehlo_legalize_deprecated_ops_inc_gen",

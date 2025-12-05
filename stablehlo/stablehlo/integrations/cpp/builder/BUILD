@@ -200,6 +200,24 @@ cc_test(
 )
 
 cc_test(
+    name = "chlo_builder_test",
+    srcs = ["ChloBuilderTest.cpp"],
+    includes = ["../../../.."],
+    deps = [
+        ":attr_type_builder_util",
+        ":chlo_builder",
+        ":func_builder",
+        ":mlir_builder",
+        ":stablehlo_builder",
+        "//stablehlo:register",
+        "//stablehlo:stablehlo_broadcast_lowering",
+        "//testing/base/public:gunit_main",
+        "@llvm-project//mlir:IR",
+        "@llvm-project//mlir:Support",
+    ],
+)
+
+cc_test(
     name = "mlir_builder_test",
     srcs = ["MlirBuilderTest.cpp"],
     includes = ["../../../.."],
