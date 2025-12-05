@@ -960,6 +960,7 @@ cc_library(
         "stablehlo_ext/transforms/stablehlo_refine_shapes.h",
     ],
     strip_include_prefix = ".",
+    visibility = internal_visibility(["//learning/brain/mlir:stablehlo_friends"]),
     deps = [
         ":shape_component_analysis",
         ":stablehlo_extension_base",
