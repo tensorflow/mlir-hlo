@@ -3,7 +3,7 @@ load("//third_party/bazel_rules/rules_cc/cc:cc_binary.bzl", "cc_binary")
 load("//third_party/bazel_rules/rules_cc/cc:cc_test.bzl", "cc_test")
 
 package(
-    # copybara:uncomment default_applicable_licenses = ["//stablehlo:license"],
+    # copybara:uncomment default_applicable_licenses = [":license"],
     default_visibility = ["//visibility:public"],
     licenses = ["notice"],
 )
