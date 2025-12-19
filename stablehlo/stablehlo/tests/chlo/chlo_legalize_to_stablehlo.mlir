@@ -3913,6 +3913,149 @@ func.func @erf_inv_wide(%arg0 : tensor<16x16xf64>) {
 
 // -----
 
+!bounded_type = tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK-LABEL:   func.func @erf_inv_bounded(
+// CHECK-SAME:      %[[ARG0:.*]]: tensor<?x16xf32, #stablehlo.bounds<16, ?>>) {
+// CHECK:           %[[NEGATE_0:.*]] = stablehlo.negate %[[ARG0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_0:.*]] = stablehlo.multiply %[[ARG0]], %[[NEGATE_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[LOG_PLUS_ONE_0:.*]] = stablehlo.log_plus_one %[[MULTIPLY_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[NEGATE_1:.*]] = stablehlo.negate %[[LOG_PLUS_ONE_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_0:.*]] = stablehlo.constant dense<5.000000e+00> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_0:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_0]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_0:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_0:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_0]], %[[GET_DIMENSION_SIZE_0]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[COMPARE_0:.*]] = stablehlo.compare  LT, %[[NEGATE_1]], %[[SET_DIMENSION_SIZE_0]] : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<?x16xi1, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_1:.*]] = stablehlo.constant dense<2.500000e+00> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_1:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_1]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_1:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_1:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_1]], %[[GET_DIMENSION_SIZE_1]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SUBTRACT_0:.*]] = stablehlo.subtract %[[NEGATE_1]], %[[SET_DIMENSION_SIZE_1]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SQRT_0:.*]] = stablehlo.sqrt %[[NEGATE_1]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_2:.*]] = stablehlo.constant dense<3.000000e+00> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_2:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_2]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_2:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_2:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_2]], %[[GET_DIMENSION_SIZE_2]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SUBTRACT_1:.*]] = stablehlo.subtract %[[SQRT_0]], %[[SET_DIMENSION_SIZE_2]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_0:.*]] = stablehlo.select %[[COMPARE_0]], %[[SUBTRACT_0]], %[[SUBTRACT_1]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_3:.*]] = stablehlo.constant dense<2.81022636E-8> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_3:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_3]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_3:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_3:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_3]], %[[GET_DIMENSION_SIZE_3]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_4:.*]] = stablehlo.constant dense<-2.00214257E-4> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_4:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_4]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_4:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_4:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_4]], %[[GET_DIMENSION_SIZE_4]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_1:.*]] = stablehlo.select %[[COMPARE_0]], %[[SET_DIMENSION_SIZE_3]], %[[SET_DIMENSION_SIZE_4]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_5:.*]] = stablehlo.constant dense<3.43273939E-7> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_5:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_5]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_5:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_5:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_5]], %[[GET_DIMENSION_SIZE_5]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_6:.*]] = stablehlo.constant dense<1.00950558E-4> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_6:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_6]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_6:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_6:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_6]], %[[GET_DIMENSION_SIZE_6]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_2:.*]] = stablehlo.select %[[COMPARE_0]], %[[SET_DIMENSION_SIZE_5]], %[[SET_DIMENSION_SIZE_6]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_1:.*]] = stablehlo.multiply %[[SELECT_1]], %[[SELECT_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[ADD_0:.*]] = stablehlo.add %[[SELECT_2]], %[[MULTIPLY_1]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_7:.*]] = stablehlo.constant dense<-3.5233877E-6> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_7:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_7]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_7:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_7:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_7]], %[[GET_DIMENSION_SIZE_7]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_8:.*]] = stablehlo.constant dense<0.00134934322> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_8:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_8]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_8:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_8:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_8]], %[[GET_DIMENSION_SIZE_8]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_3:.*]] = stablehlo.select %[[COMPARE_0]], %[[SET_DIMENSION_SIZE_7]], %[[SET_DIMENSION_SIZE_8]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_2:.*]] = stablehlo.multiply %[[ADD_0]], %[[SELECT_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[ADD_1:.*]] = stablehlo.add %[[SELECT_3]], %[[MULTIPLY_2]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_9:.*]] = stablehlo.constant dense<-4.39150654E-6> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_9:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_9]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_9:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_9:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_9]], %[[GET_DIMENSION_SIZE_9]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_10:.*]] = stablehlo.constant dense<-0.00367342844> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_10:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_10]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_10:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_10:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_10]], %[[GET_DIMENSION_SIZE_10]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_4:.*]] = stablehlo.select %[[COMPARE_0]], %[[SET_DIMENSION_SIZE_9]], %[[SET_DIMENSION_SIZE_10]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_3:.*]] = stablehlo.multiply %[[ADD_1]], %[[SELECT_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[ADD_2:.*]] = stablehlo.add %[[SELECT_4]], %[[MULTIPLY_3]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_11:.*]] = stablehlo.constant dense<2.1858087E-4> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_11:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_11]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_11:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_11:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_11]], %[[GET_DIMENSION_SIZE_11]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_12:.*]] = stablehlo.constant dense<0.00573950773> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_12:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_12]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_12:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_12:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_12]], %[[GET_DIMENSION_SIZE_12]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_5:.*]] = stablehlo.select %[[COMPARE_0]], %[[SET_DIMENSION_SIZE_11]], %[[SET_DIMENSION_SIZE_12]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_4:.*]] = stablehlo.multiply %[[ADD_2]], %[[SELECT_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[ADD_3:.*]] = stablehlo.add %[[SELECT_5]], %[[MULTIPLY_4]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_13:.*]] = stablehlo.constant dense<-0.00125372503> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_13:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_13]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_13:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_13:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_13]], %[[GET_DIMENSION_SIZE_13]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_14:.*]] = stablehlo.constant dense<-0.0076224613> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_14:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_14]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_14:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_14:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_14]], %[[GET_DIMENSION_SIZE_14]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_6:.*]] = stablehlo.select %[[COMPARE_0]], %[[SET_DIMENSION_SIZE_13]], %[[SET_DIMENSION_SIZE_14]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_5:.*]] = stablehlo.multiply %[[ADD_3]], %[[SELECT_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[ADD_4:.*]] = stablehlo.add %[[SELECT_6]], %[[MULTIPLY_5]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_15:.*]] = stablehlo.constant dense<-0.00417768164> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_15:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_15]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_15:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_15:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_15]], %[[GET_DIMENSION_SIZE_15]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_16:.*]] = stablehlo.constant dense<0.00943887047> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_16:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_16]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_16:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_16:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_16]], %[[GET_DIMENSION_SIZE_16]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_7:.*]] = stablehlo.select %[[COMPARE_0]], %[[SET_DIMENSION_SIZE_15]], %[[SET_DIMENSION_SIZE_16]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_6:.*]] = stablehlo.multiply %[[ADD_4]], %[[SELECT_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[ADD_5:.*]] = stablehlo.add %[[SELECT_7]], %[[MULTIPLY_6]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_17:.*]] = stablehlo.constant dense<0.246640727> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_17:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_17]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_17:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_17:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_17]], %[[GET_DIMENSION_SIZE_17]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_18:.*]] = stablehlo.constant dense<1.00167406> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_18:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_18]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_18:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_18:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_18]], %[[GET_DIMENSION_SIZE_18]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_8:.*]] = stablehlo.select %[[COMPARE_0]], %[[SET_DIMENSION_SIZE_17]], %[[SET_DIMENSION_SIZE_18]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_7:.*]] = stablehlo.multiply %[[ADD_5]], %[[SELECT_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[ADD_6:.*]] = stablehlo.add %[[SELECT_8]], %[[MULTIPLY_7]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_19:.*]] = stablehlo.constant dense<1.50140941> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_19:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_19]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_19:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_19:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_19]], %[[GET_DIMENSION_SIZE_19]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_20:.*]] = stablehlo.constant dense<2.83297682> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_20:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_20]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_20:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_20:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_20]], %[[GET_DIMENSION_SIZE_20]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_9:.*]] = stablehlo.select %[[COMPARE_0]], %[[SET_DIMENSION_SIZE_19]], %[[SET_DIMENSION_SIZE_20]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_8:.*]] = stablehlo.multiply %[[ADD_6]], %[[SELECT_0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[ADD_7:.*]] = stablehlo.add %[[SELECT_9]], %[[MULTIPLY_8]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_9:.*]] = stablehlo.multiply %[[ADD_7]], %[[ARG0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[ABS_0:.*]] = stablehlo.abs %[[ARG0]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_21:.*]] = stablehlo.constant dense<1.000000e+00> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_21:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_21]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_21:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_21:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_21]], %[[GET_DIMENSION_SIZE_21]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[COMPARE_1:.*]] = stablehlo.compare  EQ, %[[ABS_0]], %[[SET_DIMENSION_SIZE_21]] : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<?x16xi1, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[CONSTANT_22:.*]] = stablehlo.constant dense<0x7F800000> : tensor<f32>
+// CHECK:           %[[BROADCAST_IN_DIM_22:.*]] = stablehlo.broadcast_in_dim %[[CONSTANT_22]], dims = [] : (tensor<f32>) -> tensor<16x16xf32>
+// CHECK:           %[[GET_DIMENSION_SIZE_22:.*]] = stablehlo.get_dimension_size %[[ARG0]], dim = 0 : (tensor<?x16xf32, #stablehlo.bounds<16, ?>>) -> tensor<i32>
+// CHECK:           %[[SET_DIMENSION_SIZE_22:.*]] = stablehlo.set_dimension_size %[[BROADCAST_IN_DIM_22]], %[[GET_DIMENSION_SIZE_22]], dim = 0 : (tensor<16x16xf32>, tensor<i32>) -> tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[MULTIPLY_10:.*]] = stablehlo.multiply %[[ARG0]], %[[SET_DIMENSION_SIZE_22]] : tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           %[[SELECT_10:.*]] = stablehlo.select %[[COMPARE_1]], %[[MULTIPLY_10]], %[[MULTIPLY_9]] : tensor<?x16xi1, #stablehlo.bounds<16, ?>>, tensor<?x16xf32, #stablehlo.bounds<16, ?>>
+// CHECK:           return
+// CHECK:         }
+func.func @erf_inv_bounded(%arg0 : !bounded_type) {
+  %0 = chlo.erf_inv %arg0 : !bounded_type -> !bounded_type
+  return
+}
+
+// -----
+
 // CHECK-LABEL:   @square_complex_f32(
 // CHECK-SAME:                                  %[[VAL_0:.*]]: tensor<complex<f32>>) -> tensor<complex<f32>> {
 // CHECK:           %[[VAL_1:.*]] = stablehlo.real %[[VAL_0]] : (tensor<complex<f32>>) -> tensor<f32>
