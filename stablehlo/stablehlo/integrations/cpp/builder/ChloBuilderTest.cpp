@@ -15,6 +15,7 @@ limitations under the License.
 
 #include <string>
 
+#include "testing/base/public/gunit.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
@@ -29,7 +30,6 @@ limitations under the License.
 #include "stablehlo/integrations/cpp/builder/ChloBuilder.h"
 #include "stablehlo/integrations/cpp/builder/FuncBuilder.h"
 #include "stablehlo/integrations/cpp/builder/MlirBuilder.h"
-#include "testing/base/public/gunit.h"
 #include "stablehlo/integrations/cpp/builder/StablehloBuilder.h"
 
 namespace mlir {
