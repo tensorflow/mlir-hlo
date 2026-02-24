@@ -1,14 +1,17 @@
 # MLIR-HLO: A Standalone "HLO" MLIR-based Compiler
 
-> Note:
-> [this project is deprecated](https://groups.google.com/a/openxla.org/g/openxla-discuss/c/Mppuv1Edv1s),
-> and will be removed in the future.
+> [!WARNING]
+> [This repo was deprecated in 2023](https://groups.google.com/a/openxla.org/g/openxla-discuss/c/Mppuv1Edv1s),
+> and is no longer receiving updates. The repo will be deleted in the near future.
+> 
+> Projects should migrate to [StableHLO](https://github.com/openxla/stablehlo), as MHLO is an implementation
+> detail of the XLA compiler developed in [openxla/xla](https://github.com/openxla/xla/).
 
 The code here exists in two places:
 
 *   https://github.com/openxla/xla/tree/main/xla/mlir_hlo:
     this is the canonical location and where contributions should be made using
-    GitHub pull-requests.
+    GitHub pull-requests. The MHLO dialect is only intended to be used within the XLA project.
 *   **(DEPRECATED)** https://github.com/tensorflow/mlir-hlo; this is a
     standalone repository with a view to the same code to allow other projects
     to use this without depending on the entire XLA monorepo. This repository is
